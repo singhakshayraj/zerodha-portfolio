@@ -9,5 +9,5 @@
     { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
     { "source": "/research.html", "destination": "/dashboard/research.html" },
     { "source": "/",              "destination": "/dashboard/index.html" }
-  ],
+  ]
 }
