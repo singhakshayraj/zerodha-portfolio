@@ -7,11 +7,14 @@ const KITE_PATH_PREFIX = '/oms';
 // In-memory instruments cache (symbol → token), refreshed once per process
 let _instrumentsCache = null;
 
-function kiteRequest(path, enctoken) {
+// host: 'oms' (default) → kite.zerodha.com/oms, 'connect' → api.kite.trade
+function kiteRequest(path, enctoken, host = 'oms') {
+  const hostname = host === 'connect' ? 'api.kite.trade' : KITE_HOST;
+  const fullPath = host === 'connect' ? path : KITE_PATH_PREFIX + path;
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: KITE_HOST,
-      path: KITE_PATH_PREFIX + path,
+      hostname,
+      path: fullPath,
       method: 'GET',
       headers: {
         'Authorization': `enctoken ${enctoken}`,
@@ -88,8 +91,8 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
   // Load instruments once
   if (!_instrumentsCache) {
     const csv = await new Promise((resolve, reject) => {
-      const opts = { hostname: KITE_HOST, path: KITE_PATH_PREFIX + '/instruments/NSE', method: 'GET',
-        headers: { 'Authorization': `enctoken ${enctoken}`, 'X-Kite-Version': '3' } };
+      const opts = { hostname: 'api.kite.trade', path: '/instruments/NSE', method: 'GET',
+        headers: { 'X-Kite-Version': '3' } };
       const req = https.request(opts, res => {
         let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
       });
@@ -115,7 +118,7 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
   const fmt = d => d.toISOString().slice(0, 19).replace('T', '+');
 
   const path = `/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(now)}`;
-  return kiteRequest(path, enctoken);
+  return kiteRequest(path, enctoken, 'connect');
 }
 
 /**
