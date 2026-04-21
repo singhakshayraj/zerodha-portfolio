@@ -127,6 +127,7 @@ export function generateDailyReportHTML({ snapshot, prevSnapshot, dateLabel }) {
   <a href="/" class="topnav-brand">📈 Portfolio</a>
   <div class="topnav-links">
     <a href="/">Dashboard</a>
+    <a href="/intraday">Intraday</a>
     <a href="/alpha">Alpha Finder</a>
     <a href="/research.html">Research Desk</a>
     <a href="/connect">Connect Kite</a>

@@ -6,6 +6,7 @@
     { "source": "/trade",         "destination": "/api/trade" },
     { "source": "/alpha-score",   "destination": "/api/alpha-score" },
     { "source": "/symbol-search", "destination": "/api/symbol-search" },
+    { "source": "/intraday",      "destination": "/dashboard/intraday.html" },
     { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
     { "source": "/connect",       "destination": "/dashboard/connect.html" },
     { "source": "/research.html", "destination": "/dashboard/research.html" },

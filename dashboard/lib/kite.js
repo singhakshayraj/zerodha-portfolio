@@ -3,6 +3,9 @@ import { config } from '../config.js';
 
 const KITE_HOST = 'api.kite.trade';
 
+// In-memory instruments cache (symbol → token), refreshed once per process
+let _instrumentsCache = null;
+
 function kiteRequest(path, enctoken) {
   return new Promise((resolve, reject) => {
     const options = {
@@ -37,11 +40,11 @@ function kiteRequest(path, enctoken) {
  * In server mode: calls REST API with enctoken.
  * In local mode: throws — use mcp__kite__get_holdings via Claude Code instead.
  */
-export async function getHoldings() {
+export async function getHoldings(clientEnctoken) {
   if (config.runtimeMode === 'local') {
     throw new Error('Local mode: use mcp__kite__get_holdings via Claude Code MCP');
   }
-  const enctoken = config.kite.enctoken;
+  const enctoken = clientEnctoken || config.kite.enctoken;
   if (!enctoken) throw new Error('KITE_ENCTOKEN is not set. Add it to your .env file.');
   return kiteRequest('/portfolio/holdings', enctoken);
 }
@@ -49,13 +52,66 @@ export async function getHoldings() {
 /**
  * Fetch positions (intraday) from Kite.
  */
-export async function getPositions() {
+export async function getPositions(clientEnctoken) {
   if (config.runtimeMode === 'local') {
     throw new Error('Local mode: use mcp__kite__get_positions via Claude Code MCP');
   }
-  const enctoken = config.kite.enctoken;
+  const enctoken = clientEnctoken || config.kite.enctoken;
   if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
   return kiteRequest('/portfolio/positions', enctoken);
+}
+
+/**
+ * Fetch live quotes (LTP, OHLC, change) for given symbols.
+ * symbols: ['NSE:INFY', 'NSE:TCS', 'NSE:NIFTY 50']
+ * Accepts optional clientEnctoken to override config (for browser-stored tokens).
+ */
+export async function getQuotes(symbols, clientEnctoken) {
+  const enctoken = clientEnctoken || config.kite.enctoken;
+  if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
+  const qs = symbols.map(s => `i=${encodeURIComponent(s)}`).join('&');
+  return kiteRequest(`/quote?${qs}`, enctoken);
+}
+
+/**
+ * Fetch today's intraday candles for a symbol.
+ * Looks up instrument_token from the NSE instruments list (cached in memory).
+ */
+export async function getHistorical(symbol, interval = '5minute', clientEnctoken) {
+  const enctoken = clientEnctoken || config.kite.enctoken;
+  if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
+
+  // Load instruments once
+  if (!_instrumentsCache) {
+    const csv = await new Promise((resolve, reject) => {
+      const opts = { hostname: KITE_HOST, path: '/instruments/NSE', method: 'GET',
+        headers: { 'Authorization': `enctoken ${enctoken}`, 'X-Kite-Version': '3' } };
+      const req = https.request(opts, res => {
+        let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+      });
+      req.on('error', reject); req.end();
+    });
+    const lines = csv.trim().split('\n');
+    const h = lines[0].split(',');
+    const ti = h.indexOf('instrument_token'), si = h.indexOf('tradingsymbol');
+    _instrumentsCache = {};
+    for (let i = 1; i < lines.length; i++) {
+      const c = lines[i].split(',');
+      if (c[si]) _instrumentsCache[c[si].trim()] = c[ti].trim();
+    }
+  }
+
+  const token = _instrumentsCache[symbol.toUpperCase()];
+  if (!token) throw new Error(`Instrument token not found for ${symbol}`);
+
+  // Today's session: 9:15 AM IST to now
+  const now = new Date();
+  const from = new Date(now);
+  from.setHours(3, 45, 0, 0); // 9:15 AM IST = 3:45 AM UTC
+  const fmt = d => d.toISOString().slice(0, 19).replace('T', '+');
+
+  const path = `/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(now)}`;
+  return kiteRequest(path, enctoken);
 }
 
 /**

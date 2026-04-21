@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { execFile } from 'child_process';
 import { config } from './config.js';
 import { analyzeStock } from './lib/llm.js';
-import { getHoldings, placeOrder } from './lib/kite.js';
+import { getHoldings, getPositions, getQuotes, getHistorical, placeOrder } from './lib/kite.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = config.port;
@@ -30,6 +30,13 @@ const server = http.createServer(async (req, res) => {
   // Serve research.html
   if (req.method === 'GET' && req.url === '/research.html') {
     const file = fs.readFileSync(path.join(__dirname, 'research.html'));
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(file); return;
+  }
+
+  // Serve intraday page
+  if (req.method === 'GET' && req.url === '/intraday') {
+    const file = fs.readFileSync(path.join(__dirname, 'intraday.html'));
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(file); return;
   }
@@ -141,12 +148,62 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Live holdings endpoint (server mode only)
+  // Live holdings endpoint
   if (req.method === 'GET' && req.url === '/api/holdings') {
     try {
-      const holdings = await getHoldings();
+      const enc = req.headers['x-kite-enctoken'];
+      const holdings = await getHoldings(enc);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ data: holdings }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // Live positions endpoint
+  if (req.method === 'GET' && req.url === '/api/positions') {
+    try {
+      const enc = req.headers['x-kite-enctoken'];
+      const data = await getPositions(enc);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // Live quotes endpoint — GET /api/quotes?symbols=NSE:INFY,NSE:TCS
+  if (req.method === 'GET' && req.url.startsWith('/api/quotes')) {
+    try {
+      const enc = req.headers['x-kite-enctoken'];
+      const u = new URL(req.url, 'http://x');
+      const symbols = (u.searchParams.get('symbols') || '').split(',').filter(Boolean);
+      if (!symbols.length) { res.writeHead(400); res.end(JSON.stringify({ error: 'symbols required' })); return; }
+      const data = await getQuotes(symbols, enc);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // Historical candles — GET /api/historical?symbol=INFY&interval=5minute
+  if (req.method === 'GET' && req.url.startsWith('/api/historical')) {
+    try {
+      const enc = req.headers['x-kite-enctoken'];
+      const u = new URL(req.url, 'http://x');
+      const symbol   = u.searchParams.get('symbol');
+      const interval = u.searchParams.get('interval') || '5minute';
+      if (!symbol) { res.writeHead(400); res.end(JSON.stringify({ error: 'symbol required' })); return; }
+      const data = await getHistorical(symbol, interval, enc);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data }));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));
