@@ -11,6 +11,8 @@
     { "source": "/api/kite-debug",  "destination": "/api/kite-debug" },
     { "source": "/api/trade-plan", "destination": "/api/trade-plan" },
     { "source": "/api/gtt",        "destination": "/api/gtt" },
+    { "source": "/api/trades",     "destination": "/api/trades" },
+    { "source": "/trades",         "destination": "/dashboard/trades.html" },
     { "source": "/intraday",      "destination": "/dashboard/intraday.html" },
     { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
     { "source": "/connect",       "destination": "/dashboard/connect.html" },

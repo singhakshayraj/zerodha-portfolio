@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trade Journal — Portfolio Intelligence</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
+
+    .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* STATS BAR */
+    .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 14px 18px; }
+    .stat-label { font-size: 10px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-val { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+    .stat-val.green { color: #68d391; }
+    .stat-val.red   { color: #fc8181; }
+    .stat-val.blue  { color: #63b3ed; }
+
+    /* FILTER BAR */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 6px 14px; border: 1px solid #2d3748; background: none; border-radius: 20px; font-size: 12px; color: #718096; cursor: pointer; transition: all 0.15s; }
+    .filter-btn.active { background: #63b3ed; border-color: #63b3ed; color: #0f1117; font-weight: 700; }
+    .filter-btn:hover:not(.active) { border-color: #63b3ed; color: #63b3ed; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th { text-align: left; padding: 10px 12px; color: #4a5568; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #2d3748; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid #1a1f2e; transition: background 0.1s; }
+    tbody tr:hover { background: #1a1f2e; }
+    tbody td { padding: 12px 12px; vertical-align: middle; }
+    .sym { font-weight: 700; font-size: 13px; color: #e2e8f0; }
+    .exch { font-size: 10px; color: #4a5568; margin-left: 4px; }
+    .sector-tag { font-size: 10px; color: #718096; display: block; margin-top: 2px; }
+    .side-buy  { color: #68d391; font-weight: 700; }
+    .side-sell { color: #fc8181; font-weight: 700; }
+    .status-open   { background: rgba(99,179,237,0.12); color: #63b3ed; border: 1px solid rgba(99,179,237,0.25); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .status-closed-win  { background: rgba(104,211,145,0.12); color: #68d391; border: 1px solid rgba(104,211,145,0.25); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .status-closed-loss { background: rgba(252,129,129,0.12); color: #fc8181; border: 1px solid rgba(252,129,129,0.25); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .status-cancelled   { background: rgba(113,128,150,0.12); color: #718096; border: 1px solid rgba(113,128,150,0.25); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .levels { font-size: 11px; line-height: 1.7; }
+    .lvl-entry  { color: #63b3ed; }
+    .lvl-target { color: #68d391; }
+    .lvl-sl     { color: #fc8181; }
+    .pnl-pos { color: #68d391; font-weight: 700; }
+    .pnl-neg { color: #fc8181; font-weight: 700; }
+    .pnl-dash { color: #4a5568; }
+    .factors-tip { font-size: 10px; color: #4a5568; line-height: 1.6; }
+    .rr-val { font-size: 12px; font-weight: 600; color: #a0aec0; }
+
+    /* OUTCOME BUTTONS */
+    .outcome-row { display: flex; gap: 5px; flex-wrap: wrap; }
+    .out-btn { padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .out-btn:hover { opacity: 0.8; }
+    .out-target   { background: rgba(104,211,145,0.2); color: #68d391; border: 1px solid rgba(104,211,145,0.3); }
+    .out-stoploss { background: rgba(252,129,129,0.2); color: #fc8181; border: 1px solid rgba(252,129,129,0.3); }
+    .out-manual   { background: rgba(113,128,150,0.2); color: #718096; border: 1px solid rgba(113,128,150,0.3); }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 60px 20px; color: #4a5568; font-size: 14px; }
+    .empty a { color: #63b3ed; text-decoration: none; }
+
+    /* TOAST */
+    #toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+    #toast.show { opacity: 1; }
+    #toast.ok  { background: #276749; color: #9ae6b4; border: 1px solid #38a169; }
+    #toast.err { background: #742a2a; color: #feb2b2; border: 1px solid #c53030; }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/intraday">Intraday</a>
+    <a href="/trades" class="active">Trade Journal</a>
+    <a href="/alpha">Alpha Finder</a>
+    <a href="/research.html">Research Desk</a>
+    <a href="/connect">Connect Kite</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+    <div>
+      <h1 style="font-size:20px;font-weight:700;color:#e2e8f0">Trade Journal</h1>
+      <p style="font-size:13px;color:#4a5568;margin-top:4px">Every trade placed via Market Brain — tracked, measured, improved.</p>
+    </div>
+    <button onclick="clearClosed()" style="padding:7px 14px;background:none;border:1px solid #2d3748;border-radius:7px;color:#718096;font-size:12px;cursor:pointer">Clear closed</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card"><div class="stat-label">Total Trades</div><div class="stat-val blue" id="st-total">—</div></div>
+    <div class="stat-card"><div class="stat-label">Open</div><div class="stat-val" id="st-open">—</div></div>
+    <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-val" id="st-wr">—</div></div>
+    <div class="stat-card"><div class="stat-label">Wins / Losses</div><div class="stat-val" id="st-wl">—</div></div>
+    <div class="stat-card"><div class="stat-label">Total P&amp;L</div><div class="stat-val" id="st-pnl">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg R:R</div><div class="stat-val" id="st-rr">—</div></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('open', this)">Open</button>
+    <button class="filter-btn" onclick="setFilter('closed', this)">Closed</button>
+    <button class="filter-btn" onclick="setFilter('cancelled', this)">Cancelled</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="tradeTable">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Side</th>
+          <th>Levels</th>
+          <th>Qty</th>
+          <th>Risk / Reward</th>
+          <th>R:R</th>
+          <th>Factors</th>
+          <th>Status</th>
+          <th>P&amp;L</th>
+          <th>Opened</th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody id="tradeBody"></tbody>
+    </table>
+    <div class="empty" id="emptyMsg" style="display:none">
+      No trades yet. Head to <a href="/intraday">Intraday</a> → Market Brain → place a GTT.
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let _all = [];
+  let _filter = 'all';
+
+  async function load() {
+    try {
+      const res  = await fetch('/api/trades');
+      const data = await res.json();
+      _all = data.trades || [];
+      renderStats(data.stats || {});
+      render();
+    } catch(e) {
+      toast('Failed to load trades: ' + e.message, false);
+    }
+  }
+
+  function renderStats(s) {
+    document.getElementById('st-total').textContent = s.total ?? '—';
+    document.getElementById('st-open').textContent  = s.open  ?? '—';
+
+    const wr = document.getElementById('st-wr');
+    wr.textContent = s.win_rate != null ? s.win_rate + '%' : '—';
+    wr.className   = 'stat-val ' + (s.win_rate >= 50 ? 'green' : s.win_rate != null ? 'red' : '');
+
+    document.getElementById('st-wl').textContent = s.closed ? `${s.wins}W / ${s.losses}L` : '—';
+
+    const pnl = document.getElementById('st-pnl');
+    pnl.textContent = s.total_pnl != null ? '₹' + s.total_pnl.toLocaleString('en-IN') : '—';
+    pnl.className   = 'stat-val ' + (s.total_pnl > 0 ? 'green' : s.total_pnl < 0 ? 'red' : '');
+
+    const rr = document.getElementById('st-rr');
+    rr.textContent = s.avg_rr != null ? s.avg_rr + 'x' : '—';
+    rr.className   = 'stat-val ' + (s.avg_rr >= 1 ? 'green' : s.avg_rr != null ? 'red' : '');
+  }
+
+  function setFilter(f, btn) {
+    _filter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  function render() {
+    const trades = _filter === 'all' ? _all
+                 : _filter === 'closed' ? _all.filter(t => t.status === 'closed')
+                 : _all.filter(t => t.status === _filter);
+
+    const body = document.getElementById('tradeBody');
+    const empty = document.getElementById('emptyMsg');
+
+    if (!trades.length) {
+      body.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    body.innerHTML = trades.map(t => {
+      const statusClass = t.status === 'open' ? 'status-open'
+                        : t.exit_reason === 'target' ? 'status-closed-win'
+                        : t.exit_reason === 'stoploss' ? 'status-closed-loss'
+                        : 'status-cancelled';
+      const statusLabel = t.status === 'open' ? 'Open'
+                        : t.exit_reason === 'target' ? '✓ Target hit'
+                        : t.exit_reason === 'stoploss' ? '✗ Stop hit'
+                        : t.exit_reason === 'manual' ? 'Manual exit'
+                        : 'Cancelled';
+
+      const pnlHtml = t.pnl != null
+        ? `<span class="${t.pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">₹${t.pnl.toLocaleString('en-IN', {maximumFractionDigits:0})}</span>`
+        : `<span class="pnl-dash">—</span>`;
+
+      const f = t.factors || {};
+      const factorStr = [
+        f.atr_pct   ? `ATR ${f.atr_pct}%` : '',
+        f.vix       ? `VIX ${f.vix}` : '',
+        f.sector_beta ? `β${f.sector_beta}` : '',
+        f.conf_mul  ? `conf ×${f.conf_mul}` : '',
+      ].filter(Boolean).join(' · ') || '—';
+
+      const opened = new Date(t.opened_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' });
+
+      const outcomeHtml = t.status === 'open'
+        ? `<div class="outcome-row">
+            <button class="out-btn out-target"   onclick="markOutcome('${t.id}','target',  ${t.target})">Target</button>
+            <button class="out-btn out-stoploss" onclick="markOutcome('${t.id}','stoploss',${t.sl})">SL hit</button>
+            <button class="out-btn out-manual"   onclick="promptManual('${t.id}')">Manual</button>
+           </div>`
+        : `<span style="font-size:10px;color:#4a5568">${t.exit_price ? '@ ₹'+t.exit_price : ''}</span>`;
+
+      return `<tr>
+        <td>
+          <span class="sym">${t.symbol}<span class="exch">${t.exchange}</span></span>
+          <span class="sector-tag">${t.sector || ''}</span>
+        </td>
+        <td><span class="${t.side === 'BUY' ? 'side-buy' : 'side-sell'}">${t.side}</span></td>
+        <td class="levels">
+          <div class="lvl-entry">E ₹${t.entry}</div>
+          <div class="lvl-target">T ₹${t.target}</div>
+          <div class="lvl-sl">SL ₹${t.sl}</div>
+        </td>
+        <td>${t.qty}</td>
+        <td style="font-size:11px;color:#718096">
+          Risk <span style="color:#fc8181">₹${t.risk_rs}</span><br>
+          Reward <span style="color:#68d391">₹${t.reward_rs}</span>
+        </td>
+        <td><span class="rr-val">${t.rr}x</span></td>
+        <td class="factors-tip">${factorStr}</td>
+        <td><span class="${statusClass}">${statusLabel}</span></td>
+        <td>${pnlHtml}</td>
+        <td style="font-size:10px;color:#4a5568;white-space:nowrap">${opened}</td>
+        <td>${outcomeHtml}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function markOutcome(id, reason, exitPrice) {
+    try {
+      const res  = await fetch('/api/trades', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'closed', exit_price: exitPrice, exit_reason: reason }),
+      });
+      const data = await res.json();
+      if (data.trade) {
+        const idx = _all.findIndex(t => t.id === id);
+        if (idx >= 0) _all[idx] = data.trade;
+        renderStats(data.stats);
+        render();
+        toast(reason === 'target' ? '✓ Target hit logged' : '✗ Stop loss logged', reason === 'target');
+      }
+    } catch(e) { toast('Update failed: ' + e.message, false); }
+  }
+
+  async function promptManual(id) {
+    const price = prompt('Exit price (₹):');
+    if (!price || isNaN(+price)) return;
+    await markOutcome(id, 'manual', +price);
+  }
+
+  async function clearClosed() {
+    if (!confirm('Remove all closed/cancelled trades from the journal?')) return;
+    // Patch all closed trades — server side we'd need a bulk delete, for now filter locally and rewrite
+    const open = _all.filter(t => t.status === 'open');
+    try {
+      await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _bulk_replace: open }),
+      });
+    } catch {}
+    _all = open;
+    render();
+    toast('Closed trades cleared', true);
+  }
+
+  function toast(msg, ok = true) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className   = 'show ' + (ok ? 'ok' : 'err');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.className = '', 3000);
+  }
+
+  load();
+</script>
+</body>
+</html>

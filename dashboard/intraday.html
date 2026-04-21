@@ -203,6 +203,7 @@
   <div class="topnav-links">
     <a href="/">Dashboard</a>
     <a href="/intraday" class="active">Intraday</a>
+    <a href="/trades">Trade Journal</a>
     <a href="/alpha">Alpha Finder</a>
     <a href="/research.html">Research Desk</a>
     <a href="/connect">Connect Kite</a>
@@ -1033,11 +1034,42 @@ async function submitGTT(i) {
     const data = await res.json();
     if (data.status === 'success') {
       toast(`✓ ${pick.symbol} — GTT set (ID ${data.trigger_id})`, true);
-      el.innerHTML = `<div style="color:#68d391;font-size:11px;padding:6px 0">✓ GTT placed — target ₹${target} · SL ₹${sl}</div>`;
+      el.innerHTML = `<div style="color:#68d391;font-size:11px;padding:6px 0">✓ GTT placed — target ₹${target} · SL ₹${sl} · <a href="/trades" style="color:#63b3ed">View journal →</a></div>`;
+      // Log to trade journal
+      const plan = { entry, target, sl, qty, risk_rs: Math.round(qty*(entry-sl)), reward_rs: Math.round(qty*(target-entry)), rr: +((target-entry)/(entry-sl)).toFixed(2) };
+      logTrade(pick, plan, data.trigger_id);
     } else {
       toast('GTT error: ' + data.error, false);
     }
   } catch (e) { toast('GTT failed: ' + e.message, false); }
+}
+
+async function logTrade(pick, plan, trigger_id) {
+  try {
+    await fetch('/api/trades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol:     pick.symbol,
+        exchange:   pick.exchange || 'NSE',
+        sector:     pick.sector   || '',
+        side:       'BUY',
+        entry:      plan.entry,
+        target:     plan.target,
+        sl:         plan.sl,
+        qty:        plan.qty,
+        capital:    plan.capital || plan.qty * plan.entry,
+        risk_rs:    plan.risk_rs,
+        reward_rs:  plan.reward_rs,
+        rr:         plan.rr,
+        trigger_id,
+        confidence: pick.confidence,
+        score:      pick.score,
+        source:     'market-brain',
+        factors:    plan.factors || {},
+      }),
+    });
+  } catch {}  // journal logging should never block the trade flow
 }
 
 async function submitBuy(i) {
