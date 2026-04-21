@@ -108,12 +108,14 @@ async function fetchNewsItems(source, maxItems = 4) {
       const desc  = clean(descRaw);
       const text  = desc.length > title.length ? `${title}. ${desc}` : title;
 
-      if (text.length > 40) items.push({
+      // Cap text at 220 chars to keep total prompt under Groq's 12k TPM limit
+      const trimmed = text.length > 220 ? text.slice(0, 217) + '…' : text;
+      if (trimmed.length > 40) items.push({
         source: source.label,
         tier: source.tier,
         cat: source.cat,
         outlet: clean(outletRaw),
-        text,
+        text: trimmed,
         daysAgo: Math.round((Date.now() - ts) / 86400000),
       });
     }
@@ -141,10 +143,14 @@ async function callGroq(prompt) {
     body: JSON.stringify({
       model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.15, max_tokens: 4000,
+      temperature: 0.15, max_tokens: 3000,
     }),
   });
-  if (res.status === 429) throw Object.assign(new Error('Groq rate limited (429)'), { status: 429 });
+  // 429 = rate limit, 413 = prompt too large — both should fall back to Gemini
+  if (res.status === 429 || res.status === 413) {
+    const body = await res.text();
+    throw Object.assign(new Error(`Groq ${res.status}: ${body.slice(0, 120)}`), { status: res.status });
+  }
   if (!res.ok) throw new Error(`Groq error ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   return parseJsonResponse(data.choices?.[0]?.message?.content);
@@ -176,7 +182,7 @@ async function callLLM(prompt) {
     const result = await callGroq(prompt);
     return { result, provider: 'Groq (llama-3.3-70b)' };
   } catch (err) {
-    const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.toLowerCase().includes('rate');
+    const isRateLimit = err.status === 429 || err.status === 413 || err.message?.includes('429') || err.message?.includes('413') || err.message?.toLowerCase().includes('rate') || err.message?.toLowerCase().includes('too large');
     if (isRateLimit && process.env.GOOGLE_API_KEY) {
       const result = await callGemini(prompt);
       return { result, provider: `Gemini (${process.env.GEMINI_MODEL || 'gemini-1.5-flash'})` };
@@ -323,7 +329,7 @@ export default async function handler(req, res) {
 
   try {
     // Fetch all source categories in parallel, max 4 items each
-    const results = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 4)));
+    const results = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 3)));
     const articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
     if (articles.length === 0) {
