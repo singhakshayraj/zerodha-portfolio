@@ -392,8 +392,9 @@ function renderWatchlistRows(data) {
     const cls  = chg == null ? 'muted' : chg >= 0 ? 'green' : 'red';
     const bare = sym.replace(/^[A-Z]+:/, '');
     const exch = sym.split(':')[0];
-    return `<tr>
-      <td><span class="sym-cell" onclick="loadChart('${sym}')">${bare}<span class="exch-badge">${exch}</span></span></td>
+    const notFound = data && !q;
+    return `<tr${notFound ? ' style="opacity:0.45"' : ''}>
+      <td><span class="sym-cell" onclick="loadChart('${sym}')">${bare}<span class="exch-badge">${exch}</span></span>${notFound ? ' <span style="font-size:10px;color:#fc8181">not found</span>' : ''}</td>
       <td><strong>${ltp}</strong></td>
       <td class="${cls}">${chgStr}</td>
       <td class="muted">${q ? fmt(q.ohlc.open)  : '—'}</td>
