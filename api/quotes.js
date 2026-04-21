@@ -15,7 +15,8 @@ export default async function handler(req, res) {
       return;
     }
 
-    if (!enc && !process.env.KITE_ENCTOKEN) {
+    const effectiveEnc = enc || process.env.KITE_ENCTOKEN;
+    if (!effectiveEnc || effectiveEnc === 'test') {
       res.status(401).json({ error: 'Kite not connected. Go to /connect and save your enctoken.' });
       return;
     }

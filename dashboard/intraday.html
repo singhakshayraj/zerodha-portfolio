@@ -115,6 +115,15 @@
     .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
 
     footer { text-align: center; padding: 32px; color: #4a5568; font-size: 12px; }
+
+    /* SOURCE SELECTOR */
+    .source-bar { display: flex; align-items: center; gap: 10px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 10px 18px; }
+    .source-label { font-size: 12px; color: #718096; white-space: nowrap; }
+    .source-btns { display: flex; gap: 6px; }
+    .src-btn { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #2d3748; background: none; color: #718096; transition: all 0.15s; }
+    .src-btn.active { background: #2d3748; color: #e2e8f0; border-color: #63b3ed; }
+    .src-btn:hover:not(.active) { border-color: #4a5568; color: #a0aec0; }
+    .source-note { font-size: 11px; color: #4a5568; margin-left: 8px; }
   </style>
 </head>
 <body>
@@ -131,6 +140,16 @@
 </nav>
 
 <div class="page">
+
+  <!-- DATA SOURCE SELECTOR -->
+  <div class="source-bar">
+    <span class="source-label">Quote source:</span>
+    <div class="source-btns">
+      <button class="src-btn active" id="srcYahoo" onclick="setSource('yahoo')">Yahoo Finance</button>
+      <button class="src-btn" id="srcKite"  onclick="setSource('kite')">Kite (requires login)</button>
+    </div>
+    <span class="source-note" id="sourceNote">Free · 15-min delayed · No login needed</span>
+  </div>
 
   <!-- MARKET PULSE -->
   <div>
@@ -236,11 +255,12 @@
 
 <div class="toast" id="toast"></div>
 
-<footer>Prices from Kite · Auto-refreshes every 30 seconds · Not financial advice</footer>
+<footer id="footerNote">Prices from Yahoo Finance (15-min delayed) · Auto-refreshes every 30 seconds · Not financial advice</footer>
 
 <script>
 const STORAGE_KEY = 'kite_enctoken';
 const WATCHLIST_KEY = 'intraday_watchlist';
+const SOURCE_KEY = 'quote_source';
 
 let watchlist   = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
 let chartSym    = null;
@@ -249,6 +269,34 @@ let lwChart     = null;
 let candleSeries = null;
 let refreshTimer = null;
 let pendingOrder = null;
+let quoteSource = localStorage.getItem(SOURCE_KEY) || 'yahoo';
+
+// ── Source selector ───────────────────────────────────────────────────────────
+function setSource(src) {
+  quoteSource = src;
+  localStorage.setItem(SOURCE_KEY, src);
+  document.getElementById('srcYahoo').className = 'src-btn' + (src === 'yahoo' ? ' active' : '');
+  document.getElementById('srcKite').className  = 'src-btn' + (src === 'kite'  ? ' active' : '');
+  const isYahoo = src === 'yahoo';
+  document.getElementById('sourceNote').textContent = isYahoo
+    ? 'Free · 15-min delayed · No login needed'
+    : 'Real-time · Requires Kite enctoken';
+  document.getElementById('footerNote').textContent = isYahoo
+    ? 'Prices from Yahoo Finance (15-min delayed) · Auto-refreshes every 30 seconds · Not financial advice'
+    : 'Prices from Kite (real-time) · Auto-refreshes every 30 seconds · Not financial advice';
+  loadPulse();
+  refreshWatchlist();
+}
+
+// Apply saved source on load
+(function applySource() {
+  if (quoteSource === 'kite') {
+    document.getElementById('srcYahoo').className = 'src-btn';
+    document.getElementById('srcKite').className  = 'src-btn active';
+    document.getElementById('sourceNote').textContent = 'Real-time · Requires Kite enctoken';
+    document.getElementById('footerNote').textContent = 'Prices from Kite (real-time) · Auto-refreshes every 30 seconds · Not financial advice';
+  }
+})();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function enc() { return localStorage.getItem(STORAGE_KEY) || ''; }
@@ -257,6 +305,17 @@ function headers() {
   const h = { 'Content-Type': 'application/json' };
   if (enc()) h['X-Kite-Enctoken'] = enc();
   return h;
+}
+
+async function fetchQuotes(symbols) {
+  const encoded = symbols.map(s => encodeURIComponent(s)).join(',');
+  if (quoteSource === 'yahoo') {
+    const res = await fetch(`/api/yahoo-quotes?symbols=${encoded}`);
+    return res.json();
+  } else {
+    const res = await fetch(`/api/quotes?symbols=${encoded}`, { headers: headers() });
+    return res.json();
+  }
 }
 
 function fmt(n) { return n == null ? '—' : Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
@@ -275,8 +334,7 @@ const IKEYS   = ['NIFTY50','BANKNIFTY','MIDCPNIFTY','INDIAVIX'];
 
 async function loadPulse() {
   try {
-    const res = await fetch('/api/quotes?symbols=' + INDICES.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
-    const { data, error } = await res.json();
+    const { data, error } = await fetchQuotes(INDICES);
     if (error) {
       document.getElementById('lastRefresh').textContent = '⚠ ' + error;
       return;
@@ -374,8 +432,7 @@ function saveWatchlist() { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(wa
 async function refreshWatchlist() {
   if (!watchlist.length) { renderWatchlistRows(null); return; }
   try {
-    const res = await fetch('/api/quotes?symbols=' + watchlist.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
-    const { data, error } = await res.json();
+    const { data, error } = await fetchQuotes(watchlist);
     if (error) {
       toast(error.includes('enctoken') || error.includes('connect')
         ? '🔐 Kite not connected — go to Connect Kite page'
