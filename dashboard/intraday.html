@@ -119,20 +119,38 @@
     /* MARKET BRAIN */
     .brain-card { overflow: hidden; }
     .brain-status { font-size: 12px; color: #4a5568; }
-    .brain-summary { font-size: 13px; color: #a0aec0; margin-bottom: 14px; line-height: 1.5; padding: 10px 14px; background: #0f1117; border-radius: 8px; border-left: 3px solid #63b3ed; }
-    .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-    .pick-card { background: #0f1117; border: 1px solid #2d3748; border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.15s; }
+    .brain-meta-bar { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 14px; background: #0f1117; border-radius: 8px; }
+    .brain-meta-item { font-size: 11px; color: #718096; }
+    .brain-meta-item strong { color: #a0aec0; }
+    .brain-summary { font-size: 13px; color: #a0aec0; margin-bottom: 10px; line-height: 1.6; padding: 10px 14px; background: #0f1117; border-radius: 8px; border-left: 3px solid #63b3ed; }
+    .brain-algo-note { font-size: 11px; color: #4a5568; font-style: italic; margin-bottom: 14px; padding-left: 4px; }
+    .sector-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .sector-pill { font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600; }
+    .sector-pill.buy { background: rgba(104,211,145,0.15); color: #68d391; border: 1px solid rgba(104,211,145,0.25); }
+    .sector-pill.avoid { background: rgba(252,129,129,0.15); color: #fc8181; border: 1px solid rgba(252,129,129,0.25); }
+    .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .pick-card { background: #0f1117; border: 1px solid #2d3748; border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.15s; cursor: default; }
     .pick-card:hover { border-color: #4a5568; }
-    .pick-card.bullish  { border-left: 3px solid #68d391; }
-    .pick-card.bearish  { border-left: 3px solid #fc8181; }
-    .pick-card.neutral  { border-left: 3px solid #718096; }
-    .pick-sym  { font-size: 15px; font-weight: 800; color: #e2e8f0; }
-    .pick-co   { font-size: 11px; color: #718096; margin-bottom: 6px; }
-    .pick-reason { font-size: 11px; color: #a0aec0; line-height: 1.5; margin-bottom: 8px; }
+    .pick-card.bullish { border-left: 3px solid #68d391; }
+    .pick-card.bearish { border-left: 3px solid #fc8181; }
+    .pick-card.neutral { border-left: 3px solid #718096; }
+    .pick-rank { position: absolute; top: 10px; left: 14px; font-size: 10px; color: #4a5568; font-weight: 700; }
+    .pick-header { padding-left: 22px; margin-bottom: 4px; }
+    .pick-sym { font-size: 15px; font-weight: 800; color: #e2e8f0; }
+    .pick-co  { font-size: 10px; color: #718096; }
+    .pick-sector { font-size: 10px; color: #4a5568; margin-bottom: 6px; padding-left: 22px; }
+    .pick-reason { font-size: 11px; color: #a0aec0; line-height: 1.5; margin-bottom: 5px; }
+    .pick-detail { font-size: 11px; color: #718096; line-height: 1.5; margin-bottom: 6px; display: none; }
+    .pick-card:hover .pick-detail { display: block; }
+    .pick-intraday { font-size: 10px; color: #63b3ed; margin-bottom: 6px; font-style: italic; }
+    .pick-risk { font-size: 10px; color: #fc8181; margin-bottom: 8px; }
+    .pick-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .pick-tag { font-size: 9px; padding: 2px 6px; background: rgba(99,179,237,0.1); color: #63b3ed; border-radius: 4px; border: 1px solid rgba(99,179,237,0.2); }
     .pick-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
-    .pick-conf { font-size: 11px; color: #f6e05e; letter-spacing: 1px; }
-    .pick-by   { font-size: 10px; color: #4a5568; }
-    .pick-add  { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #2d3748; border-radius: 5px; color: #718096; font-size: 11px; padding: 2px 7px; cursor: pointer; }
+    .pick-conf { font-size: 11px; color: #f6e05e; }
+    .pick-score { font-size: 10px; color: #4a5568; }
+    .pick-by { font-size: 10px; color: #4a5568; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pick-add { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #2d3748; border-radius: 5px; color: #718096; font-size: 11px; padding: 2px 7px; cursor: pointer; }
     .pick-add:hover { border-color: #63b3ed; color: #63b3ed; }
     .pick-add.added { border-color: #68d391; color: #68d391; }
     .brain-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
@@ -142,6 +160,10 @@
     .sentiment-dot.bullish { background: #68d391; }
     .sentiment-dot.bearish { background: #fc8181; }
     .sentiment-dot.neutral  { background: #718096; }
+    .macro-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600; margin-left: 6px; }
+    .macro-badge.low    { background: rgba(104,211,145,0.15); color: #68d391; }
+    .macro-badge.medium { background: rgba(246,224,94,0.15);  color: #f6e05e; }
+    .macro-badge.high   { background: rgba(252,129,129,0.15); color: #fc8181; }
 
     /* SOURCE SELECTOR */
     .source-bar { display: flex; align-items: center; gap: 10px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 10px 18px; }
@@ -736,12 +758,12 @@ async function loadBrain(bust = false) {
 
     _brainLoaded = true;
     const picks = data.picks || [];
-    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} categories · ${data.cached ? 'cached 30min' : 'fresh'}`;
-
-    // Sentiment badge
-    const badge = document.getElementById('brainSentimentBadge');
     const smtColors = { bullish: '#68d391', bearish: '#fc8181', neutral: '#718096' };
     const smt = data.market_sentiment || 'neutral';
+    const macroRisk = data.macro_risk || 'medium';
+    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} sources · ${data.cached ? 'cached 30min' : 'fresh'}`;
+
+    const badge = document.getElementById('brainSentimentBadge');
     badge.style.display = 'inline-block';
     badge.style.background = smtColors[smt] + '22';
     badge.style.color = smtColors[smt];
@@ -749,8 +771,26 @@ async function loadBrain(bust = false) {
     badge.textContent = smt.toUpperCase();
 
     let html = '';
-    if (data.summary) {
-      html += `<div class="brain-summary"><span class="sentiment-dot ${smt}"></span>${data.summary}</div>`;
+    const tb = data.tier_breakdown || {};
+    html += `<div class="brain-meta-bar">
+      <div class="brain-meta-item">📡 <strong>${data.article_count}</strong> signals</div>
+      <div class="brain-meta-item">🏆 Legends: <strong>${tb.tier_1||0}</strong></div>
+      <div class="brain-meta-item">📊 Analysts: <strong>${tb.tier_2||0}</strong></div>
+      <div class="brain-meta-item">📈 Options: <strong>${tb.tier_4||0}</strong></div>
+      <div class="brain-meta-item">🏛 Official: <strong>${tb.tier_5||0}</strong></div>
+      <div class="brain-meta-item">🌍 Macro: <strong>${tb.tier_6||0}</strong>
+        <span class="macro-badge ${macroRisk}">Risk ${macroRisk}</span>
+      </div>
+    </div>`;
+
+    if (data.summary) html += `<div class="brain-summary"><span class="sentiment-dot ${smt}"></span>${data.summary}</div>`;
+    if (data.algo_note) html += `<div class="brain-algo-note">⚡ ${data.algo_note}</div>`;
+
+    if (data.top_sectors?.length || data.avoid_sectors?.length) {
+      html += '<div class="sector-pills"><span style="font-size:10px;color:#4a5568;padding:3px 0">Sectors: </span>';
+      (data.top_sectors || []).forEach(s => html += `<span class="sector-pill buy">↑ ${s}</span>`);
+      (data.avoid_sectors || []).forEach(s => html += `<span class="sector-pill avoid">↓ ${s}</span>`);
+      html += '</div>';
     }
 
     html += '<div class="brain-grid">';
@@ -759,28 +799,38 @@ async function loadBrain(bust = false) {
       const exch = p.exchange || 'NSE';
       const full = `${exch}:${sym}`;
       const inWl = watchlist.includes(full);
-      const byStr = (p.mentioned_by || []).map(h => '@'+h).join(', ') || 'AI-derived';
+      const byStr = (p.mentioned_by || []).join(', ') || 'AI-derived';
+      const tags  = [...(p.reasoning_types || []), ...(p.signal_types || [])].slice(0, 4);
       html += `
       <div class="pick-card ${p.sentiment || 'neutral'}" id="pick-${i}">
+        <span class="pick-rank">#${p.rank || i+1}</span>
         <button class="pick-add ${inWl ? 'added' : ''}" id="pickbtn-${i}"
-          onclick="addPickToWatchlist('${full}','${i}')">${inWl ? '✓ Added' : '+ Watch'}</button>
-        <div class="pick-sym">${sym} <span style="font-size:10px;font-weight:400;color:#718096">${exch}</span></div>
-        <div class="pick-co">${p.company || ''}</div>
-        <div class="pick-reason">${p.reason || ''}</div>
-        <div class="pick-meta">
-          <span class="pick-conf" title="Confidence">${confidenceStars(p.confidence)}</span>
-          <span class="pick-by">${byStr}</span>
+          onclick="addPickToWatchlist('${full}','${i}')">${inWl ? '✓' : '+'}</button>
+        <div class="pick-header">
+          <span class="pick-sym">${sym}</span>
+          <span style="font-size:10px;color:#718096;margin-left:4px">${exch}</span>
+          <div class="pick-co">${p.company || ''}</div>
         </div>
+        <div class="pick-sector">${p.sector || ''}</div>
+        <div class="pick-reason">${p.reason || ''}</div>
+        <div class="pick-detail">${p.detailed_reasoning || ''}</div>
+        ${p.intraday_note ? `<div class="pick-intraday">📍 ${p.intraday_note}</div>` : ''}
+        ${p.key_risk ? `<div class="pick-risk">⚠ ${p.key_risk}</div>` : ''}
+        ${tags.length ? `<div class="pick-tags">${tags.map(t=>`<span class="pick-tag">${t}</span>`).join('')}</div>` : ''}
+        <div class="pick-meta">
+          <span class="pick-conf">${confidenceStars(p.confidence)}</span>
+          <span class="pick-score">score ${(p.score||0).toFixed(1)}</span>
+        </div>
+        <div class="pick-by" title="${byStr}">${byStr}</div>
       </div>`;
     });
     html += '</div>';
 
-    // Bulk add button
-    const notInWl = picks.filter(p => !watchlist.includes(`${p.exchange || 'NSE'}:${p.symbol}`));
+    const notInWl = picks.filter(p => !watchlist.includes(`${p.exchange||'NSE'}:${p.symbol}`));
     if (notInWl.length) {
       html += `<div class="brain-actions">
         <button class="btn-sm btn-ai" onclick="addAllBrainPicks()">+ Add all ${notInWl.length} to watchlist</button>
-        <span style="font-size:11px;color:#4a5568">Picks refresh every 30 min · Not financial advice</span>
+        <span style="font-size:11px;color:#4a5568">Hover a card for full reasoning · Refreshes every 30 min · Not financial advice</span>
       </div>`;
     }
 
@@ -807,8 +857,9 @@ function addAllBrainPicks() {
   cards.forEach((card, i) => {
     const btn = document.getElementById('pickbtn-' + i);
     if (btn && !btn.classList.contains('added')) {
-      const sym = card.querySelector('.pick-sym')?.firstChild?.textContent?.trim();
-      const exch = card.querySelector('.pick-sym span')?.textContent?.trim() || 'NSE';
+      const symEl = card.querySelector('.pick-sym');
+      const sym  = symEl?.firstChild?.textContent?.trim() || symEl?.textContent?.trim();
+      const exch = card.querySelector('.pick-header span[style]')?.textContent?.trim() || 'NSE';
       if (!sym) return;
       const full = `${exch}:${sym}`;
       if (!watchlist.includes(full)) { watchlist.push(full); added++; }

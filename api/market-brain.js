@@ -1,41 +1,85 @@
 /**
- * AI Market Brain — Google News RSS edition
+ * AI Market Brain — Multi-Source Intelligence Engine
  * ─────────────────────────────────────────────────────────────────────────────
- * Searches Google News for recent articles quoting each expert investor,
- * plus general Indian market news. Feeds all text to Groq to extract stock
- * mentions, score sentiment, and return top 10 intraday picks.
- *
- * No API key needed for data fetch — Google News RSS is public.
- * Groq API key required for LLM analysis (GROQ_API_KEY env var).
- *
- * Cache: 30 min in memory. Force refresh with ?bust=1.
+ * Sources: Google News RSS across 6 expert tiers + official exchanges + global macro
+ * Algorithm: 7-factor weighted scoring (credibility × signal × recency × consensus
+ *            × technicals × options flow × global macro alignment)
+ * Cache: 30 min. Force refresh: ?bust=1
  */
 
 export const config = { maxDuration: 30 };
 
-// ── Search queries: one per expert + general market signals ───────────────────
+// ── Source registry — grouped by tier for LLM weighting ──────────────────────
+// Each entry: { label, q (Google News query), tier, category }
+// tier: 1=legend investors, 2=professional analysts, 3=fin-educators,
+//       4=options/derivatives, 5=data/official, 6=global macro
 const SOURCES = [
-  { label: 'Vijay Kedia',       q: '"Vijay Kedia" stock buy portfolio NSE' },
-  { label: 'Basant Maheshwari', q: '"Basant Maheshwari" stock equity recommendation' },
-  { label: 'Ramesh Damani',     q: '"Ramesh Damani" stock picks NSE BSE' },
-  { label: 'Porinju Veliyath',  q: '"Porinju" stock portfolio multibagger' },
-  { label: 'Nilesh Shah',       q: '"Nilesh Shah" stock market India' },
-  { label: 'Sanjay Bakshi',     q: '"Sanjay Bakshi" value investing India stock' },
-  { label: 'Mohnish Pabrai',    q: '"Pabrai" India stock investment' },
-  { label: 'Vishal Khandelwal', q: '"Safal Niveshak" stock analysis India' },
-  { label: 'NSE Momentum',      q: 'NSE BSE breakout momentum stock rally India today' },
-  { label: 'Midcap Picks',      q: 'Indian midcap smallcap stock buy recommendation today' },
+  // ── Tier 1 · Legend investors (weight 1.5×) ───────────────────────────────
+  { label: 'Vijay Kedia',       q: '"Vijay Kedia" stock portfolio NSE buy', tier: 1, cat: 'Legend Investor' },
+  { label: 'Basant Maheshwari', q: '"Basant Maheshwari" equity stock picks NSE', tier: 1, cat: 'Legend Investor' },
+  { label: 'Ramesh Damani',     q: '"Ramesh Damani" NSE stock recommendation', tier: 1, cat: 'Legend Investor' },
+  { label: 'Porinju Veliyath',  q: '"Porinju" stock multibagger portfolio India', tier: 1, cat: 'Legend Investor' },
+  { label: 'Nilesh Shah',       q: '"Nilesh Shah" stock market India', tier: 1, cat: 'Legend Investor' },
+  { label: 'Sanjay Bakshi',     q: '"Sanjay Bakshi" value investing India', tier: 1, cat: 'Legend Investor' },
+  { label: 'Mohnish Pabrai',    q: '"Pabrai" India stock investment', tier: 1, cat: 'Legend Investor' },
+  { label: 'Deepak Shenoy',     q: '"Deepak Shenoy" OR "Capital Mind" stock analysis India', tier: 1, cat: 'Legend Investor' },
+  { label: 'Mitesh Engineer',   q: '"Mitesh Engineer" OR "@Mitesh_Engr" stock buy India', tier: 1, cat: 'Legend Investor' },
+  { label: 'Raoul Pal',         q: '"Raoul Pal" emerging markets India macro', tier: 1, cat: 'Global Macro' },
+
+  // ── Tier 2 · Professional analysts & educators (weight 1.0×) ─────────────
+  { label: 'CA Rachana Ranade', q: '"Rachana Ranade" stock analysis fundamental NSE', tier: 2, cat: 'Analyst' },
+  { label: 'Pranjal Kamra',     q: '"Pranjal Kamra" stock pick India Finology', tier: 2, cat: 'Analyst' },
+  { label: 'Sharan Hegde',      q: '"Sharan Hegde" personal finance India stock', tier: 2, cat: 'Analyst' },
+  { label: 'Ankur Warikoo',     q: '"Ankur Warikoo" invest stock India', tier: 2, cat: 'Educator' },
+  { label: 'Varsity Zerodha',   q: '"Zerodha Varsity" stock market education India', tier: 2, cat: 'Educator' },
+  { label: 'QuantInsti',        q: '"QuantInsti" algorithmic trading India NSE strategy', tier: 2, cat: 'Quant' },
+  { label: 'ValuePickr',        q: 'ValuePickr stock research India fundamental', tier: 2, cat: 'Community' },
+  { label: 'El-Erian',          q: '"El-Erian" OR "Mohamed El Erian" emerging markets India', tier: 2, cat: 'Global Macro' },
+
+  // ── Tier 3 · Stock research community (weight 0.8×) ──────────────────────
+  { label: 'Investyadnya',      q: '"Investyadnya" stock pick India NSE BSE', tier: 3, cat: 'Research' },
+  { label: 'Alpha Ideas',       q: '"Alpha Ideas" OR "AlphaIdeas" stock India NSE', tier: 3, cat: 'Research' },
+  { label: 'StockMarketNerd',   q: '"StockMarketNerd" India stock analysis', tier: 3, cat: 'Research' },
+  { label: 'InvestingDaddy',    q: '"InvestingDaddy" stock India NSE recommendation', tier: 3, cat: 'Research' },
+  { label: 'EquityRush',        q: 'EquityRush India NSE stock momentum', tier: 3, cat: 'Research' },
+  { label: 'TradeSmartLive',    q: '"TradeSmartLive" OR "TradeSmart" India stock trade', tier: 3, cat: 'Research' },
+  { label: 'FundamentalCap',    q: 'Fundamental Capital India stock NSE analysis', tier: 3, cat: 'Research' },
+  { label: 'FI InvestIndia',    q: '"Invest India" FII FDI sector stock news', tier: 3, cat: 'Research' },
+
+  // ── Tier 4 · Options & derivatives (weight 1.1× for intraday) ────────────
+  { label: 'Options Signals',   q: 'Nifty BankNifty options OI unusual activity call put today', tier: 4, cat: 'Options' },
+  { label: 'BankNifty Flow',    q: 'BankNifty options strategy PCR OI today India', tier: 4, cat: 'Options' },
+  { label: 'Derivatives Flow',  q: 'NSE derivatives open interest buildup India stock', tier: 4, cat: 'Options' },
+  { label: 'Volatility',        q: 'India VIX volatility options theta strategy NSE', tier: 4, cat: 'Options' },
+
+  // ── Tier 5 · Official & data sources (weight 1.3×) ───────────────────────
+  { label: 'NSE Official',      q: 'NSE India official announcement stock circuit today', tier: 5, cat: 'Official' },
+  { label: 'BSE Official',      q: 'BSE India official announcement stock result today', tier: 5, cat: 'Official' },
+  { label: 'Stats of India',    q: 'India economic data GDP inflation RBI stock market impact', tier: 5, cat: 'Data' },
+  { label: 'India Data Hub',    q: 'India sector data FII DII flow stock market', tier: 5, cat: 'Data' },
+  { label: 'FII DII Flow',      q: 'FII DII buying selling India stock today NSE BSE', tier: 5, cat: 'Data' },
+
+  // ── Tier 6 · Global macro (weight 0.9× applied as risk filter) ───────────
+  { label: 'Goldman Sachs',     q: '"Goldman Sachs" India emerging markets stock outlook', tier: 6, cat: 'Global Macro' },
+  { label: 'JPMorgan',          q: '"JPMorgan" India stock market emerging markets', tier: 6, cat: 'Global Macro' },
+  { label: 'ZeroHedge',         q: 'ZeroHedge India emerging markets risk macro', tier: 6, cat: 'Global Macro' },
+  { label: 'Global Macro Risk', q: 'US Fed dollar DXY crude oil impact India NSE today', tier: 6, cat: 'Global Macro' },
+
+  // ── Momentum & technicals ─────────────────────────────────────────────────
+  { label: 'NSE Breakout',      q: 'NSE stock 52-week high breakout momentum rally today', tier: 3, cat: 'Technical' },
+  { label: 'Midcap Momentum',   q: 'Indian midcap smallcap stock breakout rally today NSE BSE', tier: 3, cat: 'Technical' },
+  { label: 'Results Season',    q: 'India quarterly results earnings beat stock NSE today', tier: 3, cat: 'Fundamental' },
 ];
 
 const NEWS_BASE = 'https://news.google.com/rss/search';
 
-// ── Fetch + parse Google News RSS ─────────────────────────────────────────────
-async function fetchNewsItems(source, maxItems = 5) {
+// ── Fetch Google News RSS ─────────────────────────────────────────────────────
+async function fetchNewsItems(source, maxItems = 4) {
   const url = `${NEWS_BASE}?q=${encodeURIComponent(source.q)}&hl=en-IN&gl=IN&ceid=IN:en`;
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
-      signal: AbortSignal.timeout(7000),
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return [];
     const xml = await res.text();
@@ -44,45 +88,39 @@ async function fetchNewsItems(source, maxItems = 5) {
     const items = [];
     const itemRe = /<item>([\s\S]*?)<\/item>/g;
     let m;
-
     while ((m = itemRe.exec(xml)) !== null && items.length < maxItems) {
       const block = m[1];
-
       const dateStr = (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1];
       const ts = dateStr ? new Date(dateStr).getTime() : Date.now();
       if (ts < oneWeekAgo) continue;
 
-      const titleRaw   = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '';
-      const descRaw    = (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '';
-      const sourceRaw  = (block.match(/<source[^>]*>(.*?)<\/source>/) || [])[1] || '';
+      const titleRaw = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '';
+      const descRaw  = (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '';
+      const outletRaw= (block.match(/<source[^>]*>(.*?)<\/source>/) || [])[1] || '';
 
-      const clean = (s) => s
-        .replace(/<!\[CDATA\[|\]\]>/g, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-        .replace(/\s+/g, ' ').trim();
+      const clean = s => s
+        .replace(/<!\[CDATA\[|\]\]>/g, '').replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+        .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim();
 
       const title = clean(titleRaw);
       const desc  = clean(descRaw);
       const text  = desc.length > title.length ? `${title}. ${desc}` : title;
 
-      if (text.length > 40) {
-        items.push({
-          source: source.label,
-          outlet: clean(sourceRaw),
-          text,
-          date: new Date(ts).toISOString().slice(0, 10),
-        });
-      }
+      if (text.length > 40) items.push({
+        source: source.label,
+        tier: source.tier,
+        cat: source.cat,
+        outlet: clean(outletRaw),
+        text,
+        daysAgo: Math.round((Date.now() - ts) / 86400000),
+      });
     }
     return items;
-  } catch (_) {
-    return [];
-  }
+  } catch { return []; }
 }
 
-// ── Groq LLM analysis ─────────────────────────────────────────────────────────
+// ── Groq multi-factor analysis ────────────────────────────────────────────────
 async function analyzeWithGroq(articles) {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error('GROQ_API_KEY not set in Vercel environment variables');
@@ -90,52 +128,105 @@ async function analyzeWithGroq(articles) {
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
+  const dayOfWeek = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
-  const articleBlock = articles
-    .map(a => `[${a.source} · ${a.outlet} · ${a.date}]: ${a.text}`)
-    .join('\n\n');
+  const block = articles.map(a =>
+    `[T${a.tier}·${a.cat}·${a.daysAgo}d·${a.source}·${a.outlet}]: ${a.text}`
+  ).join('\n\n');
 
-  const prompt = `You are an expert Indian equity analyst and intraday trader. Today is ${today}.
+  const prompt = `You are the CIO of a top Indian quant hedge fund. Today is ${today} (${dayOfWeek}). Your job is to identify the TOP 10 Indian NSE/BSE stocks with the highest probability of POSITIVE intraday price movement today.
 
-Below are recent news articles and headlines mentioning prominent Indian investors (Vijay Kedia, Basant Maheshwari, Ramesh Damani, Porinju Veliyath, Nilesh Shah, Sanjay Bakshi, Mohnish Pabrai, etc.) and general Indian market momentum signals. These were collected from Google News over the past 7 days.
+You have ${articles.length} intelligence signals below, tagged with:
+- T1=Legend Investors (1.5× weight) · T2=Professional Analysts (1.0×) · T3=Community Research (0.8×)
+- T4=Options/Derivatives (1.1× for intraday) · T5=Official/Data (1.3×) · T6=Global Macro (risk filter)
+- Days-ago field = signal recency (0d=today=1.0×, 1d=0.85×, 2-3d=0.65×, 4-7d=0.4×)
 
-Your task:
-1. Extract all Indian NSE/BSE stock mentions — both ticker symbols (INFY, RELIANCE) and company names
-2. Identify bullish signals: buy calls, target price upgrades, strong results, accumulation news
-3. Identify bearish signals: sell recommendations, downgrades, fraud/regulatory concerns
-4. Rank stocks by: strength of signal + expert credibility + recency
-5. Select TOP 10 stocks most likely to see POSITIVE intraday price movement TODAY
-6. If fewer than 10 are clearly mentioned, infer additional picks from sector/macro themes discussed
+═══════════════════════════════════════════════════════════
+INTELLIGENCE FEED:
+${block}
+═══════════════════════════════════════════════════════════
 
-NEWS ARTICLES (${articles.length} articles from ${[...new Set(articles.map(a => a.source))].length} search categories):
-────────────────────────────────────────
-${articleBlock}
-────────────────────────────────────────
+ALGORITHM — apply ALL 7 factors for each stock candidate:
 
-Return ONLY valid JSON — no markdown, no explanation outside the JSON:
+FACTOR 1 · EXPERT CREDIBILITY (use tier weights above)
+  Score each mention by the source tier and multiply.
+
+FACTOR 2 · SIGNAL STRENGTH
+  Explicit buy/accumulate: +5 | Price target raised: +4 | Earnings beat/strong results: +4
+  Technical breakout (52wk high, volume surge): +3 | Sector rotation inflow: +3
+  Unusual options activity / high OI buildup: +4 | FII/DII net buying: +3
+  Analyst upgrade: +3 | General mention/bullish commentary: +1
+
+FACTOR 3 · RECENCY DECAY
+  Apply: 0d=1.0 · 1d=0.85 · 2-3d=0.65 · 4-7d=0.4 multiplier to raw score.
+
+FACTOR 4 · CONSENSUS MULTIPLIER
+  1 expert=1× · 2 experts=1.8× · 3=3× · 4+=5×
+  Cross-tier consensus (T1 + T4 options signal on same stock) = extra 1.5× bonus.
+
+FACTOR 5 · TECHNICAL & OPTIONS OVERLAY
+  If options signals (T4) show high PCR, unusual call buying, max pain above CMP → +2
+  If stock near 52-week high breakout → +2 · If stock in oversold bounce zone → +1
+  High delivery % + volume surge → +2
+
+FACTOR 6 · GLOBAL MACRO FILTER (T6 signals)
+  If global risk-off (DXY up, crude spike, US yields spiking): penalise rate-sensitive (IT, NBFCs) by 0.7×
+  If risk-on (global rally, FII inflows): boost export IT, metals, pharma by 1.2×
+  If crude oil rising: boost energy/OMC but penalise aviation/paint cos.
+  Apply this as a sector-level multiplier to all individual scores.
+
+FACTOR 7 · INTRADAY TIMING FIT
+  ${dayOfWeek === 'Monday' ? 'MONDAY: favour gap-up plays, weekend news catalysts, short covering candidates.' : ''}
+  ${dayOfWeek === 'Friday' ? 'FRIDAY: avoid illiquid mid/smallcaps, favour large-cap defensive — weekend risk.' : ''}
+  Prefer high-liquidity large/midcap for confidence≥4; smallcap only for confidence≤2.
+  Expiry week (Thu): boost stocks with high options OI as max pain targets.
+
+FINAL SCORE = (CredibilityWeight × SignalStrength × RecencyDecay × ConsensusMultiplier × MacroFilter × TimingFit)
+
+REASONING TYPES TO APPLY FOR EACH PICK:
+  a) Fundamental: earnings quality, revenue growth, promoter holding
+  b) Technical: price action, volume, moving averages, breakout levels
+  c) Sentiment: expert conviction, social consensus, news momentum
+  d) Quantitative: OI data, PCR, FII/DII flows, delivery percentage
+  e) Macro: sector tailwinds, currency impact, global peer moves
+  f) Contrarian: oversold quality stocks, negative news overreaction
+
+Return ONLY valid JSON — no markdown, no text outside the JSON object:
+
 {
   "picks": [
     {
+      "rank": 1,
       "symbol": "RELIANCE",
       "exchange": "NSE",
       "company": "Reliance Industries Ltd",
+      "sector": "Energy / Telecom",
       "sentiment": "bullish",
-      "confidence": 4,
-      "reason": "One crisp sentence citing the news signal",
-      "mentioned_by": ["Basant Maheshwari", "Ramesh Damani"]
+      "confidence": 5,
+      "score": 42.5,
+      "reasoning_types": ["Fundamental", "Sentiment", "Technical"],
+      "reason": "One crisp sentence with the primary signal",
+      "detailed_reasoning": "2-3 sentence breakdown covering signal source, factor scores, and why intraday upside is likely",
+      "key_risk": "One sentence: what could invalidate this pick today",
+      "mentioned_by": ["Basant Maheshwari", "Deepak Shenoy"],
+      "signal_types": ["Earnings Beat", "FII Buying"],
+      "intraday_note": "Watch for breakout above 2950; stop-loss at 2890"
     }
   ],
   "market_sentiment": "bullish",
-  "summary": "One sentence overall Indian market mood based on these articles"
+  "macro_risk": "low",
+  "top_sectors": ["Banking", "IT", "Energy"],
+  "avoid_sectors": ["Aviation"],
+  "summary": "Two sentences: overall market mood + key macro theme driving today's picks",
+  "algo_note": "One sentence on which factor dominated today's selection"
 }
 
 Rules:
-- confidence: integer 1–5 (5 = multiple experts + strong signal; 1 = single weak mention)
-- sentiment: "bullish" | "bearish" | "neutral"
-- market_sentiment: "bullish" | "bearish" | "neutral"
-- mentioned_by: list of expert names (empty [] if derived from sector theme)
-- Return exactly 10 picks sorted by confidence descending
-- Only include stocks listed on NSE or BSE`;
+- Return exactly 10 picks sorted by score descending (rank 1=highest score)
+- confidence: 1–5 integer · score: float (raw algorithm output)
+- macro_risk: "low" | "medium" | "high"
+- Only NSE/BSE listed Indian stocks
+- If fewer than 10 are explicitly signalled, infer additional from sector/macro themes — mark intraday_note as "Thematic — no explicit signal"`;
 
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -143,22 +234,17 @@ Rules:
     body: JSON.stringify({
       model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2,
-      max_tokens: 2500,
+      temperature: 0.15,
+      max_tokens: 4000,
     }),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq error ${res.status}: ${err.slice(0, 200)}`);
-  }
-
+  if (!res.ok) throw new Error(`Groq error ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   const content = (data.choices?.[0]?.message?.content || '').trim();
 
-  try {
-    return JSON.parse(content);
-  } catch {
+  try { return JSON.parse(content); }
+  catch {
     const match = content.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
     throw new Error('LLM returned non-JSON: ' + content.slice(0, 300));
@@ -182,14 +268,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch all search categories in parallel
-    const allResults = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 5)));
-    const articles = allResults.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+    // Fetch all source categories in parallel, max 4 items each
+    const results = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 4)));
+    const articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 
     if (articles.length === 0) {
       return res.status(503).json({
-        error: 'Could not fetch any news articles. Check network connectivity.',
-        tip: 'Google News RSS may be temporarily unavailable.',
+        error: 'No news articles fetched. Google News RSS may be temporarily unavailable.',
+        tip: 'Try again in a few minutes.',
       });
     }
 
@@ -199,13 +285,15 @@ export default async function handler(req, res) {
       ...analysis,
       article_count: articles.length,
       sources_fetched: [...new Set(articles.map(a => a.source))],
+      tier_breakdown: Object.fromEntries(
+        [1,2,3,4,5,6].map(t => [`tier_${t}`, articles.filter(a => a.tier === t).length])
+      ),
       generated_at: new Date().toISOString(),
       cached: false,
     };
 
     _cache = result;
     _cacheAt = Date.now();
-
     res.status(200).json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
