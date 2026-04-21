@@ -1,0 +1,17 @@
+{
+  "name": "research-desk",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "concurrently --names \"server,tunnel\" --prefix-colors \"cyan,yellow\" \"node server.js\" \"npx cloudflared tunnel --url http://localhost:7432\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^17.4.2",
+    "groq-sdk": "^1.1.2",
+    "openai": "^6.34.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

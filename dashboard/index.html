@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portfolio — Consolidated Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: linear-gradient(135deg, #1a1f2e, #232840); padding: 32px 40px; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 24px; font-weight: 700; color: #fff; }
+    header p { color: #718096; margin-top: 4px; font-size: 14px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 40px; }
+
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .card .label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .card .delta { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .red { color: #fc8181; } .green { color: #68d391; } .white { color: #fff; } .muted { color: #718096; }
+
+    .section { margin-bottom: 36px; }
+    .section h2 { font-size: 16px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #2d3748; }
+
+    .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 32px; }
+    .chart-box { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .chart-box h3 { font-size: 13px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+
+    /* History Table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 14px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #2d3748; }
+    td { padding: 12px 14px; border-bottom: 1px solid #1e2535; }
+    tr:hover td { background: #1e2535; }
+    a.report-link { color: #63b3ed; text-decoration: none; font-size: 12px; }
+    a.report-link:hover { text-decoration: underline; }
+
+    /* Stock comparison */
+    .stock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stock-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; padding: 14px; }
+    .stock-card .sym { font-weight: 600; font-size: 14px; color: #fff; }
+    .stock-card .pnl { font-size: 13px; margin-top: 4px; }
+    .stock-card .change { font-size: 11px; color: #718096; margin-top: 2px; }
+    .trend-up::before { content: '▲ '; color: #68d391; }
+    .trend-down::before { content: '▼ '; color: #fc8181; }
+    .trend-flat::before { content: '— '; color: #718096; }
+
+    footer { text-align: center; padding: 24px; color: #4a5568; font-size: 12px; border-top: 1px solid #2d3748; margin-top: 16px; }
+
+    /* Quick Analyze Bar */
+    .quick-analyze { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 14px 40px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .quick-analyze label { font-size: 13px; color: #a0aec0; font-weight: 600; white-space: nowrap; }
+    .qa-wrap { position: relative; flex: 1; max-width: 480px; min-width: 180px; }
+    .qa-wrap input { width: 100%; padding: 9px 14px; background: #0f1117; border: 1.5px solid #2d3748; border-radius: 8px; color: #e2e8f0; font-size: 14px; font-family: 'Segoe UI', sans-serif; outline: none; }
+    .qa-wrap input:focus { border-color: #C9A84C; }
+    .qa-sugg { position: absolute; top: 100%; left: 0; right: 0; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; margin-top: 4px; z-index: 200; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); overflow: hidden; }
+    .qa-sugg.visible { display: block; }
+    .qa-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+    .qa-item:last-child { border-bottom: none; }
+    .qa-item:hover { background: #232840; }
+    .qa-sym { font-size: 13px; font-weight: 700; color: #fff; }
+    .qa-name { font-size: 11px; color: #718096; margin-top: 2px; }
+    .qa-pct { font-size: 11px; color: #C9A84C; font-weight: 600; }
+    .qa-btn { padding: 9px 20px; background: #C9A84C; color: #1a1f2e; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .qa-btn:hover { background: #E8C97A; }
+    .qa-error { font-size: 12px; color: #fc8181; margin-top: 6px; display: none; }
+
+    /* Top Nav */
+    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
+
+    @media (max-width: 640px) {
+      .topnav { padding: 0 16px; }
+      .topnav-links { gap: 16px; }
+      .quick-analyze { padding: 12px 16px; }
+      .qa-wrap { max-width: 100%; }
+      header { padding: 20px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+      .container { padding: 16px; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .stock-grid { grid-template-columns: repeat(2, 1fr); }
+      .section { overflow-x: auto; }
+      table { min-width: 480px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/" class="active">Dashboard</a>
+    <a href="/alpha">Alpha Finder</a>
+    <a href="/research.html">Research Desk</a>
+  </div>
+</nav>
+
+<header>
+  <div>
+    <h1>📈 Consolidated Portfolio Report</h1>
+    <p>Day-on-day tracking · Zerodha Kite via Claude MCP</p>
+  </div>
+  <div style="display:flex;gap:20px;align-items:center;">
+    <span style="font-size:13px; color:#718096;">Updated: <strong style="color:#e2e8f0">21 Apr 2026</strong></span>
+  </div>
+</header>
+
+<!-- QUICK ANALYZE BAR -->
+<div class="quick-analyze">
+  <label>⚡ Quick Analyze:</label>
+  <div class="qa-wrap">
+    <input type="text" id="qaInput" placeholder="Type any stock e.g. Zomato, HDFC Bank, Reliance..."
+      oninput="qaOnInput(this.value)" onkeydown="qaOnKeydown(event)" autocomplete="off"/>
+    <div class="qa-sugg" id="qaSugg"></div>
+  </div>
+  <button class="qa-btn" onclick="qaAnalyze()">Analyze →</button>
+  <div class="qa-error" id="qaError"></div>
+</div>
+
+<!-- ANALYZE RESULT PANEL -->
+<div id="qaResultPanel" style="display:none; background:#1a1f2e; border-bottom:1px solid #2d3748; padding:20px 40px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <span style="font-size:13px;color:#a0aec0;font-weight:600;">QUICK ANALYSIS</span>
+    <button onclick="document.getElementById('qaResultPanel').style.display='none'"
+      style="background:none;border:1px solid #2d3748;color:#718096;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;">✕ Close</button>
+  </div>
+  <div id="qaResult"></div>
+</div>
+
+<div class="container">
+
+  <!-- Latest Summary -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Total Invested</div>
+      <div class="value white">₹6,24,347</div>
+      <div class="delta muted">Across 18 holdings</div>
+    </div>
+    <div class="card">
+      <div class="label">Current Value</div>
+      <div class="value white">₹5,87,180</div>
+      <div class="delta green">▲ ₹85,074 vs Apr 15</div>
+    </div>
+    <div class="card">
+      <div class="label">Total P&L</div>
+      <div class="value red">-₹37,167</div>
+      <div class="delta red">-5.95% overall</div>
+    </div>
+    <div class="card">
+      <div class="label">Days Tracked</div>
+      <div class="value white">3</div>
+      <div class="delta muted">Since 7 Apr 2026</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-box">
+      <h3>Portfolio Value Over Time</h3>
+      <canvas id="valueChart" height="120"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Sector Allocation</h3>
+      <canvas id="sectorChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- Day-on-Day History -->
+  <div class="section">
+    <h2>Daily Snapshot History</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Invested</th>
+          <th>Value</th>
+          <th>P&L</th>
+          <th>Return</th>
+          <th>Day Change</th>
+          <th>Report</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable">
+        <tr>
+          <td><strong>21 Apr 2026</strong> <span style="font-size:11px;color:#68d391;margin-left:4px;">● Latest</span></td>
+          <td>₹6,24,347</td>
+          <td>₹5,87,180</td>
+          <td class="red">-₹37,167</td>
+          <td class="red">-5.95%</td>
+          <td class="green">▲ +₹85,074</td>
+          <td><a class="report-link" href="/reports/daily/2026-04-21.html">View →</a></td>
+        </tr>
+        <tr>
+          <td><strong>15 Apr 2026</strong></td>
+          <td>₹5,64,037</td>
+          <td>₹5,02,106</td>
+          <td class="red">-₹61,931</td>
+          <td class="red">-10.98%</td>
+          <td class="green">▲ +₹20,609</td>
+          <td><a class="report-link" href="/reports/daily/2026-04-15.html">View →</a></td>
+        </tr>
+        <tr>
+          <td><strong>7 Apr 2026</strong></td>
+          <td>₹5,64,038</td>
+          <td>₹4,81,497</td>
+          <td class="red">-₹82,541</td>
+          <td class="red">-14.63%</td>
+          <td class="muted">— (Day 1)</td>
+          <td><a class="report-link" href="/reports/daily/2026-04-07.html">View →</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Stock-level Day-on-Day -->
+  <div class="section">
+    <h2>Stock Performance — 21 Apr 2026</h2>
+    <div class="stock-grid">
+      <div class="stock-card">
+        <div class="sym">AARTIIND</div>
+        <div class="pnl red">-₹5,037 (-24.2%)</div>
+        <div class="change trend-up">Day: +1.24%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">ATGL</div>
+        <div class="pnl red">-₹13,705 (-19.7%)</div>
+        <div class="change trend-down">Day: -0.92%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">BANKINDIA</div>
+        <div class="pnl green">+₹9,392 (+21.8%)</div>
+        <div class="change trend-up">Day: +0.98%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">BHEL</div>
+        <div class="pnl green">+₹3,509 (+14.4%)</div>
+        <div class="change trend-up">Day: +2.14%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">HDFCSENSEX</div>
+        <div class="pnl green">+₹1,771 (+5.9%)</div>
+        <div class="change trend-up">Day: +0.86%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">ICICIPRULI</div>
+        <div class="pnl red">-₹3,340 (-22.4%)</div>
+        <div class="change trend-down">Day: -1.40%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">IREDA</div>
+        <div class="pnl red">-₹552 (-3.0%)</div>
+        <div class="change trend-down">Day: -0.98%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">ITC</div>
+        <div class="pnl red">-₹7,898 (-18.8%)</div>
+        <div class="change trend-up">Day: +1.52%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">ITCHOTELS</div>
+        <div class="pnl red">-₹3,711 (-27.3%)</div>
+        <div class="change trend-up">Day: +1.66%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">MAHLIFE</div>
+        <div class="pnl red">-₹9,315 (-46.6%)</div>
+        <div class="change trend-up">Day: +1.00%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">MAZDOCK</div>
+        <div class="pnl green">+₹416 (+1.6%)</div>
+        <div class="change trend-up">Day: +1.35%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">NBCC</div>
+        <div class="pnl red">-₹4,884 (-18.5%)</div>
+        <div class="change trend-flat">Day: -0.04%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">NMDC</div>
+        <div class="pnl green">+₹9,241 (+18.8%)</div>
+        <div class="change trend-down">Day: -0.48%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">NTPC</div>
+        <div class="pnl green">+₹4,876 (+15.8%)</div>
+        <div class="change trend-down">Day: -0.45%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">PARADEEP</div>
+        <div class="pnl green">+₹5,566 (+53.4%)</div>
+        <div class="change trend-up">Day: +4.06%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">RVNL</div>
+        <div class="pnl red">-₹12,450 (-36.7%)</div>
+        <div class="change trend-up">Day: +0.85%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">SILVERBEES</div>
+        <div class="pnl green">+₹572 (+0.6%)</div>
+        <div class="change trend-up">Day: +0.06%</div>
+      </div>
+      <div class="stock-card">
+        <div class="sym">SUPRAJIT</div>
+        <div class="pnl red">-₹11,619 (-23.2%)</div>
+        <div class="change trend-up">Day: +1.86%</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Auto-generated daily via Claude + Zerodha Kite MCP · Data from Kite Connect API
+</footer>
+
+<script>
+  // Portfolio Value Chart
+  const valueCtx = document.getElementById('valueChart').getContext('2d');
+  new Chart(valueCtx, {
+    type: 'line',
+    data: {
+      labels: ['7 Apr', '15 Apr', '21 Apr'],
+      datasets: [
+        {
+          label: 'Invested',
+          data: [564038, 564037, 624347],
+          borderColor: '#63b3ed',
+          backgroundColor: 'rgba(99,179,237,0.1)',
+          borderWidth: 2,
+          pointRadius: 5,
+          tension: 0.3
+        },
+        {
+          label: 'Current Value',
+          data: [481497, 502106, 587180],
+          borderColor: '#68d391',
+          backgroundColor: 'rgba(104,211,145,0.1)',
+          borderWidth: 2,
+          pointRadius: 5,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#a0aec0', font: { size: 12 } } } },
+      scales: {
+        x: { ticks: { color: '#718096' }, grid: { color: '#1e2535' } },
+        y: { ticks: { color: '#718096', callback: v => '₹' + (v/1000).toFixed(0) + 'K' }, grid: { color: '#1e2535' } }
+      }
+    }
+  });
+
+  // Sector Pie Chart
+  const sectorCtx = document.getElementById('sectorChart').getContext('2d');
+  new Chart(sectorCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Commodities/ETF', 'PSU/Infra', 'Energy/Gas', 'Industrials', 'FMCG/Hotels', 'Defence', 'Fertilizers', 'Chemicals', 'Real Estate', 'Insurance'],
+      datasets: [{
+        data: [33, 27, 13, 7, 7, 5, 3, 3, 2, 2],
+        backgroundColor: ['#63b3ed','#f6e05e','#b794f4','#68d391','#fc8181','#667eea','#9ae6b4','#f6ad55','#76e4f7','#fbd38d'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#a0aec0', font: { size: 11 }, padding: 8, boxWidth: 12 } }
+      }
+    }
+  });
+</script>
+
+<script>
+  // ── QUICK ANALYZE ─────────────────────────────────────────────
+  let _qaTimer = null;
+
+  function qaOnInput(val) {
+    clearTimeout(_qaTimer);
+    const sugg = document.getElementById('qaSugg');
+    if (val.trim().length < 2) { sugg.classList.remove('visible'); return; }
+    _qaTimer = setTimeout(() => qaFetchSugg(val.trim()), 350);
+  }
+
+  function qaOnKeydown(e) {
+    if (e.key === 'Enter') { document.getElementById('qaSugg').classList.remove('visible'); qaAnalyze(); }
+    if (e.key === 'Escape') { document.getElementById('qaSugg').classList.remove('visible'); }
+  }
+
+  async function qaFetchSugg(query) {
+    try {
+      const res = await fetch('/symbol-search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      const data = await res.json();
+      qaRenderSugg(data.suggestions || []);
+    } catch(e) {}
+  }
+
+  function qaRenderSugg(items) {
+    const sugg = document.getElementById('qaSugg');
+    if (!items.length) { sugg.classList.remove('visible'); return; }
+    sugg.innerHTML = items.map(s => `
+      <div class="qa-item" onclick="qaSelect('${s.symbol}', '${(s.name||'').replace(/'/g,'')}')">
+        <div>
+          <div class="qa-sym">${s.symbol}</div>
+          <div class="qa-name">${s.name || ''}${s.sector ? ' · ' + s.sector : ''}</div>
+        </div>
+        <span class="qa-pct">${s.score}%</span>
+      </div>`).join('');
+    sugg.classList.add('visible');
+  }
+
+  function qaSelect(symbol, name) {
+    document.getElementById('qaInput').value = symbol;
+    document.getElementById('qaSugg').classList.remove('visible');
+    qaAnalyze();
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.qa-wrap')) document.getElementById('qaSugg').classList.remove('visible');
+  });
+
+  async function qaAnalyze() {
+    const company = document.getElementById('qaInput').value.trim();
+    const errEl = document.getElementById('qaError');
+    const btn = document.querySelector('.qa-btn');
+    if (!company) return;
+
+    btn.textContent = 'Analyzing...';
+    btn.disabled = true;
+    errEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company })
+      });
+      const d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error || 'Server error');
+      qaRenderResult(d);
+      document.getElementById('qaInput').value = '';
+    } catch(e) {
+      errEl.textContent = e.message.includes('fetch') ? 'Server not running on port 7432' : e.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.textContent = 'Analyze →';
+      btn.disabled = false;
+    }
+  }
+
+  function qaRenderResult(d) {
+    const r = d.ratios || {};
+    const scoreColor = d.aiScore >= 70 ? '#68d391' : d.aiScore >= 55 ? '#C9A84C' : '#fc8181';
+    const verdictColor = { Buy:'#68d391', Hold:'#C9A84C', Sell:'#fc8181', Review:'#fc8181' }[d.verdict] || '#C9A84C';
+    const bull = (d.bullCase||[]).map(b=>`<li style="margin-bottom:4px">▲ ${b}</li>`).join('');
+    const bear = (d.bearCase||[]).map(b=>`<li style="margin-bottom:4px">▼ ${b}</li>`).join('');
+
+    document.getElementById('qaResult').innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="font-size:22px;font-weight:700;color:#fff">${d.symbol}</div>
+        <div style="font-size:13px;color:#718096">${d.name || ''}</div>
+        <div style="padding:3px 10px;background:#232840;border-radius:12px;font-size:11px;color:#C9A84C">${d.sector||''}</div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:28px;font-weight:700;color:${scoreColor};line-height:1">${d.aiScore}</div>
+          <div style="font-size:10px;color:#718096;letter-spacing:0.06em">AI SCORE</div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:${verdictColor}">${d.verdict}</div>
+      </div>
+      <div style="font-size:13px;color:#a0aec0;margin-bottom:14px;line-height:1.6">${d.summary||''}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div style="background:#0f1117;border-radius:8px;padding:12px;">
+          <div style="font-size:10px;font-weight:700;color:#68d391;letter-spacing:0.08em;margin-bottom:8px">BULL CASE</div>
+          <ul style="list-style:none;font-size:12px;color:#a0aec0;line-height:1.5">${bull}</ul>
+        </div>
+        <div style="background:#0f1117;border-radius:8px;padding:12px;">
+          <div style="font-size:10px;font-weight:700;color:#fc8181;letter-spacing:0.08em;margin-bottom:8px">BEAR CASE</div>
+          <ul style="list-style:none;font-size:12px;color:#a0aec0;line-height:1.5">${bear}</ul>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${[['PE',r.pe],['ROE',r.roe+'%'],['ROCE',r.roce+'%'],['D/E',r.debtEquity],['Div',r.dividendYield+'%']].map(([k,v])=>`
+        <span style="padding:5px 12px;background:#0f1117;border:1px solid #2d3748;border-radius:20px;font-size:11px;color:#a0aec0">
+          ${k} <strong style="color:#fff">${v??'—'}</strong></span>`).join('')}
+      </div>`;
+
+    document.getElementById('qaResultPanel').style.display = 'block';
+    document.getElementById('qaResultPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
+
+</body>
+</html>

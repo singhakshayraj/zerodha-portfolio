@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Research Desk — Portfolio Intelligence</title>
+  <style>
+    :root {
+      --gold: #C9A84C;
+      --gold-light: #E8C97A;
+      --gold-pale: #FDF6E3;
+      --gold-border: #E8D5A3;
+      --white: #FFFFFF;
+      --off-white: #FAFAF8;
+      --text-primary: #1A1A1A;
+      --text-secondary: #555555;
+      --text-muted: #999999;
+      --green: #2E7D32;
+      --green-bg: #F1F8F1;
+      --red: #C62828;
+      --red-bg: #FDF1F1;
+      --border: #EEEBE3;
+      --shadow: 0 2px 20px rgba(0,0,0,0.06);
+      --shadow-hover: 0 8px 40px rgba(201,168,76,0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Georgia', serif; background: var(--off-white); color: var(--text-primary); }
+
+    /* NAV */
+    nav { background: var(--white); border-bottom: 1px solid var(--gold-border); padding: 0 48px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-brand .logo { width: 32px; height: 32px; background: var(--gold); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .nav-brand h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-primary); }
+    .nav-brand span { font-size: 11px; color: var(--gold); font-family: 'Segoe UI', sans-serif; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-top: -2px; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { font-family: 'Segoe UI', sans-serif; font-size: 13px; color: var(--text-muted); text-decoration: none; letter-spacing: 0.03em; transition: color 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: var(--gold); }
+    .nav-right { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-muted); }
+
+    /* HERO SEARCH */
+    .hero { background: var(--white); border-bottom: 1px solid var(--border); padding: 48px 48px 36px; }
+    .hero h2 { font-size: 28px; font-weight: 400; color: var(--text-primary); letter-spacing: -0.01em; }
+    .hero h2 span { color: var(--gold); }
+    .hero p { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+    .search-bar { display: flex; gap: 12px; margin-top: 24px; max-width: 600px; }
+    .search-bar input { flex: 1; padding: 12px 18px; border: 1.5px solid var(--gold-border); border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 14px; background: var(--off-white); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+    .search-bar input:focus { border-color: var(--gold); background: var(--white); }
+    .search-bar button { padding: 12px 24px; background: var(--gold); color: var(--white); border: none; border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
+    .search-bar button:hover { background: #B8913A; }
+
+    /* FILTERS */
+    .filters { padding: 20px 48px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); background: var(--white); }
+    .filter-label { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-muted); margin-right: 4px; }
+    .filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-secondary); background: var(--white); cursor: pointer; transition: all 0.2s; }
+    .filter-btn:hover, .filter-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-pale); }
+
+    /* MAIN GRID */
+    .container { max-width: 1400px; margin: 0 auto; padding: 36px 48px; }
+    .section-title { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 20px; }
+    .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
+
+    /* STOCK CARD */
+    .stock-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.25s; cursor: pointer; }
+    .stock-card:hover { border-color: var(--gold-border); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+    .stock-card.expanded { grid-column: 1 / -1; }
+
+    .card-header { padding: 20px 24px 16px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); }
+    .card-header-left { display: flex; flex-direction: column; gap: 4px; }
+    .stock-symbol { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
+    .stock-name { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-muted); }
+    .stock-sector { display: inline-block; padding: 3px 10px; background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: 12px; font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--gold); margin-top: 2px; }
+    .card-header-right { text-align: right; }
+    .ai-score { font-size: 32px; font-weight: 700; line-height: 1; }
+    .ai-score-label { font-family: 'Segoe UI', sans-serif; font-size: 10px; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+    .score-high { color: var(--green); }
+    .score-mid { color: var(--gold); }
+    .score-low { color: var(--red); }
+
+    /* PORTFOLIO BADGE */
+    .portfolio-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+    .badge-held { background: var(--green-bg); color: var(--green); border: 1px solid #C8E6C9; }
+    .badge-not-held { background: var(--off-white); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* CARD BODY */
+    .card-body { padding: 18px 24px; }
+    .card-summary { font-family: 'Segoe UI', sans-serif; font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+
+    /* BULL BEAR */
+    .bull-bear { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .bull-box, .bear-box { padding: 12px 14px; border-radius: 8px; }
+    .bull-box { background: var(--green-bg); border: 1px solid #C8E6C9; }
+    .bear-box { background: var(--red-bg); border: 1px solid #FFCDD2; }
+    .bb-title { font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+    .bull-box .bb-title { color: var(--green); }
+    .bear-box .bb-title { color: var(--red); }
+    .bb-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .bb-list li { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-secondary); padding-left: 14px; position: relative; line-height: 1.4; }
+    .bull-box .bb-list li::before { content: '↑'; position: absolute; left: 0; color: var(--green); font-size: 10px; top: 1px; }
+    .bear-box .bb-list li::before { content: '↓'; position: absolute; left: 0; color: var(--red); font-size: 10px; top: 1px; }
+
+    /* RATIOS */
+    .ratios { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .ratio-pill { padding: 5px 12px; background: var(--off-white); border: 1px solid var(--border); border-radius: 20px; font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--text-secondary); }
+    .ratio-pill span { color: var(--text-primary); font-weight: 600; }
+
+    /* RED FLAGS */
+    .red-flags { background: var(--red-bg); border: 1px solid #FFCDD2; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+    .red-flags-title { font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+    .red-flags ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .red-flags ul li { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-secondary); padding-left: 14px; position: relative; }
+    .red-flags ul li::before { content: '⚠'; position: absolute; left: 0; font-size: 9px; top: 1px; }
+
+    /* PORTFOLIO CONTEXT */
+    .portfolio-context { background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: 8px; padding: 12px 14px; }
+    .portfolio-context-title { font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+    .portfolio-context p { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .portfolio-context .pnl-line { font-weight: 600; margin-top: 4px; font-size: 13px; }
+
+    /* VERDICT */
+    .verdict { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-top: 1px solid var(--border); background: var(--off-white); }
+    .verdict-label { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+    .verdict-text { font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; }
+    .verdict-hold { color: var(--gold); }
+    .verdict-buy { color: var(--green); }
+    .verdict-review { color: var(--red); }
+    .verdict-profit { color: #1565C0; }
+
+    /* EXPAND TOGGLE */
+    .expand-btn { margin-left: auto; padding: 5px 12px; background: none; border: 1px solid var(--border); border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+    .expand-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* HIDDEN content */
+    .card-details { display: none; padding: 0 24px 20px; border-top: 1px solid var(--border); margin-top: 4px; }
+    .card-details.visible { display: block; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px; }
+    .detail-block h4 { font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+    .detail-block p { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+
+    /* SUMMARY BAR */
+    .summary-bar { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px 24px; margin-bottom: 28px; display: flex; gap: 32px; align-items: center; }
+    .summary-item { font-family: 'Segoe UI', sans-serif; }
+    .summary-item .s-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .summary-item .s-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .divider { width: 1px; height: 36px; background: var(--border); }
+
+    footer { text-align: center; padding: 24px; font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 16px; }
+    footer a { color: var(--gold); text-decoration: none; }
+
+    /* ── MOBILE RESPONSIVE ────────────────────────────────────── */
+    @media (max-width: 640px) {
+      /* Nav */
+      nav { padding: 0 16px; height: auto; flex-wrap: wrap; gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+      .nav-right { display: none; }
+      .nav-links { gap: 16px; }
+      .nav-links a { font-size: 12px; }
+
+      /* Hero */
+      .hero { padding: 24px 16px 20px; }
+      .hero h2 { font-size: 20px; }
+      .search-bar { flex-direction: column; gap: 8px; }
+      .search-bar button { width: 100%; }
+
+      /* Kite bar */
+      .kite-bar { padding: 10px 16px; flex-wrap: wrap; gap: 8px; top: 0; position: relative; }
+      .kite-bar input { max-width: 100%; width: 100%; }
+      .kite-bar .kite-toggle { margin-left: 0; }
+
+      /* Filters */
+      .filters { padding: 12px 16px; flex-wrap: wrap; gap: 6px; overflow-x: auto; }
+
+      /* Container & grid */
+      .container { padding: 16px; }
+      .stock-grid { grid-template-columns: 1fr; gap: 14px; }
+
+      /* Summary bar */
+      .summary-bar { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+      .summary-item .s-value { font-size: 16px; }
+      .divider { display: none; }
+
+      /* Card */
+      .card-header { padding: 14px 16px 12px; }
+      .card-body { padding: 14px 16px; }
+      .bull-bear { grid-template-columns: 1fr; gap: 8px; }
+      .details-grid { grid-template-columns: 1fr; }
+
+      /* Verdict + trade row */
+      .verdict { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+      .trade-row { width: 100%; justify-content: flex-start; }
+      .qty-input { width: 56px; }
+      .buy-btn, .sell-btn { flex: 1; padding: 8px 0; font-size: 13px; }
+      .expand-btn { margin-left: auto; }
+
+      /* Modal */
+      .modal { padding: 20px 18px; }
+
+      /* Toast */
+      .toast { left: 16px; right: 16px; bottom: 16px; }
+    }
+
+    /* SUGGESTIONS DROPDOWN */
+    .suggest-wrap { position: relative; flex: 1; }
+    .suggest-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1.5px solid var(--gold-border); border-radius: 8px; margin-top: 4px; z-index: 200; overflow: hidden; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+    .suggest-list.visible { display: block; }
+    .suggest-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .suggest-item:last-child { border-bottom: none; }
+    .suggest-item:hover { background: var(--gold-pale); }
+    .suggest-sym { font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .suggest-name { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .suggest-match { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--gold); font-weight: 600; }
+
+    /* KITE SESSION BAR */
+    .kite-bar { background: #1a1a2e; border-bottom: 2px solid var(--gold); padding: 10px 48px; display: flex; align-items: center; gap: 12px; position: sticky; top: 64px; z-index: 99; }
+    .kite-bar label { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; }
+    .kite-bar input { flex: 1; max-width: 480px; padding: 7px 14px; background: #0d0d1a; border: 1px solid #333; border-radius: 6px; font-family: monospace; font-size: 12px; color: #ccc; outline: none; }
+    .kite-bar input:focus { border-color: var(--gold); }
+    .kite-bar .kite-status { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin-left: 8px; }
+    .kite-bar .kite-save-btn { padding: 7px 16px; background: var(--gold); color: #1a1a2e; border: none; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .kite-bar .kite-save-btn:hover { background: var(--gold-light); }
+    .kite-bar .kite-toggle { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: #888; cursor: pointer; margin-left: auto; text-decoration: underline; }
+
+    /* TRADE ROW */
+    .trade-row { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .qty-input { width: 64px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; text-align: center; outline: none; }
+    .qty-input:focus { border-color: var(--gold); }
+    .buy-btn { padding: 5px 14px; background: var(--green); color: #fff; border: none; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .buy-btn:hover { opacity: 0.85; }
+    .sell-btn { padding: 5px 14px; background: var(--red); color: #fff; border: none; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .sell-btn:hover { opacity: 0.85; }
+
+    /* CONFIRMATION MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal h3 { font-size: 18px; margin-bottom: 8px; }
+    .modal p { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-cancel { padding: 8px 20px; background: none; border: 1px solid var(--border); border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 13px; cursor: pointer; }
+    .modal-confirm { padding: 8px 20px; border: none; border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; }
+    .modal-confirm.buy { background: var(--green); }
+    .modal-confirm.sell { background: var(--red); }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 28px; right: 28px; padding: 14px 20px; border-radius: 10px; font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; color: #fff; z-index: 2000; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: var(--green); }
+    .toast.error { background: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <div class="logo">◈</div>
+    <div>
+      <h1>Research Desk</h1>
+      <span>Portfolio Intelligence</span>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="/">Dashboard</a>
+    <a href="/alpha">Alpha Finder</a>
+    <a href="/research.html" class="active">Research Desk</a>
+  </div>
+  <div class="nav-right">16 holdings · Updated 7 Apr 2026</div>
+</nav>
+
+<!-- KITE SESSION BAR -->
+<div class="kite-bar" id="kiteBar">
+  <label>🔐 Kite Session:</label>
+  <input type="password" id="enctokenInput" placeholder="Paste your enctoken here (from Kite login)..." autocomplete="off"/>
+  <button class="kite-save-btn" onclick="saveEnctoken()">Save</button>
+  <span class="kite-status" id="kiteStatus"></span>
+  <span class="kite-toggle" onclick="toggleKiteBar()">hide</span>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div class="modal-overlay" id="tradeModal">
+  <div class="modal">
+    <h3 id="modalTitle">Confirm Order</h3>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-confirm" id="modalConfirmBtn" onclick="executeOrder()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HERO -->
+<div class="hero">
+  <h2>Your <span>Stock Research</span> Intelligence</h2>
+  <p>AI-powered analysis for every stock you hold. Bull cases, bear cases, red flags and scores — all in one place.</p>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search by stock name or sector..." oninput="filterStocks(this.value)"/>
+    <button onclick="filterStocks(document.getElementById('searchInput').value)">Search</button>
+  </div>
+  <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--gold-border);">
+    <p style="font-family:'Segoe UI',sans-serif; font-size:13px; color:var(--gold); font-weight:600; margin-bottom:10px;">✦ Analyze Any Stock</p>
+    <div class="search-bar" style="max-width:600px;">
+      <div class="suggest-wrap">
+        <input type="text" id="analyzeInput" placeholder="Enter any company name e.g. Reliance, Infosys, HDFC Bank..."
+          oninput="onAnalyzeInput(this.value)"
+          onkeydown="onAnalyzeKeydown(event)"
+          autocomplete="off"/>
+        <div class="suggest-list" id="analyzeSuggList"></div>
+      </div>
+      <button id="analyzeBtn" onclick="analyzeStock()">Analyze</button>
+    </div>
+    <div id="analyzeError" style="display:none; font-family:'Segoe UI',sans-serif; font-size:12px; color:var(--red); margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <span class="filter-label">Filter:</span>
+  <button class="filter-btn active" onclick="setFilter('all', this)">All (16)</button>
+  <button class="filter-btn" onclick="setFilter('held', this)">In Portfolio</button>
+  <button class="filter-btn" onclick="setFilter('high', this)">Score 70+</button>
+  <button class="filter-btn" onclick="setFilter('review', this)">Needs Review</button>
+  <button class="filter-btn" onclick="setFilter('psu', this)">PSU</button>
+  <button class="filter-btn" onclick="setFilter('etf', this)">ETF</button>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- DYNAMIC RESULTS -->
+  <div id="dynamicSection" style="display:none; margin-bottom:32px;">
+    <div class="section-title">Live Analysis</div>
+    <div id="dynamicGrid" class="stock-grid"></div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <div class="s-label">Portfolio P&L</div>
+      <div class="s-value" style="color:var(--red)">-₹82,541</div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-item">
+      <div class="s-label">Avg AI Score</div>
+      <div class="s-value" style="color:var(--gold)">61 / 100</div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-item">
+      <div class="s-label">Strong Holds</div>
+      <div class="s-value" style="color:var(--green)">7</div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-item">
+      <div class="s-label">Needs Review</div>
+      <div class="s-value" style="color:var(--red)">3</div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-item">
+      <div class="s-label">Book Profits</div>
+      <div class="s-value" style="color:#1565C0">2</div>
+    </div>
+  </div>
+
+  <div class="section-title">Portfolio Analysis — 16 Holdings</div>
+  <div class="stock-grid" id="stockGrid">
+
+    <!-- ITC -->
+    <div class="stock-card" data-symbol="ITC" data-sector="fmcg" data-score="72" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 100 shares · -₹9,044</span>
+          <div class="stock-symbol">ITC</div>
+          <div class="stock-name">ITC Limited</div>
+          <div class="stock-sector">FMCG</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">72</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest FMCG-cigarette conglomerate transitioning to a diversified consumer goods company. Strong cash flows, consistent dividends, FMCG segment growing 10%+ YoY. Demerger of hotels business (ITCHOTELS) has created short-term price pressure.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Cigarette pricing power intact, 70%+ EBIT margins</li><li>FMCG portfolio scaling fast (Aashirvaad, Sunfeast)</li><li>Hotels demerger unlocks value</li><li>Dividend yield ~3.5%, consistent payer</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Cigarette volumes declining long-term</li><li>FMCG margin dilution vs. pure-play peers</li><li>Regulatory risk on tobacco products</li><li>Conglomerate discount persists</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>27x</span></div>
+          <div class="ratio-pill">ROE <span>28%</span></div>
+          <div class="ratio-pill">ROCE <span>35%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.01</span></div>
+          <div class="ratio-pill">Div Yield <span>3.5%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹388.89, now ₹298.45. Down 23.3% from your entry. The demerger of ITCHOTELS at ₹240 created selling pressure — most of that overhang is now cleared. <span class="pnl-line" style="color:var(--red)">Unrealised loss: -₹9,044. Recommend: HOLD — recovery likely in 2–3 quarters.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Strong Hold — await earnings recovery</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹19,527 Cr (+7.4%). Net profit ₹5,036 Cr (+8.2%). Cigarette volumes flat, FMCG revenue +9%. Hotels PAT +24% (now demerged). Agribusiness volatile.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>CEO Sanjiv Puri: "FMCG business approaching inflection point on margins. Targeting double-digit EBITDA margins in 2 years. Hotels demerger on track to create independent value."</p></div>
+          <div class="detail-block"><h4>Shareholding (Dec 2024)</h4><p>FII: 39.2% | DII: 34.8% | Promoter: 0% (no promoter — LIC is largest holder at 16%). FII stake stable, DII buying on dips.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>Current exposure: ₹29,825 (6.2% of portfolio). Ideal range: 5–8% for FMCG anchor. No action needed. Consider averaging below ₹280 if opportunity arises.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NTPC -->
+    <div class="stock-card" data-symbol="NTPC" data-sector="psu" data-score="75" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 90 shares · +₹2,432</span>
+          <div class="stock-symbol">NTPC</div>
+          <div class="stock-name">NTPC Limited</div>
+          <div class="stock-sector">PSU Power</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">75</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest power generation company with 73 GW capacity. Aggressive renewable energy expansion (50 GW by 2032). Regulated ROE model ensures predictable earnings. One of the most solid PSU bets in the energy transition play.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>50 GW renewable target — massive capex cycle</li><li>Regulated ROE ensures earnings visibility</li><li>Largest power utility, no competition risk</li><li>NTPC Green Energy IPO unlocks valuation</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>High capex = stretched balance sheet</li><li>Renewable transition slower than planned</li><li>Coal price volatility impacts margins</li><li>State DISCOM payment delays</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>18x</span></div>
+          <div class="ratio-pill">ROE <span>13%</span></div>
+          <div class="ratio-pill">ROCE <span>9%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>1.8</span></div>
+          <div class="ratio-pill">Div Yield <span>2.1%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹342.02, now ₹369.05. Up 7.9%. Your only PSU Power holding — well positioned. <span class="pnl-line" style="color:var(--green)">Unrealised gain: +₹2,432. Recommend: HOLD with trailing stop at ₹340.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — long-term energy transition story intact</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹47,519 Cr (+9.2%). PAT ₹4,711 Cr (+4.5%). Generation up 5.2%. Renewable capacity addition on track. NTPC Green subsidiary growing fast.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>CMD Gurdeep Singh: "We will have 60 GW of total capacity by FY26. Renewable energy is our growth engine. NTPC Green Energy IPO will create significant value for shareholders."</p></div>
+          <div class="detail-block"><h4>Shareholding (Dec 2024)</h4><p>Govt: 51.1% | FII: 16.8% | DII: 23.4%. FII interest increasing as renewable story gains traction.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>Current exposure: ₹33,215 (6.9% of portfolio). Good size for a PSU utility anchor. No change needed.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NMDC -->
+    <div class="stock-card" data-symbol="NMDC" data-sector="mining" data-score="65" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 660 shares · +₹4,806</span>
+          <div class="stock-symbol">NMDC</div>
+          <div class="stock-name">NMDC Limited</div>
+          <div class="stock-sector">Mining</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">65</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest iron ore producer — a natural monopoly with lowest-cost production. Earnings are cyclical, tied to steel industry demand and global iron ore prices. Strong dividend history makes it a good income + commodity play.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Monopoly in domestic iron ore supply</li><li>India infra boom = sustained steel demand</li><li>Consistent high dividends (5–7% yield)</li><li>Nagarnar steel plant adds value</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Iron ore prices globally volatile</li><li>China steel slowdown = price pressure</li><li>Nagarnar plant ramp-up delays</li><li>Cyclical earnings, not growth stock</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>11x</span></div>
+          <div class="ratio-pill">ROE <span>22%</span></div>
+          <div class="ratio-pill">ROCE <span>28%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.1</span></div>
+          <div class="ratio-pill">Div Yield <span>5.8%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹74.47, now ₹81.75. Up 9.8%. Best entry price in your portfolio relative to value. <span class="pnl-line" style="color:var(--green)">Unrealised gain: +₹4,806. Hold for dividends + commodity cycle upside.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — dividend income + commodity upside</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹5,823 Cr (-3%). PAT ₹1,671 Cr (-8%). Lower iron ore prices dented revenue but volumes were up 6%. Dividend of ₹5.75/share declared.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>"Production volume growth remains our focus. Nagarnar steel plant integration progressing. We remain committed to our dividend policy — targeting 30–40% payout."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Govt: 60.8% | FII: 10.2% | DII: 16.5%. Steady institutional holding. No major changes.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹53,955 = 11.2% of portfolio. Slightly heavy for a cyclical. Consider trimming 200 shares above ₹90.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARADEEP -->
+    <div class="stock-card" data-symbol="PARADEEP" data-sector="fertilizers" data-score="63" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 121 shares · +₹3,584</span>
+          <div class="stock-symbol">PARADEEP</div>
+          <div class="stock-name">Paradeep Phosphates</div>
+          <div class="stock-sector">Fertilizers</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">63</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's second-largest phosphatic fertilizer company. High subsidy dependence from government — a double-edged sword. Strong distribution network across 10+ states. Up 34% from your entry — best performer in the portfolio.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>India fertilizer demand structurally rising</li><li>Govt subsidy support ensures revenue stability</li><li>New DAP/NPK capacity expansion underway</li><li>Strong distribution moat</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>100% dependent on govt subsidy payments</li><li>Raw material (phosphoric acid) import risk</li><li>Subsidy reform could hurt margins</li><li>Working capital intensive business</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>22x</span></div>
+          <div class="ratio-pill">ROE <span>14%</span></div>
+          <div class="ratio-pill">ROCE <span>12%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.8</span></div>
+          <div class="ratio-pill">Div Yield <span>1.2%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹86.08, now ₹115.70. Up 34.4% — your best performer. <span class="pnl-line" style="color:var(--green)">Gain: +₹3,584. Consider booking 50% profits (60 shares) above ₹118 and letting rest ride.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-profit">Book Partial Profits — 50% at ₹118+</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹3,210 Cr (+11%). PAT ₹186 Cr (+34%). Subsidy receipts normalized. Volume growth 8% YoY. NPK mix improving margins.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>"Capacity expansion to 3.5 MMTPA on track. Subsidy receivables under control. We expect margin improvement as raw material prices stabilize globally."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Promoter (GSFC + Govt): 51% | FII: 8% | DII: 14%. Promoter holding stable, retail buying on momentum.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹13,999 = 2.9% of portfolio. Small position. Book 50% above ₹118, trail SL on balance at ₹105.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BANKINDIA -->
+    <div class="stock-card" data-symbol="BANKINDIA" data-sector="psu" data-score="60" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 351 shares · +₹5,075</span>
+          <div class="stock-symbol">BANKINDIA</div>
+          <div class="stock-name">Bank of India</div>
+          <div class="stock-sector">PSU Banking</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">60</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">PSU bank on a recovery trajectory — NPA cycle turning, credit costs falling. Trades at 0.7x P/B — cheap vs. private peers. Government ownership provides stability but limits agility. Decent 11.6% gain from your entry.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>NPA ratio falling — credit cycle improving</li><li>Cheap valuation at 0.7x P/B</li><li>Govt capital infusion backstop</li><li>Retail + MSME loan growth accelerating</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>ROA/ROE still below private bank peers</li><li>Slower digital adoption vs. HDFC/ICICI</li><li>Rate cut cycle may compress NIM</li><li>Government interference in lending decisions</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>8x</span></div>
+          <div class="ratio-pill">ROE <span>12%</span></div>
+          <div class="ratio-pill">P/B <span>0.7x</span></div>
+          <div class="ratio-pill">NIM <span>3.1%</span></div>
+          <div class="ratio-pill">GNPA <span>4.8%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹123.04, now ₹137.50. Up 11.7%. Your largest holding by quantity. <span class="pnl-line" style="color:var(--green)">Gain: +₹5,075. Hold with trailing SL at ₹125. Target ₹155 in 12 months.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — PSU bank re-rating in progress</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>NII ₹6,070 Cr (+8%). PAT ₹2,511 Cr (+62% YoY). GNPA down to 4.8% from 7.3% YoY. Strong recovery on written-off accounts.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>MD Rajneesh Karnatak: "Asset quality improvements are structural, not cyclical. We are targeting ROA of 1% by FY26 and ROE of 15% by FY27."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Govt: 73.4% | FII: 7.2% | DII: 9.8%. FII interest picking up as NPA story improves.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹48,263 = 10% of portfolio. Largest single holding. Limit further additions — diversification risk.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SILVERBEES -->
+    <div class="stock-card" data-symbol="SILVERBEES" data-sector="etf" data-score="68" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 425 shares · -₹6,815</span>
+          <div class="stock-symbol">SILVERBEES</div>
+          <div class="stock-name">Nippon Silver ETF</div>
+          <div class="stock-sector">Silver ETF</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">68</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Silver ETF tracking domestic silver prices. Silver has dual demand — industrial (solar panels, EVs, electronics) and precious metal. Acts as inflation hedge and portfolio diversifier. Largest position in your portfolio by value.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>EV + solar demand driving industrial silver</li><li>Global silver deficit — supply constraints</li><li>Inflation hedge, gold correlation</li><li>No counterparty risk — physical backing</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>High volatility vs. gold ETF</li><li>USD strength suppresses precious metals</li><li>Industrial demand can drop in recession</li><li>No yield/dividend</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">Type <span>ETF</span></div>
+          <div class="ratio-pill">Underlying <span>Silver</span></div>
+          <div class="ratio-pill">Expense <span>0.40%</span></div>
+          <div class="ratio-pill">AUM <span>₹3,200 Cr</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹236.07, now ₹220.03. Down 6.8%. Your largest holding (₹93,512 = 19.4% of portfolio). Heavy concentration in a single commodity. <span class="pnl-line" style="color:var(--red)">Loss: -₹6,815. Hold — silver thesis intact for 2–3 year horizon.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — long-term commodity thesis intact</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Silver Market View</h4><p>Silver Industrial demand grew 8% in 2024. Solar panel manufacturers are largest buyers. Silver Institute forecasts structural deficit through 2027. Long-term case strong.</p></div>
+          <div class="detail-block"><h4>Portfolio Risk</h4><p>At 19.4% of portfolio, SILVERBEES is your single largest exposure. Consider trimming to 12–15% if it recovers to ₹235+. Concentration risk is real.</p></div>
+          <div class="detail-block"><h4>Correlation</h4><p>Silver correlates ~0.85 with gold. When USD weakens or inflation rises, silver typically outperforms gold. Macro is currently mixed.</p></div>
+          <div class="detail-block"><h4>Action Plan</h4><p>Hold current position. On recovery to ₹235–240, sell 100–150 units to reduce concentration. Reinvest proceeds into fundamentally stronger stocks.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATGL -->
+    <div class="stock-card" data-symbol="ATGL" data-sector="energy" data-score="65" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 90 shares · -₹22,457</span>
+          <div class="stock-symbol">ATGL</div>
+          <div class="stock-name">Adani Total Gas</div>
+          <div class="stock-sector">Gas Distribution</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">65</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest city gas distribution (CGD) company by geographic area. Near-monopoly in 33 GAs across India. Business fundamentals are excellent — but you bought at peak Adani Group valuations (~₹767) before the Hindenburg crisis correction.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>CGD monopoly in 33 geographic areas</li><li>Govt push for gas-based economy (15% by 2030)</li><li>CNG vehicle penetration accelerating</li><li>PNG household connections doubling</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Adani Group governance overhang</li><li>Rich valuation even post correction (40x+)</li><li>EV adoption threatens CNG long-term</li><li>LNG import price volatility</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>95x</span></div>
+          <div class="ratio-pill">ROE <span>17%</span></div>
+          <div class="ratio-pill">ROCE <span>14%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.4</span></div>
+          <div class="ratio-pill">Vol Growth <span>+22%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹767, now ₹517. Down 32.6% — your biggest absolute loss (₹22,457). Entry was at peak Adani premium valuations. <span class="pnl-line" style="color:var(--red)">Recommend: HOLD — business is strong, valuation is normalising. Do NOT average down here.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — strong business, wait for valuation comfort</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹1,432 Cr (+18%). PAT ₹198 Cr (+22%). CNG volumes +24%, PNG domestic +31%. EBITDA margins stable at 30%+.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>"We will have 4 million PNG connections by FY26. CNG station additions accelerating. Targeting 100+ new geographic areas through PNGRB bidding."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Adani Group: 74.8% | FII: 4.1% | DII: 8.2%. FII holding dropped significantly post Hindenburg — partial recovery since.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹46,566 = 9.7% of portfolio. 2nd largest position. Do not add more. Let business fundamentals catch up to price over 2–3 years.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPRAJIT -->
+    <div class="stock-card" data-symbol="SUPRAJIT" data-sector="auto" data-score="62" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 90 shares · -₹11,967</span>
+          <div class="stock-symbol">SUPRAJIT</div>
+          <div class="stock-name">Suprajit Engineering</div>
+          <div class="stock-sector">Auto Ancillary</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">62</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest automotive cable manufacturer with growing non-auto (lighting controls, industrial) exposure. Acquired Wescon Controls (US) — now a global player. EV transition risk is a concern but management is actively diversifying.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Dominant market share in auto cables</li><li>Non-auto revenue now 30%+ of mix</li><li>US acquisition adds global revenue</li><li>2W + CV cycle recovery benefits</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>EV reduces cable content per vehicle</li><li>Wescon integration challenges</li><li>US slowdown risk for acquired business</li><li>Margin pressure from raw material costs</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>28x</span></div>
+          <div class="ratio-pill">ROE <span>16%</span></div>
+          <div class="ratio-pill">ROCE <span>18%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.5</span></div>
+          <div class="ratio-pill">Sales CAGR <span>12%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹551.16, now ₹418.20. Down 24.1%. Quality business bought at a premium. <span class="pnl-line" style="color:var(--red)">Loss: -₹11,967. Hold — fundamentals intact, EV risk is a 5-year story not immediate.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — quality compounder, time in market needed</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹831 Cr (+9%). PAT ₹61 Cr (+18%). Non-auto share improved to 32%. Wescon margins improving. Domestic 2W segment strong.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>CMD Ajit Kumar Rai: "EV transition will take longer than expected in India. We are well positioned in both ICE and EV. Non-auto business gives us diversification."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Promoter: 50.8% | FII: 13.2% | DII: 18.4%. Promoter holding stable — skin in the game intact.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹37,638 = 7.8% of portfolio. Reasonable for a quality mid-cap. No action needed.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AARTIIND -->
+    <div class="stock-card" data-symbol="AARTIIND" data-sector="chemicals" data-score="55" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 32 shares · -₹6,636</span>
+          <div class="stock-symbol">AARTIIND</div>
+          <div class="stock-name">Aarti Industries</div>
+          <div class="stock-sector">Specialty Chemicals</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">55</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Leading specialty chemicals company — benzene derivatives, pharma intermediates. Long-term story on China+1 beneficiary. However, sector has been de-rated severely due to demand slowdown and China dumping. Recovery visible but slow.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>China+1 strategy — global supply shift</li><li>Long-term contracts with MNCs (10–20 yr)</li><li>Capex cycle completing — margins to recover</li><li>Pharma API demand structural growth</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>China dumping benzene derivatives at low prices</li><li>Demand slowdown in agrochemicals</li><li>High capex = elevated debt</li><li>Volume de-growth in recent quarters</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>45x</span></div>
+          <div class="ratio-pill">ROE <span>10%</span></div>
+          <div class="ratio-pill">ROCE <span>11%</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.7</span></div>
+          <div class="ratio-pill">EV/EBITDA <span>22x</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹609.83, now ₹402.45. Down 34%. Caught in the specialty chemicals sector re-rating. <span class="pnl-line" style="color:var(--red)">Loss: -₹6,636. Hold — do not cut loss here. Sector recovery expected in FY26.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — sector in recovery, patience needed</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹1,721 Cr (-4%). PAT ₹118 Cr (-22%). Volume growth +3% but pricing pressure persisted. Toluene di-isocyanate (TDI) margins improving. Signs of recovery.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>"H2 FY25 will be better than H1. Long-term contracts are intact — no cancellations. China competition is plateauing. We expect volumes to grow 15%+ in FY26."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Promoter: 43.5% | FII: 22.1% | DII: 16.8%. FII stake fell 5% in last year as sector was de-rated.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹12,878 = 2.7% of portfolio. Small position. No change — recovery play needs time.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BHEL -->
+    <div class="stock-card" data-symbol="BHEL" data-sector="psu" data-score="62" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 84 shares · -₹3,136</span>
+          <div class="stock-symbol">BHEL</div>
+          <div class="stock-name">Bharat Heavy Electricals</div>
+          <div class="stock-sector">PSU Capital Goods</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">62</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's largest power equipment manufacturer — boilers, turbines, generators. Order book at a decade high driven by India's power capacity addition push. Execution is improving but historically slow. EPC capability being rebuilt.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Order book at ₹1.15L Cr — decade high</li><li>Thermal + renewable power capex boom</li><li>Defence diversification adding revenue</li><li>Govt commitment to BHEL as strategic PSU</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Historically poor project execution</li><li>Competition from Chinese equipment</li><li>Low ROE (7–8%) despite high order book</li><li>Working capital cycle very long</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>95x</span></div>
+          <div class="ratio-pill">ROE <span>8%</span></div>
+          <div class="ratio-pill">ROCE <span>7%</span></div>
+          <div class="ratio-pill">Order Book <span>₹1.15L Cr</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.2</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹290.83, now ₹253.50. Down 13.2%. Small position. <span class="pnl-line" style="color:var(--red)">Loss: -₹3,136. Hold — order book execution will drive re-rating in FY26.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — execution improvement key monitorable</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹7,926 Cr (+14%). PAT ₹383 Cr (+83% YoY — low base). Order inflows ₹8,200 Cr in quarter. Execution revenue picking up after years of stagnation.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>CMD Copper Singh: "We have turned the corner on execution. Revenue recognition will accelerate through FY26. Defence orders now 12% of book — a new growth driver."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Govt: 63.2% | FII: 10.4% | DII: 14.8%. FII buying on execution improvement thesis.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹21,294 = 4.4% of portfolio. Reasonable exposure. No change recommended.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RVNL -->
+    <div class="stock-card" data-symbol="RVNL" data-sector="psu" data-score="42" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 52 shares · -₹14,316</span>
+          <div class="stock-symbol">RVNL</div>
+          <div class="stock-name">Rail Vikas Nigam Limited</div>
+          <div class="stock-sector">PSU Infra</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-low">42</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Railway infrastructure PSU — executes railway projects. Fundamentally decent business but was massively overvalued during the 2023–24 PSU/defence/railway mania. Down 51% from your entry. Re-rating risk remains.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Railways capex at ₹2.5L Cr/year — captive orders</li><li>Vande Bharat, metro, high-speed rail pipeline</li><li>Govt won't let railway PSUs fail</li><li>PE now reasonable at 25x after correction</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Down 51% — momentum entirely broken</li><li>PSU railway rally was sentiment, not earnings</li><li>Order execution capacity limited</li><li>Margins thin (3–4% PAT margin)</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>25x</span></div>
+          <div class="ratio-pill">ROE <span>18%</span></div>
+          <div class="ratio-pill">ROCE <span>22%</span></div>
+          <div class="ratio-pill">PAT Margin <span>3.5%</span></div>
+          <div class="ratio-pill">Order Book <span>₹86,000 Cr</span></div>
+        </div>
+        <div class="red-flags">
+          <div class="red-flags-title">⚠ Red Flags</div>
+          <ul><li>Bought at 10x book value during PSU mania — thesis was momentum, not value</li><li>PAT margins are structurally thin (3–4%) — limited earnings leverage</li><li>51% drawdown suggests market has re-priced the sector</li></ul>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Biggest loss: ₹14,316 on just 52 shares. Entry at ₹536 was at peak PSU euphoria. <span class="pnl-line" style="color:var(--red)">Verdict: REVIEW — ask yourself if the original thesis still holds. If no, consider exiting on any bounce to ₹280+.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-review">Review — exit on bounce, re-evaluate thesis</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹5,240 Cr (+11%). PAT ₹214 Cr (+8%). Order book ₹86,000 Cr. Revenue growth modest despite massive order inflows. Execution pace is the bottleneck.</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Govt: 72.8% | FII: 3.1% | DII: 9.2%. FII stake collapsed from 8% to 3% — they exited. Retail holding increased (catching a falling knife risk).</p></div>
+          <div class="detail-block"><h4>Exit Strategy</h4><p>Wait for a dead-cat bounce to ₹275–285. Sell 50% to reduce losses. Keep remaining 26 shares as a free option on railway capex recovery.</p></div>
+          <div class="detail-block"><h4>Lesson</h4><p>Classic PSU momentum trap. High PE + low margin business + government dependency = volatile. Next time, avoid entering PSU stocks when PE > 40x on momentum.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NBCC -->
+    <div class="stock-card" data-symbol="NBCC" data-sector="psu" data-score="45" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 210 shares · -₹6,777</span>
+          <div class="stock-symbol">NBCC</div>
+          <div class="stock-name">National Buildings Construction</div>
+          <div class="stock-sector">PSU Construction</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-low">45</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Govt construction PSU — executes real estate and redevelopment projects. Amrapali project resolution is a positive. But execution speed is chronically slow, margin structure is thin, and the stock rode the PSU wave without earnings justification.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Amrapali resolution = ₹10,000 Cr revenue pipeline</li><li>Govt redevelopment projects captive order flow</li><li>Zero debt, asset light model</li><li>PM Awas Yojana beneficiary</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Chronically slow execution history</li><li>PAT margins wafer thin (2–3%)</li><li>Overvalued at 35x PE for thin margin business</li><li>No pricing power — all Govt contracts</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>35x</span></div>
+          <div class="ratio-pill">ROE <span>16%</span></div>
+          <div class="ratio-pill">PAT Margin <span>2.8%</span></div>
+          <div class="ratio-pill">Debt <span>Zero</span></div>
+          <div class="ratio-pill">Order Book <span>₹85,000 Cr</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹116.43, now ₹84.16. Down 27.7%. <span class="pnl-line" style="color:var(--red)">Loss: -₹6,777. Weakest fundamental story in portfolio. Hold for now — exit on recovery to ₹95+.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-review">Review — weakest fundamental in portfolio</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹2,890 Cr (+6%). PAT ₹81 Cr (+12%). Amrapali project revenues recognising slowly. Order inflows healthy but execution remains slow.</p></div>
+          <div class="detail-block"><h4>Exit Strategy</h4><p>Target exit at ₹92–95 (next resistance). At 210 shares, that recovers ~₹1,600 of the ₹6,777 loss. Not great but reduces dead weight in portfolio.</p></div>
+          <div class="detail-block"><h4>Red Flags</h4><p>FII stake dropped 4% in 6 months. Smart money exited. Retail and DII holding the bag. Order book looks good on paper but revenue recognition is the gap.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹17,674 = 3.7% of portfolio. Manageable. Plan an exit rather than hoping for recovery.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAHLIFE -->
+    <div class="stock-card" data-symbol="MAHLIFE" data-sector="realestate" data-score="50" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 33 shares · -₹8,626</span>
+          <div class="stock-symbol">MAHLIFE</div>
+          <div class="stock-name">Mahindra Lifespace</div>
+          <div class="stock-sector">Real Estate</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">50</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Mahindra Group's real estate arm — affordable and mid-income housing across Mumbai, Chennai, Pune. Integrated Cities & Industrial Clusters (IC&IC) segment is a differentiator. Strong brand but slow residential sales velocity.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Mahindra brand — premium trust in housing</li><li>IC&IC industrial parks — B2B high margin</li><li>Affordable housing demand structural</li><li>Land bank at cost is undervalued</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Real estate cycle is long — slow returns</li><li>Residential sales velocity below peers</li><li>High interest rates hurt demand</li><li>Small scale vs. Godrej/Prestige/DLF</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>80x</span></div>
+          <div class="ratio-pill">ROE <span>6%</span></div>
+          <div class="ratio-pill">P/B <span>3.5x</span></div>
+          <div class="ratio-pill">Pre-sales <span>₹1,400 Cr</span></div>
+          <div class="ratio-pill">Debt/Eq <span>0.2</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹606, now ₹344. Down 43%. Real estate is a cycle business — you bought at the top of the hype. <span class="pnl-line" style="color:var(--red)">Loss: -₹8,626. Hold — real estate recovery story, but 2–3 year timeline.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — long cycle business, patience needed</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>Revenue ₹412 Cr (+22%). PAT ₹42 Cr (+35%). Pre-sales ₹410 Cr in quarter. IC&IC industrial parks showing strong leasing momentum. Residential still slow.</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>Mahindra & Mahindra: 51.5% | FII: 18.2% | DII: 11.4%. FII interest in real estate picking up with rate cut expectations.</p></div>
+          <div class="detail-block"><h4>IC&IC Segment</h4><p>Industrial cities in Chennai and Pune are leased to global manufacturers. This is the hidden gem — asset light, high ROI business that the market underappreciates.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹11,380 = 2.4% of portfolio. Small. Hold and forget for 2–3 years.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ICICIPRULI -->
+    <div class="stock-card" data-symbol="ICICIPRULI" data-sector="insurance" data-score="68" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 21 shares · -₹4,042</span>
+          <div class="stock-symbol">ICICIPRULI</div>
+          <div class="stock-name">ICICI Prudential Life</div>
+          <div class="stock-sector">Insurance</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">68</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">India's 2nd largest private life insurer by premium. Strong VNB (Value of New Business) growth, ICICI Bank bancassurance channel is a massive moat. Insurance penetration in India at 3.2% — massive runway vs. global average of 7%.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Insurance penetration 3.2% — massive underpenetration</li><li>ICICI Bank bancassurance channel unmatched</li><li>VNB growth 20%+ consistently</li><li>Demographic dividend — young population buying insurance</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>ULIP regulatory changes impact margins</li><li>LIC competition intensifying</li><li>Surrender value regulation impact</li><li>High PE for insurance sector</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>85x</span></div>
+          <div class="ratio-pill">VNB Growth <span>+19%</span></div>
+          <div class="ratio-pill">VNB Margin <span>28%</span></div>
+          <div class="ratio-pill">Solvency <span>212%</span></div>
+          <div class="ratio-pill">P/EV <span>2.1x</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Bought at ₹709, now ₹516. Down 27.2%. Sector re-rated lower after surrender value circular. <span class="pnl-line" style="color:var(--red)">Loss: -₹4,042. Hold — long-term insurance story is very strong. Buy more below ₹500.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Strong Hold — consider averaging below ₹500</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results (Q3 FY25)</h4><p>APE ₹2,140 Cr (+9%). VNB ₹598 Cr (+19%). PAT ₹326 Cr (+22%). Protection business growing fast — key margin driver. Annuity segment scaling.</p></div>
+          <div class="detail-block"><h4>Management Commentary</h4><p>MD Anup Bagchi: "We are focused on non-par savings and protection — highest margin products. Surrender value regulations will have minimal impact on our business model."</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>ICICI Bank: 51.9% | Prudential Plc: 22% | FII: 14.2%. Strong institutional backing. ICICI Bank promoter stake stable.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹10,847 = 2.3% of portfolio. Underweight for a quality name. Consider adding 10 more shares below ₹500.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITCHOTELS -->
+    <div class="stock-card" data-symbol="ITCHOTELS" data-sector="hospitality" data-score="55" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 50 shares · -₹4,641</span>
+          <div class="stock-symbol">ITCHOTELS</div>
+          <div class="stock-name">ITC Hotels Limited</div>
+          <div class="stock-sector">Hospitality</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">55</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Newly demerged from ITC — now India's 2nd largest luxury hotel chain. Strong brand (ITC Maurya, ITC Grand Chola). Still finding price discovery post-demerger. Hospitality sector is cyclical but India travel demand is structurally strong.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>Premium brand — pricing power in luxury segment</li><li>India leisure + business travel booming</li><li>Asset-heavy model = real estate value unlock</li><li>Independent listing creates focused management</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Price discovery still underway post-demerger</li><li>Cyclical business — recession hits hotels hard</li><li>High asset base = low ROE currently</li><li>Competition from Marriott/Hyatt/OYO</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">PE <span>55x</span></div>
+          <div class="ratio-pill">ROE <span>8%</span></div>
+          <div class="ratio-pill">RevPAR <span>₹9,800</span></div>
+          <div class="ratio-pill">Occupancy <span>68%</span></div>
+          <div class="ratio-pill">Rooms <span>11,000+</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Received as demerger from ITC holdings — effective cost ~₹240. Down 38%. Price discovery is ongoing for this newly listed entity. <span class="pnl-line" style="color:var(--red)">Loss: -₹4,641. Hold — give it 4–6 quarters to establish as an independent entity.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-hold">Hold — price discovery phase, too early to judge</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Latest Results</h4><p>First full quarter as independent entity. Revenue ₹724 Cr (+12%). EBITDA ₹231 Cr (32% margin). Luxury segment ARR up 9%. Strong Q4 seasonality ahead.</p></div>
+          <div class="detail-block"><h4>Real Estate Value</h4><p>ITC Hotels owns prime real estate in Chennai, Delhi, Kolkata, Mumbai. Land + property value estimated at ₹12,000–15,000 Cr — close to current market cap. Hidden value.</p></div>
+          <div class="detail-block"><h4>Shareholding</h4><p>ITC Ltd: 40.0% | LIC: 8.2% | FII: 11.4%. ITC retaining 40% means strong brand + operational support.</p></div>
+          <div class="detail-block"><h4>Position Sizing</h4><p>₹7,340 = 1.5% of portfolio. Small. No action needed — hold for 2 years minimum.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HDFCSENSEX -->
+    <div class="stock-card" data-symbol="HDFCSENSEX" data-sector="etf" data-score="70" data-held="true">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="portfolio-badge badge-held">✓ Held · 350 units · +₹20</span>
+          <div class="stock-symbol">HDFCSENSEX</div>
+          <div class="stock-name">HDFC Sensex ETF</div>
+          <div class="stock-sector">Index ETF</div>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score score-mid">70</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-summary">Passive Sensex ETF — tracks India's top 30 companies by market cap. The safest instrument in your portfolio. Low expense ratio, high liquidity. A good core holding but currently a small position. Should ideally be your largest holding.</p>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list"><li>India GDP growth 6.5–7% structural story</li><li>Sensex compounds at ~12% CAGR historically</li><li>No stock-specific risk — diversified instantly</li><li>Low cost: 0.07% expense ratio</li></ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list"><li>Returns capped at index level — no alpha</li><li>Global risk-off can dent Sensex sharply</li><li>Concentrated in HDFC, Reliance, TCS (top 5 = 45%)</li></ul></div>
+        </div>
+        <div class="ratios">
+          <div class="ratio-pill">Type <span>ETF</span></div>
+          <div class="ratio-pill">Tracks <span>BSE Sensex</span></div>
+          <div class="ratio-pill">Expense <span>0.07%</span></div>
+          <div class="ratio-pill">10Y CAGR <span>~12%</span></div>
+        </div>
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Portfolio Context</div>
+          <p>Only ₹29,508 = 6.1% of portfolio in index. This is too low. Ideally 20–30% of a portfolio should be in index ETFs for stability. <span class="pnl-line" style="color:var(--green)">Gain: +₹20. Consider gradually increasing this position.</span></p>
+        </div>
+      </div>
+      <div class="verdict"><span class="verdict-label">Verdict</span><span class="verdict-text verdict-buy">Increase Position — core holding, underweight</span><button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button></div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Why Index ETFs Matter</h4><p>85% of actively managed funds underperform the index over 10 years. Index ETFs guarantee you capture market returns without the risk of individual stock blowups. HDFCSENSEX is ideal for this role.</p></div>
+          <div class="detail-block"><h4>Suggested Allocation</h4><p>Target: 20% of portfolio = ₹96,000. Current: ₹29,508 (6.1%). Gap: ₹66,500. Add ₹5,000/month via SIP into HDFCSENSEX or equivalent — easiest way to reduce portfolio risk.</p></div>
+          <div class="detail-block"><h4>Top Holdings in Sensex</h4><p>HDFC Bank 13%, Reliance 11%, ICICI Bank 8%, Infosys 7%, TCS 6%. Well diversified across BFSI, IT, Energy, Consumer.</p></div>
+          <div class="detail-block"><h4>Action</h4><p>No immediate action. Plan to increase this to 15–20% of portfolio over next 12 months by reinvesting PARADEEP profits and future fresh capital here.</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  AI Research Desk · Portfolio Intelligence via Claude + Zerodha Kite MCP &nbsp;·&nbsp;
+  <a href="index.html">← Dashboard</a> &nbsp;·&nbsp;
+  <a href="../reports/daily/2026-04-07.html">Daily Report</a>
+  <br><br>
+  <em>Analysis is AI-generated for informational purposes only. Not financial advice. Always do your own research before trading.</em>
+</footer>
+
+<script>
+  function toggleDetails(btn) {
+    const card = btn.closest('.stock-card');
+    const details = card.querySelector('.card-details');
+    const isVisible = details.classList.contains('visible');
+    details.classList.toggle('visible', !isVisible);
+    btn.textContent = isVisible ? 'Details ↓' : 'Close ↑';
+  }
+
+  function filterStocks(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('.stock-card').forEach(card => {
+      const symbol = card.dataset.symbol.toLowerCase();
+      const sector = card.dataset.sector.toLowerCase();
+      const text = card.innerText.toLowerCase();
+      card.style.display = (symbol.includes(q) || sector.includes(q) || text.includes(q)) ? '' : 'none';
+    });
+  }
+
+  // ── ANALYZE INPUT SUGGESTIONS ─────────────────────────────────
+  let _analyzeTimer = null;
+
+  function onAnalyzeInput(val) {
+    clearTimeout(_analyzeTimer);
+    const list = document.getElementById('analyzeSuggList');
+    if (val.trim().length < 2) { list.classList.remove('visible'); return; }
+    _analyzeTimer = setTimeout(() => fetchAnalyzeSuggestions(val.trim()), 350);
+  }
+
+  function onAnalyzeKeydown(e) {
+    if (e.key === 'Enter') { document.getElementById('analyzeSuggList').classList.remove('visible'); analyzeStock(); }
+    if (e.key === 'Escape') { document.getElementById('analyzeSuggList').classList.remove('visible'); }
+  }
+
+  async function fetchAnalyzeSuggestions(query) {
+    try {
+      const res = await fetch('/symbol-search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      const data = await res.json();
+      renderAnalyzeSuggestions(data.suggestions || []);
+    } catch(e) { /* silent */ }
+  }
+
+  function renderAnalyzeSuggestions(items) {
+    const list = document.getElementById('analyzeSuggList');
+    if (!items.length) { list.classList.remove('visible'); return; }
+    list.innerHTML = items.map(s => `
+      <div class="suggest-item" onclick="selectAnalyzeSuggestion('${s.symbol}', '${(s.name||'').replace(/'/g,'')}')">
+        <div>
+          <div class="suggest-sym">${s.symbol}</div>
+          <div class="suggest-name">${s.name || ''}${s.sector ? ' · ' + s.sector : ''}</div>
+        </div>
+        <span class="suggest-match">${s.score}%</span>
+      </div>`).join('');
+    list.classList.add('visible');
+  }
+
+  function selectAnalyzeSuggestion(symbol, name) {
+    document.getElementById('analyzeInput').value = symbol;
+    document.getElementById('analyzeSuggList').classList.remove('visible');
+    analyzeStock();
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.suggest-wrap')) {
+      document.querySelectorAll('.suggest-list').forEach(l => l.classList.remove('visible'));
+    }
+  });
+
+  async function analyzeStock() {
+    const input = document.getElementById('analyzeInput');
+    const btn = document.getElementById('analyzeBtn');
+    const errDiv = document.getElementById('analyzeError');
+    const company = input.value.trim();
+    if (!company) return;
+
+    btn.textContent = 'Analyzing...';
+    btn.disabled = true;
+    errDiv.style.display = 'none';
+
+    try {
+      const res = await fetch('/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company })
+      });
+      const d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error || 'Server error ' + res.status);
+      renderDynamicCard(d);
+      input.value = '';
+    } catch (e) {
+      let msg = e.message;
+      if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
+        msg = 'Cannot reach server. Make sure server.js is running on port 7432.';
+      }
+      errDiv.textContent = msg;
+      errDiv.style.display = 'block';
+    } finally {
+      btn.textContent = 'Analyze';
+      btn.disabled = false;
+    }
+  }
+
+  function renderDynamicCard(d) {
+    const scoreClass = d.aiScore >= 70 ? 'score-high' : d.aiScore >= 55 ? 'score-mid' : 'score-low';
+    const verdictClass = { Buy: 'verdict-buy', Hold: 'verdict-hold', Sell: 'verdict-review', Review: 'verdict-review' }[d.verdict] || 'verdict-hold';
+
+    const bullItems = (d.bullCase || []).map(b => `<li>${b}</li>`).join('');
+    const bearItems = (d.bearCase || []).map(b => `<li>${b}</li>`).join('');
+    const redFlagItems = (d.redFlags || []).map(f => `<li>${f}</li>`).join('');
+    const redFlagsHtml = redFlagItems ? `
+      <div class="red-flags"><div class="red-flags-title">Red Flags</div><ul>${redFlagItems}</ul></div>` : '';
+
+    const r = d.ratios || {};
+    const card = document.createElement('div');
+    card.className = 'stock-card';
+    card.dataset.symbol = d.symbol || '';
+    card.dataset.sector = d.sector || 'other';
+    card.dataset.score = d.aiScore || 0;
+    card.dataset.held = 'false';
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-header-left">
+          <div class="stock-symbol">${d.symbol || '—'}</div>
+          <div class="stock-name">${d.name || d.symbol}</div>
+          <span class="stock-sector">${d.sector || 'other'}</span>
+        </div>
+        <div class="card-header-right">
+          <div class="ai-score ${scoreClass}">${d.aiScore}</div>
+          <div class="ai-score-label">AI Score</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-summary">${d.summary || ''}</div>
+        <div class="bull-bear">
+          <div class="bull-box"><div class="bb-title">Bull Case</div><ul class="bb-list">${bullItems}</ul></div>
+          <div class="bear-box"><div class="bb-title">Bear Case</div><ul class="bb-list">${bearItems}</ul></div>
+        </div>
+        <div class="ratios">
+          <span class="ratio-pill">PE <span>${r.pe ?? '—'}</span></span>
+          <span class="ratio-pill">ROE <span>${r.roe ?? '—'}%</span></span>
+          <span class="ratio-pill">ROCE <span>${r.roce ?? '—'}%</span></span>
+          <span class="ratio-pill">D/E <span>${r.debtEquity ?? '—'}</span></span>
+          <span class="ratio-pill">Div <span>${r.dividendYield ?? '—'}%</span></span>
+        </div>
+        ${redFlagsHtml}
+        <div class="portfolio-context">
+          <div class="portfolio-context-title">Context</div>
+          <p>Not currently in portfolio. Analysis based on latest available data.</p>
+        </div>
+      </div>
+      <div class="verdict">
+        <span class="verdict-label">Verdict</span>
+        <span class="verdict-text ${verdictClass}">${d.verdict}</span>
+        <button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button>
+        <div class="trade-row">
+          <input type="number" class="qty-input" value="1" min="1" title="Quantity">
+          <button class="buy-btn" onclick="placeOrder('${d.symbol}','BUY',this)">Buy</button>
+          <button class="sell-btn" onclick="placeOrder('${d.symbol}','SELL',this)">Sell</button>
+        </div>
+      </div>
+      <div class="card-details">
+        <div class="details-grid">
+          <div class="detail-block"><h4>Bull Case Detail</h4><p>${(d.bullCase || []).join('. ')}</p></div>
+          <div class="detail-block"><h4>Bear Case Detail</h4><p>${(d.bearCase || []).join('. ')}</p></div>
+        </div>
+      </div>`;
+
+    const grid = document.getElementById('dynamicGrid');
+    const section = document.getElementById('dynamicSection');
+    grid.prepend(card);
+    section.style.display = 'block';
+  }
+
+  // ── KITE SESSION ──────────────────────────────────────────────
+  let _enctoken = localStorage.getItem('kite_enctoken') || '';
+  let _pendingOrder = null;
+
+  (function initKiteBar() {
+    const inp = document.getElementById('enctokenInput');
+    if (_enctoken) {
+      inp.value = _enctoken;
+      setKiteStatus(true);
+    }
+    // Hide bar initially if token already saved
+    if (_enctoken) document.getElementById('kiteBar').style.display = '';
+  })();
+
+  function saveEnctoken() {
+    const val = document.getElementById('enctokenInput').value.trim();
+    if (!val) { showToast('Paste your enctoken first', 'error'); return; }
+    _enctoken = val;
+    localStorage.setItem('kite_enctoken', val);
+    setKiteStatus(true);
+    showToast('Kite session saved', 'success');
+  }
+
+  function setKiteStatus(ok) {
+    const el = document.getElementById('kiteStatus');
+    el.textContent = ok ? '✓ Connected' : '✗ No session';
+    el.style.color = ok ? '#4CAF50' : '#f44336';
+  }
+
+  function toggleKiteBar() {
+    const bar = document.getElementById('kiteBar');
+    const inp = bar.querySelector('input');
+    const btn = bar.querySelector('.kite-save-btn');
+    const toggle = bar.querySelector('.kite-toggle');
+    const hidden = inp.style.display === 'none';
+    inp.style.display = hidden ? '' : 'none';
+    btn.style.display = hidden ? '' : 'none';
+    toggle.textContent = hidden ? 'hide' : 'show token';
+  }
+
+  // ── TRADE BUTTONS ──────────────────────────────────────────────
+  function makeTradeRow(symbol) {
+    const div = document.createElement('div');
+    div.className = 'trade-row';
+    div.innerHTML = `<input type="number" class="qty-input" value="1" min="1" title="Quantity">
+      <button class="buy-btn" onclick="placeOrder('${symbol}','BUY',this)">Buy</button>
+      <button class="sell-btn" onclick="placeOrder('${symbol}','SELL',this)">Sell</button>`;
+    return div;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#stockGrid .stock-card').forEach(card => {
+      const symbol = card.dataset.symbol;
+      if (!symbol) return;
+      const verdict = card.querySelector('.verdict');
+      if (verdict) verdict.appendChild(makeTradeRow(symbol));
+    });
+  });
+
+  function placeOrder(symbol, side, btn) {
+    if (!_enctoken) {
+      showToast('Paste your Kite enctoken in the session bar first', 'error');
+      return;
+    }
+    const row = btn.closest('.trade-row');
+    const qty = parseInt(row.querySelector('.qty-input').value) || 1;
+    _pendingOrder = { symbol, side, qty };
+
+    document.getElementById('modalTitle').textContent = `${side === 'BUY' ? '🟢 Buy' : '🔴 Sell'} ${symbol}`;
+    document.getElementById('modalBody').innerHTML =
+      `You are about to place a <strong>${side}</strong> order for <strong>${qty} shares</strong> of <strong>${symbol}</strong> at <strong>MARKET price</strong> (CNC / Delivery).<br><br>This will be sent to Zerodha Kite immediately.`;
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    confirmBtn.textContent = `Confirm ${side}`;
+    confirmBtn.className = `modal-confirm ${side === 'BUY' ? 'buy' : 'sell'}`;
+    document.getElementById('tradeModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('tradeModal').classList.remove('open');
+    _pendingOrder = null;
+  }
+
+  async function executeOrder() {
+    if (!_pendingOrder) return;
+    const { symbol, side, qty } = _pendingOrder;
+    closeModal();
+
+    try {
+      const res = await fetch('/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          transaction_type: side,
+          quantity: qty,
+          enctoken: _enctoken
+        })
+      });
+      const d = await res.json();
+      if (!res.ok || d.error) throw new Error(d.error);
+      showToast(`✓ Order placed! ID: ${d.order_id}`, 'success');
+    } catch (e) {
+      let msg = e.message;
+      if (msg.includes('enctoken') || msg.includes('403') || msg.includes('auth')) {
+        msg = 'Session expired. Please update your enctoken.';
+        localStorage.removeItem('kite_enctoken');
+        _enctoken = '';
+        setKiteStatus(false);
+      }
+      showToast('Order failed: ' + msg, 'error');
+    }
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('tradeModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type}`;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  // ── FILTERS ───────────────────────────────────────────────────
+  function setFilter(type, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('searchInput').value = '';
+
+    document.querySelectorAll('.stock-card').forEach(card => {
+      let show = true;
+      if (type === 'held')   show = card.dataset.held === 'true';
+      if (type === 'high')   show = parseInt(card.dataset.score) >= 70;
+      if (type === 'review') show = parseInt(card.dataset.score) <= 50;
+      if (type === 'psu')    show = card.dataset.sector === 'psu';
+      if (type === 'etf')    show = card.dataset.sector === 'etf';
+      card.style.display = show ? '' : 'none';
+    });
+  }
+</script>
+
+</body>
+</html>

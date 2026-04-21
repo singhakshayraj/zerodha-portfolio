@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__kite__get_positions",
+      "mcp__kite__get_ltp",
+      "mcp__kite__login",
+      "mcp__kite__get_holdings",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:7432/)"
+    ]
+  }
+}

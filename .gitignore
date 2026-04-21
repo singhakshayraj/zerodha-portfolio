@@ -1,0 +1,22 @@
+# Secrets — never commit
+.env
+.env.local
+
+# Dependencies
+dashboard/node_modules/
+alpha/node_modules/
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+alpha/__pycache__/
+modules/**/__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local state
+.claude/scheduled_tasks.lock

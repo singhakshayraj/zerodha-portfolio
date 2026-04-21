@@ -1,0 +1,16 @@
+{
+  "name": "zerodha-portfolio",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "cd dashboard && node server.js",
+    "dev": "cd dashboard && npm start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^17.4.2",
+    "groq-sdk": "^1.1.2",
+    "openai": "^6.34.0"
+  }
+}

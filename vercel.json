@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/analyze",       "destination": "/api/analyze" },
+    { "source": "/trade",         "destination": "/api/trade" },
+    { "source": "/alpha-score",   "destination": "/api/alpha-score" },
+    { "source": "/symbol-search", "destination": "/api/symbol-search" },
+    { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
+    { "source": "/research.html", "destination": "/dashboard/research.html" },
+    { "source": "/",              "destination": "/dashboard/index.html" }
+  ],
+}

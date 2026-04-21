@@ -1,0 +1,20 @@
+{
+  "AARTIIND":   { "sector": "Specialty Chemicals",  "exchange": "NSE", "type": "equity" },
+  "ATGL":       { "sector": "Gas Distribution",      "exchange": "BSE", "type": "equity" },
+  "BANKINDIA":  { "sector": "PSU Banking",            "exchange": "BSE", "type": "equity" },
+  "BHEL":       { "sector": "PSU Capital Goods",      "exchange": "BSE", "type": "equity" },
+  "HDFCSENSEX": { "sector": "Index ETF",              "exchange": "NSE", "type": "etf"    },
+  "ICICIPRULI": { "sector": "Insurance",              "exchange": "NSE", "type": "equity" },
+  "ITC":        { "sector": "FMCG",                  "exchange": "NSE", "type": "equity" },
+  "ITCHOTELS":  { "sector": "Hospitality",            "exchange": "BSE", "type": "equity" },
+  "MAHLIFE":    { "sector": "Real Estate",            "exchange": "NSE", "type": "equity" },
+  "NBCC":       { "sector": "PSU Construction",       "exchange": "NSE", "type": "equity" },
+  "NMDC":       { "sector": "Mining",                 "exchange": "BSE", "type": "equity" },
+  "NTPC":       { "sector": "PSU Power",              "exchange": "BSE", "type": "equity" },
+  "PARADEEP":   { "sector": "Fertilizers",            "exchange": "BSE", "type": "equity" },
+  "RVNL":       { "sector": "PSU Infra",              "exchange": "BSE", "type": "equity" },
+  "SILVERBEES": { "sector": "Silver ETF",             "exchange": "NSE", "type": "etf"    },
+  "SUPRAJIT":   { "sector": "Auto Ancillary",         "exchange": "NSE", "type": "equity" },
+  "IREDA":      { "sector": "Renewable Energy",       "exchange": "NSE", "type": "equity" },
+  "MAZDOCK":    { "sector": "Defence / Shipbuilding", "exchange": "NSE", "type": "equity" }
+}

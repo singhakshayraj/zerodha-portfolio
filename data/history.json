@@ -1,0 +1,87 @@
+{
+  "snapshots": [
+    {
+      "date": "2026-04-07",
+      "totalInvested": 564038,
+      "currentValue": 481497,
+      "totalPnl": -82541,
+      "totalPnlPct": -14.63,
+      "winners": 5,
+      "losers": 11,
+      "holdings": [
+        { "symbol": "AARTIIND",   "sector": "Specialty Chemicals", "qty": 32,  "avgPrice": 609.83, "ltp": 402.45, "pnl": -6636.3,  "pnlPct": -33.98, "dayChangePct": -0.43 },
+        { "symbol": "ATGL",       "sector": "Gas Distribution",    "qty": 90,  "avgPrice": 766.92, "ltp": 517.40, "pnl": -22457.0, "pnlPct": -32.54, "dayChangePct": -1.19 },
+        { "symbol": "BANKINDIA",  "sector": "PSU Banking",         "qty": 351, "avgPrice": 123.04, "ltp": 137.50, "pnl": 5074.68,  "pnlPct": 11.75,  "dayChangePct": -3.88 },
+        { "symbol": "BHEL",       "sector": "PSU Capital Goods",   "qty": 84,  "avgPrice": 290.83, "ltp": 253.50, "pnl": -3136.0,  "pnlPct": -13.17, "dayChangePct": 3.17  },
+        { "symbol": "HDFCSENSEX", "sector": "Index ETF",           "qty": 350, "avgPrice": 84.25,  "ltp": 84.31,  "pnl": 20.0,     "pnlPct": 0.07,   "dayChangePct": 0.73  },
+        { "symbol": "ICICIPRULI", "sector": "Insurance",           "qty": 21,  "avgPrice": 709.13, "ltp": 516.65, "pnl": -4042.1,  "pnlPct": -27.14, "dayChangePct": 0.69  },
+        { "symbol": "ITC",        "sector": "FMCG",                "qty": 100, "avgPrice": 388.89, "ltp": 298.45, "pnl": -9043.76, "pnlPct": -23.26, "dayChangePct": 1.22  },
+        { "symbol": "ITCHOTELS",  "sector": "Hospitality",         "qty": 50,  "avgPrice": 239.63, "ltp": 146.80, "pnl": -4641.34, "pnlPct": -38.74, "dayChangePct": -2.04 },
+        { "symbol": "MAHLIFE",    "sector": "Real Estate",         "qty": 33,  "avgPrice": 606.24, "ltp": 344.85, "pnl": -8625.75, "pnlPct": -43.09, "dayChangePct": 4.90  },
+        { "symbol": "NBCC",       "sector": "PSU Construction",    "qty": 210, "avgPrice": 116.43, "ltp": 84.16,  "pnl": -6776.95, "pnlPct": -27.72, "dayChangePct": -0.21 },
+        { "symbol": "NMDC",       "sector": "Mining",              "qty": 660, "avgPrice": 74.47,  "ltp": 81.75,  "pnl": 4806.05,  "pnlPct": 9.78,   "dayChangePct": 0.37  },
+        { "symbol": "NTPC",       "sector": "PSU Power",           "qty": 90,  "avgPrice": 342.02, "ltp": 369.05, "pnl": 2432.35,  "pnlPct": 7.90,   "dayChangePct": 0.79  },
+        { "symbol": "PARADEEP",   "sector": "Fertilizers",         "qty": 121, "avgPrice": 86.08,  "ltp": 115.70, "pnl": 3584.16,  "pnlPct": 34.43,  "dayChangePct": -0.26 },
+        { "symbol": "RVNL",       "sector": "PSU Infra",           "qty": 52,  "avgPrice": 536.46, "ltp": 261.15, "pnl": -14316.3, "pnlPct": -51.31, "dayChangePct": -0.17 },
+        { "symbol": "SILVERBEES", "sector": "Silver ETF",          "qty": 425, "avgPrice": 236.07, "ltp": 220.03, "pnl": -6814.89, "pnlPct": -6.80,  "dayChangePct": -1.06 },
+        { "symbol": "SUPRAJIT",   "sector": "Auto Ancillary",      "qty": 90,  "avgPrice": 551.16, "ltp": 418.20, "pnl": -11966.7, "pnlPct": -24.12, "dayChangePct": 1.16  }
+      ]
+    },
+    {
+      "date": "2026-04-15",
+      "totalInvested": 564037,
+      "currentValue": 502106,
+      "totalPnl": -61931,
+      "totalPnlPct": -10.98,
+      "winners": 5,
+      "losers": 11,
+      "holdings": [
+        { "symbol": "AARTIIND",   "sector": "Specialty Chemicals", "qty": 32,  "avgPrice": 609.83, "ltp": 424.85, "pnl": -5919.5,  "pnlPct": -30.33, "dayChangePct": 5.56  },
+        { "symbol": "ATGL",       "sector": "Gas Distribution",    "qty": 90,  "avgPrice": 766.92, "ltp": 572.70, "pnl": -17480.0, "pnlPct": -25.32, "dayChangePct": 10.69 },
+        { "symbol": "BANKINDIA",  "sector": "PSU Banking",         "qty": 351, "avgPrice": 123.04, "ltp": 145.10, "pnl": 7742.28,  "pnlPct": 17.93,  "dayChangePct": 5.53  },
+        { "symbol": "BHEL",       "sector": "PSU Capital Goods",   "qty": 84,  "avgPrice": 290.83, "ltp": 287.85, "pnl": -250.6,   "pnlPct": -1.03,  "dayChangePct": 13.55 },
+        { "symbol": "HDFCSENSEX", "sector": "Index ETF",           "qty": 350, "avgPrice": 84.25,  "ltp": 86.39,  "pnl": 748.0,    "pnlPct": 2.54,   "dayChangePct": 2.47  },
+        { "symbol": "ICICIPRULI", "sector": "Insurance",           "qty": 21,  "avgPrice": 709.13, "ltp": 547.05, "pnl": -3403.7,  "pnlPct": -22.86, "dayChangePct": 5.88  },
+        { "symbol": "ITC",        "sector": "FMCG",                "qty": 100, "avgPrice": 388.89, "ltp": 298.65, "pnl": -9023.76, "pnlPct": -23.21, "dayChangePct": 0.07  },
+        { "symbol": "ITCHOTELS",  "sector": "Hospitality",         "qty": 50,  "avgPrice": 239.63, "ltp": 154.50, "pnl": -4256.34, "pnlPct": -35.52, "dayChangePct": 5.24  },
+        { "symbol": "MAHLIFE",    "sector": "Real Estate",         "qty": 33,  "avgPrice": 606.24, "ltp": 337.70, "pnl": -8861.7,  "pnlPct": -44.30, "dayChangePct": -2.07 },
+        { "symbol": "NBCC",       "sector": "PSU Construction",    "qty": 210, "avgPrice": 116.43, "ltp": 88.67,  "pnl": -5829.85, "pnlPct": -23.84, "dayChangePct": 5.36  },
+        { "symbol": "NMDC",       "sector": "Mining",              "qty": 660, "avgPrice": 74.47,  "ltp": 85.81,  "pnl": 7485.65,  "pnlPct": 15.23,  "dayChangePct": 4.97  },
+        { "symbol": "NTPC",       "sector": "PSU Power",           "qty": 90,  "avgPrice": 342.02, "ltp": 386.25, "pnl": 3980.35,  "pnlPct": 12.93,  "dayChangePct": 4.66  },
+        { "symbol": "PARADEEP",   "sector": "Fertilizers",         "qty": 121, "avgPrice": 86.08,  "ltp": 120.51, "pnl": 4166.17,  "pnlPct": 40.00,  "dayChangePct": 4.16  },
+        { "symbol": "RVNL",       "sector": "PSU Infra",           "qty": 52,  "avgPrice": 536.46, "ltp": 272.00, "pnl": -13752.1, "pnlPct": -49.30, "dayChangePct": 4.15  },
+        { "symbol": "SILVERBEES", "sector": "Silver ETF",          "qty": 425, "avgPrice": 236.07, "ltp": 224.97, "pnl": -4715.39, "pnlPct": -4.70,  "dayChangePct": 2.24  },
+        { "symbol": "SUPRAJIT",   "sector": "Auto Ancillary",      "qty": 90,  "avgPrice": 551.16, "ltp": 411.60, "pnl": -12560.7, "pnlPct": -25.32, "dayChangePct": -1.58 }
+      ]
+    },
+    {
+      "date": "2026-04-21",
+      "totalInvested": 624347,
+      "currentValue": 587180,
+      "totalPnl": -37167,
+      "totalPnlPct": -5.95,
+      "winners": 8,
+      "losers": 10,
+      "holdings": [
+        { "symbol": "AARTIIND",   "sector": "Specialty Chemicals",  "qty": 35,  "avgPrice": 595.31, "ltp": 451.40, "pnl": -5036.90,  "pnlPct": -24.17, "dayChangePct": 1.24  },
+        { "symbol": "ATGL",       "sector": "Gas Distribution",     "qty": 91,  "avgPrice": 765.45, "ltp": 614.85, "pnl": -13704.70, "pnlPct": -19.67, "dayChangePct": -0.92 },
+        { "symbol": "BANKINDIA",  "sector": "PSU Banking",          "qty": 351, "avgPrice": 123.04, "ltp": 149.80, "pnl": 9391.98,   "pnlPct": 21.75,  "dayChangePct": 0.98  },
+        { "symbol": "BHEL",       "sector": "PSU Capital Goods",    "qty": 84,  "avgPrice": 290.83, "ltp": 332.61, "pnl": 3509.24,   "pnlPct": 14.36,  "dayChangePct": 2.14  },
+        { "symbol": "HDFCSENSEX", "sector": "Index ETF",            "qty": 356, "avgPrice": 84.33,  "ltp": 89.30,  "pnl": 1770.58,   "pnlPct": 5.90,   "dayChangePct": 0.86  },
+        { "symbol": "ICICIPRULI", "sector": "Insurance",            "qty": 21,  "avgPrice": 709.13, "ltp": 550.10, "pnl": -3339.65,  "pnlPct": -22.43, "dayChangePct": -1.40 },
+        { "symbol": "IREDA",      "sector": "Renewable Energy",     "qty": 140, "avgPrice": 132.80, "ltp": 128.86, "pnl": -551.60,   "pnlPct": -2.97,  "dayChangePct": -0.98 },
+        { "symbol": "ITC",        "sector": "FMCG",                 "qty": 110, "avgPrice": 381.45, "ltp": 309.65, "pnl": -7897.76,  "pnlPct": -18.82, "dayChangePct": 1.52  },
+        { "symbol": "ITCHOTELS",  "sector": "Hospitality",          "qty": 60,  "avgPrice": 226.81, "ltp": 164.95, "pnl": -3711.34,  "pnlPct": -27.27, "dayChangePct": 1.66  },
+        { "symbol": "MAHLIFE",    "sector": "Real Estate",          "qty": 33,  "avgPrice": 606.24, "ltp": 323.95, "pnl": -9315.45,  "pnlPct": -46.56, "dayChangePct": 1.00  },
+        { "symbol": "MAZDOCK",    "sector": "Defence / Shipbuilding","qty": 10,  "avgPrice": 2615.00,"ltp": 2656.60,"pnl": 416.00,    "pnlPct": 1.59,   "dayChangePct": 1.35  },
+        { "symbol": "NBCC",       "sector": "PSU Construction",     "qty": 230, "avgPrice": 114.51, "ltp": 93.28,  "pnl": -4883.95,  "pnlPct": -18.54, "dayChangePct": -0.04 },
+        { "symbol": "NMDC",       "sector": "Mining",               "qty": 660, "avgPrice": 74.47,  "ltp": 88.47,  "pnl": 9241.25,   "pnlPct": 18.80,  "dayChangePct": -0.48 },
+        { "symbol": "NTPC",       "sector": "PSU Power",            "qty": 90,  "avgPrice": 342.02, "ltp": 396.20, "pnl": 4875.85,   "pnlPct": 15.84,  "dayChangePct": -0.45 },
+        { "symbol": "PARADEEP",   "sector": "Fertilizers",          "qty": 121, "avgPrice": 86.08,  "ltp": 132.08, "pnl": 5566.14,   "pnlPct": 53.44,  "dayChangePct": 4.06  },
+        { "symbol": "RVNL",       "sector": "PSU Infra",            "qty": 72,  "avgPrice": 471.78, "ltp": 298.86, "pnl": -12449.98, "pnlPct": -36.65, "dayChangePct": 0.85  },
+        { "symbol": "SILVERBEES", "sector": "Silver ETF",           "qty": 425, "avgPrice": 236.07, "ltp": 237.41, "pnl": 571.61,    "pnlPct": 0.57,   "dayChangePct": 0.06  },
+        { "symbol": "SUPRAJIT",   "sector": "Auto Ancillary",       "qty": 91,  "avgPrice": 549.78, "ltp": 422.10, "pnl": -11618.60, "pnlPct": -23.22, "dayChangePct": 1.86  }
+      ]
+    }
+  ]
+}

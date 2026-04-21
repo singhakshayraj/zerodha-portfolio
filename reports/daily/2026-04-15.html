@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portfolio Report — 15 Apr 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    header { background: linear-gradient(135deg, #1a1f2e, #232840); padding: 32px 40px; border-bottom: 1px solid #2d3748; }
+    header h1 { font-size: 24px; font-weight: 700; color: #fff; }
+    header p { color: #718096; margin-top: 4px; font-size: 14px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 40px; }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .card .label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .card .sub { font-size: 12px; margin-top: 4px; }
+    .card .delta { font-size: 13px; margin-top: 6px; }
+    .red { color: #fc8181; }
+    .green { color: #68d391; }
+    .white { color: #fff; }
+    .yellow { color: #f6e05e; }
+    .section { margin-bottom: 32px; }
+    .section h2 { font-size: 16px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #2d3748; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 14px; color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #2d3748; }
+    td { padding: 12px 14px; border-bottom: 1px solid #1e2535; }
+    tr:hover td { background: #1e2535; }
+    td .symbol { font-weight: 600; color: #fff; }
+    td .sector { font-size: 12px; color: #718096; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-red { background: rgba(252,129,129,0.15); color: #fc8181; }
+    .badge-green { background: rgba(104,211,145,0.15); color: #68d391; }
+    .sector-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .sector-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; padding: 14px; }
+    .sector-card .name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .sector-card .pnl { font-size: 12px; margin-top: 4px; }
+    .sector-card .weight { font-size: 11px; color: #718096; margin-top: 2px; }
+    .rec-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .rec-card { background: #1a1f2e; border-radius: 8px; padding: 14px; }
+    .rec-card.hold { border-left: 3px solid #68d391; }
+    .rec-card.review { border-left: 3px solid #f6e05e; }
+    .rec-card.profit { border-left: 3px solid #63b3ed; }
+    .rec-card .rec-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .rec-card.hold .rec-label { color: #68d391; }
+    .rec-card.review .rec-label { color: #f6e05e; }
+    .rec-card.profit .rec-label { color: #63b3ed; }
+    .rec-card .stocks { font-size: 13px; color: #e2e8f0; line-height: 1.8; }
+    .improvement-banner { background: rgba(104,211,145,0.1); border: 1px solid rgba(104,211,145,0.3); border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; font-size: 14px; color: #68d391; }
+    footer { text-align: center; padding: 24px; color: #4a5568; font-size: 12px; border-top: 1px solid #2d3748; margin-top: 16px; }
+    a { color: #63b3ed; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    /* Top Nav */
+    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
+    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 16px; } }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/alpha">Alpha Finder</a>
+    <a href="/research.html">Research Desk</a>
+  </div>
+</nav>
+
+<header>
+  <h1>📊 Portfolio Report</h1>
+  <p>Tuesday, 15 April 2026 &nbsp;·&nbsp; Kite Connect via Claude MCP</p>
+</header>
+
+<div class="container">
+
+  <!-- Recovery Banner -->
+  <div class="improvement-banner">
+    ▲ Portfolio recovered ₹20,610 since Apr 7 &nbsp;·&nbsp; P&L improved from -14.63% → -10.98% &nbsp;·&nbsp; Broad market rally (+4–13% across most holdings)
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Total Invested</div>
+      <div class="value white">₹5,64,037</div>
+      <div class="sub" style="color:#718096">Across 16 holdings</div>
+    </div>
+    <div class="card">
+      <div class="label">Current Value</div>
+      <div class="value white">₹5,02,106</div>
+      <div class="sub green">▲ ₹20,609 vs Apr 7</div>
+    </div>
+    <div class="card">
+      <div class="label">Total P&L</div>
+      <div class="value red">-₹61,931</div>
+      <div class="sub green">▲ Improved from -₹82,541</div>
+    </div>
+    <div class="card">
+      <div class="label">Winners / Losers</div>
+      <div class="value white">5 <span style="color:#718096;font-size:18px">/</span> <span class="red">11</span></div>
+      <div class="sub" style="color:#718096">Return: -10.98%</div>
+    </div>
+  </div>
+
+  <!-- Sector Allocation -->
+  <div class="section">
+    <h2>Sector Allocation</h2>
+    <div class="sector-grid">
+      <div class="sector-card">
+        <div class="name">🏅 Commodities / ETF</div>
+        <div class="pnl" style="color:#68d391">P&L: +₹3,518</div>
+        <div class="weight">SILVERBEES, NMDC, HDFCSENSEX · ~37%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">⚡ PSU / Infra</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹8,111</div>
+        <div class="weight">BHEL, NBCC, NTPC, RVNL, BANKINDIA · ~26%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">🏭 Industrials / Auto</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹18,480</div>
+        <div class="weight">SUPRAJIT, AARTIIND · ~10%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">🍃 FMCG / Hospitality</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹13,280</div>
+        <div class="weight">ITC, ITCHOTELS · ~7%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">💧 Energy / Gas</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹17,480</div>
+        <div class="weight">ATGL · ~10%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">🏠 Real Estate</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹8,862</div>
+        <div class="weight">MAHLIFE · ~2%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">🏦 Insurance</div>
+        <div class="pnl" style="color:#fc8181">P&L: -₹3,404</div>
+        <div class="weight">ICICIPRULI · ~2%</div>
+      </div>
+      <div class="sector-card">
+        <div class="name">🌾 Fertilizers</div>
+        <div class="pnl" style="color:#68d391">P&L: +₹4,166</div>
+        <div class="weight">PARADEEP · ~3%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holdings Table -->
+  <div class="section">
+    <h2>Holdings Detail</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Qty</th>
+          <th>Avg Buy</th>
+          <th>LTP</th>
+          <th>Invested</th>
+          <th>Current</th>
+          <th>P&L</th>
+          <th>Return</th>
+          <th>vs Apr 7</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="symbol">AARTIIND</div><div class="sector">Specialty Chemicals · BSE</div></td>
+          <td>32</td><td>₹609.83</td><td>₹424.85</td>
+          <td>₹19,515</td><td>₹13,595</td>
+          <td class="red">-₹5,920</td><td class="red">-30.33%</td><td class="green">▲ +5.56%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">ATGL</div><div class="sector">Gas Distribution · BSE</div></td>
+          <td>90</td><td>₹766.92</td><td>₹572.70</td>
+          <td>₹69,023</td><td>₹51,543</td>
+          <td class="red">-₹17,480</td><td class="red">-25.32%</td><td class="green">▲ +10.69%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">BANKINDIA</div><div class="sector">PSU Banking · BSE</div></td>
+          <td>351</td><td>₹123.04</td><td>₹145.10</td>
+          <td>₹43,188</td><td>₹50,930</td>
+          <td class="green">+₹7,742</td><td class="green">+17.93%</td><td class="green">▲ +5.53%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">BHEL</div><div class="sector">PSU Capital Goods · BSE</div></td>
+          <td>84</td><td>₹290.83</td><td>₹287.85</td>
+          <td>₹24,430</td><td>₹24,179</td>
+          <td class="red">-₹251</td><td class="red">-1.03%</td><td class="green">▲ +13.55%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">HDFCSENSEX</div><div class="sector">Index ETF · NSE</div></td>
+          <td>350</td><td>₹84.25</td><td>₹86.39</td>
+          <td>₹29,488</td><td>₹30,237</td>
+          <td class="green">+₹748</td><td class="green">+2.54%</td><td class="green">▲ +2.47%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">ICICIPRULI</div><div class="sector">Insurance · BSE</div></td>
+          <td>21</td><td>₹709.13</td><td>₹547.05</td>
+          <td>₹14,892</td><td>₹11,488</td>
+          <td class="red">-₹3,404</td><td class="red">-22.86%</td><td class="green">▲ +5.88%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">ITC</div><div class="sector">FMCG · NSE</div></td>
+          <td>100</td><td>₹388.89</td><td>₹298.65</td>
+          <td>₹38,889</td><td>₹29,865</td>
+          <td class="red">-₹9,024</td><td class="red">-23.21%</td><td class="green">▲ +0.07%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">ITCHOTELS</div><div class="sector">Hospitality · BSE</div></td>
+          <td>50</td><td>₹239.63</td><td>₹154.50</td>
+          <td>₹11,981</td><td>₹7,725</td>
+          <td class="red">-₹4,256</td><td class="red">-35.52%</td><td class="green">▲ +5.24%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">MAHLIFE</div><div class="sector">Real Estate · NSE</div></td>
+          <td>33</td><td>₹606.24</td><td>₹337.70</td>
+          <td>₹20,006</td><td>₹11,144</td>
+          <td class="red">-₹8,862</td><td class="red">-44.30%</td><td class="red">▼ -2.07%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">NBCC</div><div class="sector">PSU Construction · NSE</div></td>
+          <td>210</td><td>₹116.43</td><td>₹88.67</td>
+          <td>₹24,451</td><td>₹18,621</td>
+          <td class="red">-₹5,830</td><td class="red">-23.84%</td><td class="green">▲ +5.36%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">NMDC</div><div class="sector">Mining · NSE</div></td>
+          <td>660</td><td>₹74.47</td><td>₹85.81</td>
+          <td>₹49,150</td><td>₹56,635</td>
+          <td class="green">+₹7,486</td><td class="green">+15.23%</td><td class="green">▲ +4.97%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">NTPC</div><div class="sector">PSU Power · NSE</div></td>
+          <td>90</td><td>₹342.02</td><td>₹386.25</td>
+          <td>₹30,782</td><td>₹34,763</td>
+          <td class="green">+₹3,980</td><td class="green">+12.93%</td><td class="green">▲ +4.66%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">PARADEEP</div><div class="sector">Fertilizers · NSE</div></td>
+          <td>121</td><td>₹86.08</td><td>₹120.51</td>
+          <td>₹10,416</td><td>₹14,582</td>
+          <td class="green">+₹4,166</td><td class="green">+40.00%</td><td class="green">▲ +4.16%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">RVNL</div><div class="sector">PSU Infra · BSE</div></td>
+          <td>52</td><td>₹536.46</td><td>₹272.00</td>
+          <td>₹27,896</td><td>₹14,144</td>
+          <td class="red">-₹13,752</td><td class="red">-49.30%</td><td class="green">▲ +4.15%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">SILVERBEES</div><div class="sector">Silver ETF · NSE</div></td>
+          <td>425</td><td>₹236.07</td><td>₹224.97</td>
+          <td>₹1,00,330</td><td>₹95,612</td>
+          <td class="red">-₹4,715</td><td class="red">-4.70%</td><td class="green">▲ +2.24%</td>
+        </tr>
+        <tr>
+          <td><div class="symbol">SUPRAJIT</div><div class="sector">Auto Ancillary · NSE</div></td>
+          <td>90</td><td>₹551.16</td><td>₹411.60</td>
+          <td>₹49,605</td><td>₹37,044</td>
+          <td class="red">-₹12,561</td><td class="red">-25.32%</td><td class="red">▼ -1.58%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Action Plan -->
+  <div class="section">
+    <h2>Action Plan</h2>
+    <div class="rec-grid">
+      <div class="rec-card hold">
+        <div class="rec-label">✅ Hold — Recovering Strongly</div>
+        <div class="stocks">NTPC · NMDC · BANKINDIA · BHEL<br>HDFCSENSEX · ICICIPRULI · ATGL<br>NBCC · ITCHOTELS · AARTIIND</div>
+      </div>
+      <div class="rec-card review">
+        <div class="rec-label">⚠️ Review — Still Weak</div>
+        <div class="stocks">RVNL — down 49%, PSU infra stalled<br>MAHLIFE — real estate slow, -2% today<br>SUPRAJIT — -1.58% while market rallied</div>
+      </div>
+      <div class="rec-card profit">
+        <div class="rec-label">💰 Consider Booking Profits</div>
+        <div class="stocks">PARADEEP — up 40%, consider 50% exit<br>BANKINDIA — up 18%, trail stop loss<br>NMDC — up 15%, partial profit booking</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Generated on 15 Apr 2026 via Claude + Zerodha Kite MCP &nbsp;·&nbsp;
+  <a href="../../dashboard/index.html">View Consolidated Dashboard →</a>
+</footer>
+
+</body>
+</html>

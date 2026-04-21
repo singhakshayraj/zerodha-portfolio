@@ -1,0 +1,46 @@
+name: Daily Portfolio Report
+
+on:
+  schedule:
+    # 3:33 PM IST = 10:03 AM UTC, weekdays
+    - cron: '3 10 * * 1-5'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to commit updated files
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run daily report
+        run: node modules/daily-report/generate.js
+        env:
+          RUNTIME_MODE: server
+          KITE_ENCTOKEN: ${{ secrets.KITE_ENCTOKEN }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'groq' }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Commit and push updated files
+        run: |
+          git config user.name  "portfolio-bot"
+          git config user.email "bot@portfolio"
+          git add data/history.json reports/daily/ dashboard/index.html
+          git diff --cached --quiet || git commit -m "chore: daily report $(date -u '+%Y-%m-%d')"
+          git push
