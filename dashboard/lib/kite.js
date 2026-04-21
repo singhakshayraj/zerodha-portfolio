@@ -176,3 +176,67 @@ export async function placeOrder({ symbol, transactionType, quantity, enctoken, 
     req.end();
   });
 }
+
+/**
+ * Place a GTT OCO order (buy at market + target + stop-loss in one shot).
+ * Uses Kite's two-leg GTT which survives browser close.
+ */
+export async function placeGTT({ symbol, exchange = 'NSE', qty, ltp, target, sl, enctoken }) {
+  const token = enctoken || config.kite.enctoken;
+  if (!token) throw new Error('enctoken required');
+
+  // Two-leg GTT: trigger fires when price hits target OR sl
+  // Kite OCO needs the lower price (SL) and upper price (target) as the two triggers
+  const body = new URLSearchParams({
+    type:            'two-leg',
+    tradingsymbol:   symbol.toUpperCase(),
+    exchange,
+    'trigger_values[]': String(sl),
+    'trigger_values[]': String(target),
+    last_price:      String(ltp),
+    'orders[0][tradingsymbol]':    symbol.toUpperCase(),
+    'orders[0][exchange]':         exchange,
+    'orders[0][transaction_type]': 'SELL',
+    'orders[0][quantity]':         String(qty),
+    'orders[0][order_type]':       'LIMIT',
+    'orders[0][product]':          'CNC',
+    'orders[0][price]':            String(sl),
+    'orders[1][tradingsymbol]':    symbol.toUpperCase(),
+    'orders[1][exchange]':         exchange,
+    'orders[1][transaction_type]': 'SELL',
+    'orders[1][quantity]':         String(qty),
+    'orders[1][order_type]':       'LIMIT',
+    'orders[1][product]':          'CNC',
+    'orders[1][price]':            String(target),
+  }).toString();
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: KITE_HOST,
+      path:     KITE_PATH_PREFIX + '/gtt/triggers',
+      method:   'POST',
+      headers: {
+        'Authorization':  `enctoken ${token}`,
+        'X-Kite-Version': '3',
+        'Content-Type':   'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          if (result.status === 'success') resolve({ trigger_id: result.data?.trigger_id });
+          else reject(new Error(`[${result.error_type || 'Error'}] ${result.message}`));
+        } catch {
+          reject(new Error(`Kite GTT non-JSON (HTTP ${res.statusCode}): ${data.slice(0, 200)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}

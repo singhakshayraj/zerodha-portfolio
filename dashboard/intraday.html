@@ -152,6 +152,27 @@
     .pick-by { font-size: 10px; color: #4a5568; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pick-add { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #2d3748; border-radius: 5px; color: #718096; font-size: 11px; padding: 2px 7px; cursor: pointer; }
     .pick-add:hover { border-color: #63b3ed; color: #63b3ed; }
+    /* Trade plan panel */
+    .trade-plan { margin-top: 10px; padding: 10px; background: #0a0d14; border: 1px solid #2d3748; border-radius: 8px; font-size: 11px; }
+    .tp-loading { color: #4a5568; font-style: italic; }
+    .tp-levels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .tp-cell { text-align: center; }
+    .tp-label { font-size: 9px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.05em; }
+    .tp-val { font-size: 13px; font-weight: 700; margin-top: 2px; }
+    .tp-val.entry { color: #63b3ed; }
+    .tp-val.target { color: #68d391; }
+    .tp-val.sl     { color: #fc8181; }
+    .tp-stats { display: flex; gap: 10px; justify-content: space-between; margin-bottom: 8px; font-size: 10px; color: #718096; }
+    .tp-stat strong { color: #a0aec0; }
+    .tp-factors { font-size: 9px; color: #4a5568; line-height: 1.7; margin-bottom: 8px; }
+    .tp-warn { font-size: 9px; color: #f6e05e; margin-bottom: 6px; }
+    .tp-btn-row { display: flex; gap: 6px; }
+    .tp-btn { flex: 1; padding: 7px 0; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .tp-btn:hover { opacity: 0.85; }
+    .tp-btn-buy  { background: #68d391; color: #0f1117; }
+    .tp-btn-gtt  { background: #63b3ed; color: #0f1117; }
+    .tp-btn-skip { background: none; border: 1px solid #2d3748; color: #718096; }
+    .tp-btn-skip:hover { border-color: #fc8181; color: #fc8181; opacity: 1; }
     .pick-add.added { border-color: #68d391; color: #68d391; }
     .brain-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
     .brain-loading { text-align: center; padding: 30px; color: #4a5568; font-size: 13px; }
@@ -848,6 +869,9 @@ async function loadBrain(bust = false) {
           <span class="pick-score">score ${(p.score||0).toFixed(1)}</span>
         </div>
         <div class="pick-by" title="${byStr}">${byStr}</div>
+        <div class="trade-plan" id="tp-${i}">
+          <div class="tp-loading">Loading trade plan…</div>
+        </div>
       </div>`;
     });
     html += '</div>';
@@ -861,6 +885,7 @@ async function loadBrain(bust = false) {
     }
 
     content.innerHTML = html;
+    loadTradePlans(picks);
   } catch(e) {
     content.innerHTML = `<div class="brain-error">⚠ ${e.message}</div>`;
     status.textContent = 'Error';
@@ -875,6 +900,172 @@ function addPickToWatchlist(full, idx) {
   const btn = document.getElementById('pickbtn-' + idx);
   if (btn) { btn.textContent = '✓ Added'; btn.className = 'pick-add added'; }
   toast(full.split(':')[1] + ' added to watchlist', true);
+}
+
+// ── Trade Plan ────────────────────────────────────────────────────────────────
+let _brainPicks = [];
+
+async function loadTradePlans(picks) {
+  _brainPicks = picks;
+  const enc = localStorage.getItem('kite_enctoken') || '';
+
+  // Fetch current LTP for all picks via NSE
+  let ltpMap = {};
+  try {
+    const syms = picks.map(p => encodeURIComponent(`${p.exchange||'NSE'}:${p.symbol}`)).join(',');
+    const qRes = await fetch(`/api/yahoo-quotes?symbols=${syms}`);
+    const qData = await qRes.json();
+    ltpMap = qData;
+  } catch {}
+
+  picks.forEach((p, i) => {
+    const full = `${p.exchange||'NSE'}:${p.symbol}`;
+    const q    = ltpMap[full] || ltpMap[p.symbol] || {};
+    const ltp  = q.last_price || 0;
+    const open = q.ohlc?.open || ltp;
+    const high = q.ohlc?.high || ltp;
+    const low  = q.ohlc?.low  || ltp;
+
+    if (!ltp) {
+      const el = document.getElementById('tp-' + i);
+      if (el) el.innerHTML = `<div class="tp-loading">Price unavailable — add to watchlist to track</div>`;
+      return;
+    }
+
+    fetch('/api/trade-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: p.symbol, exchange: p.exchange || 'NSE',
+        sector: p.sector || '', confidence: p.confidence || 70,
+        score: p.score || 70, ltp, open, high, low,
+      }),
+    })
+    .then(r => r.json())
+    .then(plan => renderTradePlan(i, p, plan, enc))
+    .catch(() => {
+      const el = document.getElementById('tp-' + i);
+      if (el) el.innerHTML = `<div class="tp-loading">Plan unavailable</div>`;
+    });
+  });
+}
+
+function renderTradePlan(i, pick, plan, enc) {
+  const el = document.getElementById('tp-' + i);
+  if (!el) return;
+  const f  = plan.factors || {};
+  const factorLine = [
+    `ATR ${f.atr_pct}%`,
+    `VIX ${f.vix} ×${f.vix_mul}`,
+    `β${f.sector_beta}`,
+    `Trend ${f.trend_pct > 0 ? '+' : ''}${f.trend_pct}%`,
+    `Conf ×${f.conf_mul}`,
+    `Day ×${f.day_factor}`,
+  ].join(' · ');
+
+  const hasKite = !!enc;
+  const warnHtml = plan.time_warn === 'early-session'
+    ? `<div class="tp-warn">⚡ Early session — wait 15 min for gap to settle</div>`
+    : plan.time_warn === 'late-session'
+    ? `<div class="tp-warn">⚡ Late session — liquidity thins after 3 PM</div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="tp-levels">
+      <div class="tp-cell">
+        <div class="tp-label">Entry</div>
+        <div class="tp-val entry">₹${plan.entry?.toFixed(1)}</div>
+      </div>
+      <div class="tp-cell">
+        <div class="tp-label">Target +${plan.target_pct}%</div>
+        <div class="tp-val target">₹${plan.target?.toFixed(1)}</div>
+      </div>
+      <div class="tp-cell">
+        <div class="tp-label">SL −${plan.sl_pct}%</div>
+        <div class="tp-val sl">₹${plan.sl?.toFixed(1)}</div>
+      </div>
+    </div>
+    <div class="tp-stats">
+      <span><strong>${plan.qty}</strong> shares · ₹${(plan.capital||0).toLocaleString()}</span>
+      <span>Risk <strong style="color:#fc8181">₹${plan.risk_rs}</strong></span>
+      <span>Reward <strong style="color:#68d391">₹${plan.reward_rs}</strong></span>
+      <span>R:R <strong>${plan.rr}</strong></span>
+    </div>
+    <div class="tp-factors">${factorLine}</div>
+    ${warnHtml}
+    <div class="tp-btn-row">
+      ${hasKite
+        ? `<button class="tp-btn tp-btn-gtt" onclick="submitGTT(${i})">GTT OCO</button>
+           <button class="tp-btn tp-btn-buy" onclick="submitBuy(${i})">Market Buy</button>`
+        : `<a href="/connect" class="tp-btn tp-btn-gtt" style="text-align:center;text-decoration:none">Connect Kite to trade</a>`
+      }
+      <button class="tp-btn tp-btn-skip" onclick="document.getElementById('tp-${i}').style.display='none'">✕</button>
+    </div>`;
+}
+
+async function submitGTT(i) {
+  const pick = _brainPicks[i];
+  const el   = document.getElementById('tp-' + i);
+  const enc  = localStorage.getItem('kite_enctoken') || '';
+  if (!enc) { toast('Connect Kite first', false); return; }
+
+  // Re-read values from rendered DOM
+  const vals   = el.querySelectorAll('.tp-val');
+  const entry  = parseFloat(vals[0]?.textContent?.replace('₹',''));
+  const target = parseFloat(vals[1]?.textContent?.replace('₹',''));
+  const sl     = parseFloat(vals[2]?.textContent?.replace('₹',''));
+  const qty    = parseInt(el.querySelector('.tp-stats strong')?.textContent);
+  if (!entry || !target || !sl || !qty) { toast('Plan not ready', false); return; }
+
+  // Step 1: market buy
+  try {
+    toast(`Placing market buy for ${pick.symbol}…`, true);
+    await fetch('/trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': enc },
+      body: JSON.stringify({ symbol: pick.symbol, exchange: pick.exchange || 'NSE',
+                             transaction_type: 'BUY', quantity: qty, enctoken: enc }),
+    });
+  } catch (e) { toast('Buy failed: ' + e.message, false); return; }
+
+  // Step 2: GTT OCO
+  try {
+    toast(`Setting GTT: target ₹${target} / SL ₹${sl}…`, true);
+    const res  = await fetch('/api/gtt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': enc },
+      body: JSON.stringify({ symbol: pick.symbol, exchange: pick.exchange || 'NSE',
+                             qty, ltp: entry, target, sl }),
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      toast(`✓ ${pick.symbol} — GTT set (ID ${data.trigger_id})`, true);
+      el.innerHTML = `<div style="color:#68d391;font-size:11px;padding:6px 0">✓ GTT placed — target ₹${target} · SL ₹${sl}</div>`;
+    } else {
+      toast('GTT error: ' + data.error, false);
+    }
+  } catch (e) { toast('GTT failed: ' + e.message, false); }
+}
+
+async function submitBuy(i) {
+  const pick = _brainPicks[i];
+  const el   = document.getElementById('tp-' + i);
+  const enc  = localStorage.getItem('kite_enctoken') || '';
+  if (!enc) { toast('Connect Kite first', false); return; }
+  const qty  = parseInt(el.querySelector('.tp-stats strong')?.textContent);
+  if (!qty) { toast('Plan not ready', false); return; }
+  try {
+    toast(`Placing market buy for ${pick.symbol}…`, true);
+    const res  = await fetch('/trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': enc },
+      body: JSON.stringify({ symbol: pick.symbol, exchange: pick.exchange || 'NSE',
+                             transaction_type: 'BUY', quantity: qty, enctoken: enc }),
+    });
+    const data = await res.json();
+    if (data.status === 'success') toast(`✓ ${pick.symbol} bought (${qty} shares)`, true);
+    else toast('Error: ' + data.error, false);
+  } catch (e) { toast('Buy failed: ' + e.message, false); }
 }
 
 function addAllBrainPicks() {
