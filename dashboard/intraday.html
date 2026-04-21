@@ -34,10 +34,17 @@
     .refresh-badge { font-size: 11px; color: #4a5568; }
 
     /* WATCHLIST */
-    .watchlist-add { display: flex; gap: 8px; margin-bottom: 14px; }
+    .watchlist-add { display: flex; gap: 8px; margin-bottom: 14px; position: relative; }
     .watchlist-add input { flex: 1; padding: 9px 14px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; font-size: 13px; color: #e2e8f0; outline: none; }
     .watchlist-add input:focus { border-color: #63b3ed; }
     .watchlist-add input::placeholder { color: #4a5568; }
+    .watch-suggest { position: absolute; top: 100%; left: 0; right: 60px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px; margin-top: 4px; z-index: 200; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden; }
+    .watch-suggest.visible { display: block; }
+    .watch-suggest-item { padding: 9px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #0f1117; font-size: 13px; }
+    .watch-suggest-item:last-child { border-bottom: none; }
+    .watch-suggest-item:hover { background: #2d3748; }
+    .watch-sym { font-weight: 700; color: #e2e8f0; }
+    .watch-name { font-size: 11px; color: #718096; }
     .btn-add { padding: 9px 18px; background: #63b3ed; color: #0f1117; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .btn-add:hover { background: #90cdf4; }
 
@@ -149,7 +156,11 @@
         <span class="refresh-badge">Auto-refresh 30s</span>
       </div>
       <div class="watchlist-add">
-        <input id="watchInput" placeholder="Add ticker (e.g. INFY, TCS, RELIANCE)" onkeydown="if(event.key==='Enter')addToWatchlist()"/>
+        <input id="watchInput" placeholder="Add ticker (e.g. INFY, TCS, RELIANCE)"
+          oninput="onWatchInput(this.value)"
+          onkeydown="onWatchKeydown(event)"
+          autocomplete="off"/>
+        <div class="watch-suggest" id="watchSuggest"></div>
         <button class="btn-add" onclick="addToWatchlist()">+ Add</button>
       </div>
       <div style="overflow-x:auto">
@@ -264,7 +275,7 @@ const IKEYS   = ['NIFTY50','BANKNIFTY','MIDCPNIFTY','INDIAVIX'];
 
 async function loadPulse() {
   try {
-    const res = await fetch('/api/quotes?symbols=' + encodeURIComponent(INDICES.join(',')), { headers: headers() });
+    const res = await fetch('/api/quotes?symbols=' + INDICES.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
     const { data, error } = await res.json();
     if (error) return;
     INDICES.forEach((sym, i) => {
@@ -283,6 +294,59 @@ async function loadPulse() {
 }
 
 // ── Watchlist ─────────────────────────────────────────────────────────────────
+// ── Watchlist suggestions ─────────────────────────────────────────────────────
+let _watchSuggestTimer = null;
+let _watchSuggestIdx = -1;
+
+async function onWatchInput(val) {
+  clearTimeout(_watchSuggestTimer);
+  const box = document.getElementById('watchSuggest');
+  if (!val || val.length < 1) { box.className = 'watch-suggest'; return; }
+  _watchSuggestTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch('/symbol-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: val }) });
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data.results || []);
+      if (!items.length) { box.className = 'watch-suggest'; return; }
+      _watchSuggestIdx = -1;
+      box.innerHTML = items.map((s, i) =>
+        `<div class="watch-suggest-item" data-sym="${s.symbol}" onclick="selectWatchSuggest('${s.symbol}')">
+          <span class="watch-sym">${s.symbol}</span>
+          <span class="watch-name">${s.name !== s.symbol ? s.name : ''}</span>
+        </div>`
+      ).join('');
+      box.className = 'watch-suggest visible';
+    } catch(e) {}
+  }, 200);
+}
+
+function onWatchKeydown(e) {
+  const box   = document.getElementById('watchSuggest');
+  const items = box.querySelectorAll('.watch-suggest-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); _watchSuggestIdx = Math.min(_watchSuggestIdx + 1, items.length - 1); highlightSuggest(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); _watchSuggestIdx = Math.max(_watchSuggestIdx - 1, -1); highlightSuggest(items); }
+  else if (e.key === 'Enter') {
+    if (_watchSuggestIdx >= 0 && items[_watchSuggestIdx]) {
+      selectWatchSuggest(items[_watchSuggestIdx].dataset.sym);
+    } else { addToWatchlist(); }
+  } else if (e.key === 'Escape') { box.className = 'watch-suggest'; }
+}
+
+function highlightSuggest(items) {
+  items.forEach((el, i) => el.style.background = i === _watchSuggestIdx ? '#2d3748' : '');
+}
+
+function selectWatchSuggest(symbol) {
+  document.getElementById('watchInput').value = symbol;
+  document.getElementById('watchSuggest').className = 'watch-suggest';
+  addToWatchlist();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.watchlist-add')) document.getElementById('watchSuggest').className = 'watch-suggest';
+});
+
 function addToWatchlist() {
   const raw = document.getElementById('watchInput').value.trim().toUpperCase();
   if (!raw) return;
@@ -291,6 +355,7 @@ function addToWatchlist() {
   watchlist.push(sym);
   saveWatchlist();
   document.getElementById('watchInput').value = '';
+  document.getElementById('watchSuggest').className = 'watch-suggest';
   refreshWatchlist();
 }
 
@@ -306,7 +371,7 @@ function saveWatchlist() { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(wa
 async function refreshWatchlist() {
   if (!watchlist.length) { renderWatchlistRows(null); return; }
   try {
-    const res = await fetch('/api/quotes?symbols=' + encodeURIComponent(watchlist.join(',')), { headers: headers() });
+    const res = await fetch('/api/quotes?symbols=' + watchlist.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
     const { data, error } = await res.json();
     if (error) { toast(error, false); return; }
     renderWatchlistRows(data);

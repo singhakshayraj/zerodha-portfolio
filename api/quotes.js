@@ -3,7 +3,11 @@ import { getQuotes } from '../dashboard/lib/kite.js';
 export default async function handler(req, res) {
   if (req.method !== 'GET') { res.status(405).end(); return; }
   try {
-    const symbols = (req.query.symbols || '').split(',').filter(Boolean);
+    // symbols are comma-separated, each individually URI-encoded
+    const raw = req.url.split('?')[1] || '';
+    const params = new URLSearchParams(raw);
+    const symbolsRaw = params.get('symbols') || '';
+    const symbols = symbolsRaw.split(',').map(s => decodeURIComponent(s)).filter(Boolean);
     if (!symbols.length) { res.status(400).json({ error: 'symbols required' }); return; }
     const enc = req.headers['x-kite-enctoken'];
     const data = await getQuotes(symbols, enc);
