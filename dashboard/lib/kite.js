@@ -23,10 +23,13 @@ function kiteRequest(path, enctoken) {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          if (parsed.status === 'error') reject(new Error(parsed.message || 'Kite API error'));
-          else resolve(parsed.data);
+          if (parsed.status === 'error') {
+            reject(new Error(`[${res.statusCode}] ${parsed.error_type || ''} ${parsed.message || 'Kite API error'}`.trim()));
+          } else {
+            resolve(parsed.data);
+          }
         } catch (e) {
-          reject(new Error('Kite returned non-JSON: ' + data.slice(0, 200)));
+          reject(new Error(`Kite HTTP ${res.statusCode}: ${data.slice(0, 200)}`));
         }
       });
     });

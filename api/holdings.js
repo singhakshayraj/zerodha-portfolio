@@ -12,6 +12,8 @@ export default async function handler(req, res) {
     const holdings = await getHoldings(effectiveEnc);
     res.status(200).json({ data: holdings });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    // Return full error so Connect page can show exactly what Kite said
+    const status = e.message?.includes('[403]') ? 403 : e.message?.includes('[400]') ? 400 : 500;
+    res.status(status).json({ error: e.message });
   }
 }
