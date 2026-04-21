@@ -787,7 +787,7 @@ async function loadBrain(bust = false) {
     const smtColors = { bullish: '#68d391', bearish: '#fc8181', neutral: '#718096' };
     const smt = data.market_sentiment || 'neutral';
     const macroRisk = data.macro_risk || 'medium';
-    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} sources · ${data.cached ? 'cached 30min' : 'fresh'}`;
+    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} sources · ${data.cached ? 'cached 30min' : 'fresh'} · ⚡ ${data.powered_by || 'AI'}`;
 
     const badge = document.getElementById('brainSentimentBadge');
     badge.style.display = 'inline-block';

@@ -55,17 +55,53 @@ async function analyzeWithOpenAI(company) {
   return JSON.parse(message.choices[0].message.content.trim());
 }
 
+async function analyzeWithGemini(company) {
+  const apiKey = config.llm.googleApiKey;
+  if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
+  const model = config.llm.geminiModel || 'gemini-1.5-flash';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: STOCK_ANALYSIS_PROMPT(company) }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 1024, responseMimeType: 'application/json' },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  const clean = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  return JSON.parse(clean);
+}
+
 /**
- * Analyze a stock using the configured LLM provider.
- * Returns the same JSON schema regardless of provider.
+ * Analyze a stock — tries primary provider, falls back to Gemini on rate-limit.
+ * Returns { ...result, _provider: 'groq'|'gemini'|'claude'|'openai' }
  */
 export async function analyzeStock(company) {
   const provider = config.llm.provider;
-  switch (provider) {
-    case 'claude':  return analyzeWithClaude(company);
-    case 'openai':  return analyzeWithOpenAI(company);
-    case 'groq':
-    default:        return analyzeWithGroq(company);
+  const providerFn = {
+    claude:  () => analyzeWithClaude(company),
+    openai:  () => analyzeWithOpenAI(company),
+    gemini:  () => analyzeWithGemini(company),
+    groq:    () => analyzeWithGroq(company),
+  };
+  const primaryFn = providerFn[provider] ?? providerFn.groq;
+
+  try {
+    const result = await primaryFn();
+    return { ...result, _provider: provider || 'groq' };
+  } catch (err) {
+    const isRateLimit = err.message?.includes('429') || err.message?.toLowerCase().includes('rate') || err.status === 429;
+    const hasGemini   = !!(config.llm.googleApiKey);
+    if (isRateLimit && hasGemini && provider !== 'gemini') {
+      const result = await analyzeWithGemini(company);
+      return { ...result, _provider: 'gemini' };
+    }
+    throw err;
   }
 }
 

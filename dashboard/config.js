@@ -29,6 +29,8 @@ export const config = {
     anthropicModel:  process.env.ANTHROPIC_MODEL   || 'claude-haiku-4-5-20251001',
     openaiApiKey:   process.env.OPENAI_API_KEY || '',
     openaiModel:    process.env.OPENAI_MODEL   || 'gpt-4o-mini',
+    googleApiKey:   process.env.GOOGLE_API_KEY || '',
+    geminiModel:    process.env.GEMINI_MODEL   || 'gemini-1.5-flash',
   },
 
   port: parseInt(process.env.PORT || '7432', 10),

@@ -121,10 +121,75 @@ async function fetchNewsItems(source, maxItems = 4) {
   } catch { return []; }
 }
 
-// ── Groq multi-factor analysis ────────────────────────────────────────────────
-async function analyzeWithGroq(articles) {
+// ── LLM helpers ───────────────────────────────────────────────────────────────
+function parseJsonResponse(content) {
+  const text = (content || '').trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  try { return JSON.parse(text); }
+  catch {
+    const m = text.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('LLM returned non-JSON: ' + text.slice(0, 200));
+  }
+}
+
+async function callGroq(prompt) {
   const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error('GROQ_API_KEY not set in Vercel environment variables');
+  if (!key) throw new Error('GROQ_API_KEY not set');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.15, max_tokens: 4000,
+    }),
+  });
+  if (res.status === 429) throw Object.assign(new Error('Groq rate limited (429)'), { status: 429 });
+  if (!res.ok) throw new Error(`Groq error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return parseJsonResponse(data.choices?.[0]?.message?.content);
+}
+
+async function callGemini(prompt) {
+  const key = process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error('GOOGLE_API_KEY not set');
+  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 4000 },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return parseJsonResponse(data.candidates?.[0]?.content?.parts?.[0]?.text);
+}
+
+// Try Groq → fall back to Gemini on rate-limit
+async function callLLM(prompt) {
+  try {
+    const result = await callGroq(prompt);
+    return { result, provider: 'Groq (llama-3.3-70b)' };
+  } catch (err) {
+    const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.toLowerCase().includes('rate');
+    if (isRateLimit && process.env.GOOGLE_API_KEY) {
+      const result = await callGemini(prompt);
+      return { result, provider: `Gemini (${process.env.GEMINI_MODEL || 'gemini-1.5-flash'})` };
+    }
+    throw err;
+  }
+}
+
+// ── Multi-factor analysis ─────────────────────────────────────────────────────
+async function analyzeWithGroq(articles) {
+  // kept for compat — now delegates to callLLM
+  const key = process.env.GROQ_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error('No LLM API key set (GROQ_API_KEY or GOOGLE_API_KEY)');
 
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
@@ -236,27 +301,8 @@ Rules:
 - Only NSE/BSE listed Indian stocks
 - If fewer than 10 are explicitly signalled, infer additional from sector/macro themes — mark intraday_note as "Thematic — no explicit signal"`;
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.15,
-      max_tokens: 4000,
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Groq error ${res.status}: ${(await res.text()).slice(0, 200)}`);
-  const data = await res.json();
-  const content = (data.choices?.[0]?.message?.content || '').trim();
-
-  try { return JSON.parse(content); }
-  catch {
-    const match = content.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('LLM returned non-JSON: ' + content.slice(0, 300));
-  }
+  const { result, provider } = await callLLM(prompt);
+  return { ...result, _provider: provider };
 }
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
@@ -296,9 +342,11 @@ export default async function handler(req, res) {
       tier_breakdown: Object.fromEntries(
         [1,2,3,4,5,6].map(t => [`tier_${t}`, articles.filter(a => a.tier === t).length])
       ),
+      powered_by: analysis._provider || 'Groq (llama-3.3-70b)',
       generated_at: new Date().toISOString(),
       cached: false,
     };
+    delete result._provider;
 
     _cache = result;
     _cacheAt = Date.now();
