@@ -145,10 +145,10 @@
   <div class="source-bar">
     <span class="source-label">Quote source:</span>
     <div class="source-btns">
-      <button class="src-btn active" id="srcYahoo" onclick="setSource('yahoo')">Yahoo Finance</button>
+      <button class="src-btn active" id="srcYahoo" onclick="setSource('yahoo')">NSE India</button>
       <button class="src-btn" id="srcKite"  onclick="setSource('kite')">Kite (requires login)</button>
     </div>
-    <span class="source-note" id="sourceNote">Free · 15-min delayed · No login needed</span>
+    <span class="source-note" id="sourceNote">Free · Real-time · No login needed</span>
   </div>
 
   <!-- MARKET PULSE -->
@@ -255,7 +255,7 @@
 
 <div class="toast" id="toast"></div>
 
-<footer id="footerNote">Prices from Yahoo Finance (15-min delayed) · Auto-refreshes every 30 seconds · Not financial advice</footer>
+<footer id="footerNote">Prices from NSE India (real-time) · Auto-refreshes every 30 seconds · Not financial advice</footer>
 
 <script>
 const STORAGE_KEY = 'kite_enctoken';
@@ -279,10 +279,10 @@ function setSource(src) {
   document.getElementById('srcKite').className  = 'src-btn' + (src === 'kite'  ? ' active' : '');
   const isYahoo = src === 'yahoo';
   document.getElementById('sourceNote').textContent = isYahoo
-    ? 'Free · 15-min delayed · No login needed'
+    ? 'Free · Real-time · No login needed'
     : 'Real-time · Requires Kite enctoken';
   document.getElementById('footerNote').textContent = isYahoo
-    ? 'Prices from Yahoo Finance (15-min delayed) · Auto-refreshes every 30 seconds · Not financial advice'
+    ? 'Prices from NSE India (real-time) · Auto-refreshes every 30 seconds · Not financial advice'
     : 'Prices from Kite (real-time) · Auto-refreshes every 30 seconds · Not financial advice';
   loadPulse();
   refreshWatchlist();
