@@ -115,7 +115,7 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
   const now = new Date();
   const from = new Date(now);
   from.setHours(3, 45, 0, 0); // 9:15 AM IST = 3:45 AM UTC
-  const fmt = d => d.toISOString().slice(0, 19).replace('T', '+');
+  const fmt = d => d.toISOString().slice(0, 19).replace('T', '%2B');
 
   const path = `/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(now)}`;
   return kiteRequest(path, enctoken, 'connect');
