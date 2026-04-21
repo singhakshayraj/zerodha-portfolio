@@ -34,6 +34,13 @@ const server = http.createServer(async (req, res) => {
     res.end(file); return;
   }
 
+  // Serve connect page
+  if (req.method === 'GET' && req.url === '/connect') {
+    const file = fs.readFileSync(path.join(__dirname, 'connect.html'));
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(file); return;
+  }
+
   // Serve daily reports
   if (req.method === 'GET' && req.url.startsWith('/reports/daily/')) {
     const reportPath = path.join(__dirname, '..', req.url);

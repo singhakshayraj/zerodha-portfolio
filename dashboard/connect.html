@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connect Kite — Portfolio Intelligence</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    /* NAV */
+    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
+    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 16px; } }
+
+    /* PAGE */
+    .page { max-width: 600px; margin: 64px auto; padding: 0 24px; }
+
+    header { margin-bottom: 40px; }
+    header h1 { font-size: 24px; font-weight: 700; color: #e2e8f0; }
+    header p { font-size: 14px; color: #718096; margin-top: 6px; line-height: 1.6; }
+
+    /* STATUS BADGE */
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 32px; }
+    .status-badge.connected { background: rgba(104,211,145,0.1); border: 1px solid rgba(104,211,145,0.3); color: #68d391; }
+    .status-badge.disconnected { background: rgba(252,129,129,0.1); border: 1px solid rgba(252,129,129,0.3); color: #fc8181; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+    /* CARD */
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 28px; margin-bottom: 20px; }
+    .card h2 { font-size: 14px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
+
+    /* INPUT GROUP */
+    .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .input-group label { font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .input-group input { padding: 12px 16px; background: #0f1117; border: 1.5px solid #2d3748; border-radius: 8px; font-family: monospace; font-size: 13px; color: #e2e8f0; outline: none; transition: border-color 0.15s; }
+    .input-group input:focus { border-color: #63b3ed; }
+    .input-group input::placeholder { color: #4a5568; }
+
+    /* BUTTONS */
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #63b3ed; color: #0f1117; }
+    .btn-outline { background: none; border: 1px solid #2d3748; color: #a0aec0; }
+    .btn-outline:hover { border-color: #63b3ed; color: #63b3ed; opacity: 1; }
+    .btn-danger { background: none; border: 1px solid rgba(252,129,129,0.3); color: #fc8181; }
+    .btn-danger:hover { background: rgba(252,129,129,0.1); opacity: 1; }
+
+    /* TEST RESULT */
+    .test-result { margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; display: none; }
+    .test-result.ok { background: rgba(104,211,145,0.1); border: 1px solid rgba(104,211,145,0.3); color: #68d391; }
+    .test-result.err { background: rgba(252,129,129,0.1); border: 1px solid rgba(252,129,129,0.3); color: #fc8181; }
+
+    /* HOW-TO */
+    .steps { display: flex; flex-direction: column; gap: 14px; }
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step-num { min-width: 24px; height: 24px; background: #2d3748; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #a0aec0; }
+    .step-text { font-size: 13px; color: #a0aec0; line-height: 1.6; }
+    .step-text code { background: #0f1117; border: 1px solid #2d3748; padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #63b3ed; }
+    .step-text a { color: #63b3ed; text-decoration: none; }
+    .step-text a:hover { text-decoration: underline; }
+
+    /* NOTE */
+    .note { background: rgba(99,179,237,0.08); border: 1px solid rgba(99,179,237,0.2); border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #718096; line-height: 1.6; margin-top: 8px; }
+    .note strong { color: #63b3ed; }
+
+    footer { text-align: center; padding: 40px 24px; color: #4a5568; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/alpha">Alpha Finder</a>
+    <a href="/research.html">Research Desk</a>
+    <a href="/connect" class="active">Connect Kite</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <header>
+    <h1>Connect Kite</h1>
+    <p>Paste your Kite session token below to enable live holdings and trade execution across the app.</p>
+  </header>
+
+  <div id="statusBadge" class="status-badge disconnected">
+    <span class="status-dot"></span>
+    <span id="statusText">Not connected</span>
+  </div>
+
+  <!-- TOKEN INPUT -->
+  <div class="card">
+    <h2>Session Token</h2>
+    <div class="input-group">
+      <label>Enctoken</label>
+      <input type="password" id="enctokenInput" placeholder="Paste your enctoken here…" autocomplete="off"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveToken()">Save &amp; Connect</button>
+      <button class="btn btn-outline" onclick="testConnection()">Test Connection</button>
+      <button class="btn btn-danger" onclick="clearToken()">Disconnect</button>
+    </div>
+    <div class="test-result" id="testResult"></div>
+  </div>
+
+  <!-- HOW TO GET THE TOKEN -->
+  <div class="card">
+    <h2>How to get your enctoken</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open <a href="https://kite.zerodha.com" target="_blank">kite.zerodha.com</a> and log in.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Open DevTools — press <code>F12</code> or <code>Cmd+Option+I</code> on Mac.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Go to <strong>Application</strong> → <strong>Cookies</strong> → <code>kite.zerodha.com</code>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Find the cookie named <code>enctoken</code> and copy its value.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">Paste it above and click <strong>Save &amp; Connect</strong>.</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:20px">
+      <strong>Note:</strong> The enctoken refreshes roughly once a week when your Kite session expires. You'll need to repeat these steps when that happens.
+    </div>
+  </div>
+
+</div>
+
+<footer>Token is stored in your browser only — never sent anywhere except Kite's API.</footer>
+
+<script>
+  const STORAGE_KEY = 'kite_enctoken';
+
+  function init() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      document.getElementById('enctokenInput').value = saved;
+      setStatus(true);
+    }
+  }
+
+  function setStatus(connected, detail) {
+    const badge = document.getElementById('statusBadge');
+    const text  = document.getElementById('statusText');
+    badge.className = 'status-badge ' + (connected ? 'connected' : 'disconnected');
+    text.textContent = connected
+      ? (detail || 'Connected')
+      : (detail || 'Not connected');
+  }
+
+  function saveToken() {
+    const val = document.getElementById('enctokenInput').value.trim();
+    if (!val) { showResult('Paste your enctoken first.', false); return; }
+    localStorage.setItem(STORAGE_KEY, val);
+    setStatus(true);
+    showResult('Token saved. Use "Test Connection" to verify it works.', true);
+  }
+
+  async function testConnection() {
+    const token = localStorage.getItem(STORAGE_KEY);
+    if (!token) { showResult('Save a token first.', false); return; }
+
+    showResult('Testing…', null);
+    try {
+      const res = await fetch('/api/holdings', {
+        headers: { 'X-Kite-Enctoken': token }
+      });
+      const data = await res.json();
+      if (res.ok && data.data) {
+        const n = data.data.length;
+        setStatus(true, `Connected · ${n} holding${n !== 1 ? 's' : ''}`);
+        showResult(`✓ Connected successfully — ${n} holding${n !== 1 ? 's' : ''} found.`, true);
+      } else {
+        setStatus(false, 'Token invalid');
+        showResult('✗ ' + (data.error || 'Token rejected by Kite.'), false);
+      }
+    } catch (e) {
+      setStatus(false, 'Connection failed');
+      showResult('✗ Could not reach server: ' + e.message, false);
+    }
+  }
+
+  function clearToken() {
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('enctokenInput').value = '';
+    setStatus(false);
+    showResult('Token cleared.', null);
+  }
+
+  function showResult(msg, ok) {
+    const el = document.getElementById('testResult');
+    el.textContent = msg;
+    el.className = 'test-result ' + (ok === true ? 'ok' : ok === false ? 'err' : '');
+    el.style.display = 'block';
+  }
+
+  init();
+</script>
+</body>
+</html>

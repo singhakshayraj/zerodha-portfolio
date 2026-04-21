@@ -129,6 +129,7 @@ export function generateDailyReportHTML({ snapshot, prevSnapshot, dateLabel }) {
     <a href="/">Dashboard</a>
     <a href="/alpha">Alpha Finder</a>
     <a href="/research.html">Research Desk</a>
+    <a href="/connect">Connect Kite</a>
   </div>
 </nav>
 

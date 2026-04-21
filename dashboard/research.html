@@ -6,36 +6,33 @@
   <title>Research Desk — Portfolio Intelligence</title>
   <style>
     :root {
-      --gold: #C9A84C;
-      --gold-light: #E8C97A;
-      --gold-pale: #FDF6E3;
-      --gold-border: #E8D5A3;
-      --white: #FFFFFF;
-      --off-white: #FAFAF8;
-      --text-primary: #1A1A1A;
-      --text-secondary: #555555;
-      --text-muted: #999999;
-      --green: #2E7D32;
-      --green-bg: #F1F8F1;
-      --red: #C62828;
-      --red-bg: #FDF1F1;
-      --border: #EEEBE3;
-      --shadow: 0 2px 20px rgba(0,0,0,0.06);
-      --shadow-hover: 0 8px 40px rgba(201,168,76,0.15);
+      --gold: #63b3ed;
+      --gold-light: #90cdf4;
+      --gold-pale: rgba(99,179,237,0.08);
+      --gold-border: rgba(99,179,237,0.25);
+      --white: #1a1f2e;
+      --off-white: #0f1117;
+      --text-primary: #e2e8f0;
+      --text-secondary: #a0aec0;
+      --text-muted: #718096;
+      --green: #68d391;
+      --green-bg: rgba(104,211,145,0.1);
+      --red: #fc8181;
+      --red-bg: rgba(252,129,129,0.1);
+      --border: #2d3748;
+      --shadow: 0 2px 20px rgba(0,0,0,0.3);
+      --shadow-hover: 0 8px 40px rgba(99,179,237,0.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Georgia', serif; background: var(--off-white); color: var(--text-primary); }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--off-white); color: var(--text-primary); }
 
     /* NAV */
-    nav { background: var(--white); border-bottom: 1px solid var(--gold-border); padding: 0 48px; display: flex; align-items: center; justify-content: space-between; height: 64px; position: sticky; top: 0; z-index: 100; }
-    .nav-brand { display: flex; align-items: center; gap: 10px; }
-    .nav-brand .logo { width: 32px; height: 32px; background: var(--gold); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .nav-brand h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-primary); }
-    .nav-brand span { font-size: 11px; color: var(--gold); font-family: 'Segoe UI', sans-serif; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-top: -2px; }
-    .nav-links { display: flex; gap: 32px; }
-    .nav-links a { font-family: 'Segoe UI', sans-serif; font-size: 13px; color: var(--text-muted); text-decoration: none; letter-spacing: 0.03em; transition: color 0.2s; }
-    .nav-links a:hover, .nav-links a.active { color: var(--gold); }
-    .nav-right { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--text-muted); }
+    nav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .nav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .nav-links a:hover, .nav-links a.active { color: #e2e8f0; }
+    @media (max-width: 640px) { nav { padding: 0 16px; } .nav-links { gap: 16px; } }
 
     /* HERO SEARCH */
     .hero { background: var(--white); border-bottom: 1px solid var(--border); padding: 48px 48px 36px; }
@@ -43,10 +40,10 @@
     .hero h2 span { color: var(--gold); }
     .hero p { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: var(--text-muted); margin-top: 6px; }
     .search-bar { display: flex; gap: 12px; margin-top: 24px; max-width: 600px; }
-    .search-bar input { flex: 1; padding: 12px 18px; border: 1.5px solid var(--gold-border); border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 14px; background: var(--off-white); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
-    .search-bar input:focus { border-color: var(--gold); background: var(--white); }
-    .search-bar button { padding: 12px 24px; background: var(--gold); color: var(--white); border: none; border-radius: 8px; font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
-    .search-bar button:hover { background: #B8913A; }
+    .search-bar input { flex: 1; padding: 12px 18px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: #0f1117; color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+    .search-bar input:focus { border-color: var(--gold); background: #0f1117; }
+    .search-bar button { padding: 12px 24px; background: var(--gold); color: #0f1117; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
+    .search-bar button:hover { background: var(--gold-light); }
 
     /* FILTERS */
     .filters { padding: 20px 48px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border); background: var(--white); }
@@ -209,18 +206,18 @@
     .suggest-match { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: var(--gold); font-weight: 600; }
 
     /* KITE SESSION BAR */
-    .kite-bar { background: #1a1a2e; border-bottom: 2px solid var(--gold); padding: 10px 48px; display: flex; align-items: center; gap: 12px; position: sticky; top: 64px; z-index: 99; }
-    .kite-bar label { font-family: 'Segoe UI', sans-serif; font-size: 12px; color: var(--gold); font-weight: 600; white-space: nowrap; }
-    .kite-bar input { flex: 1; max-width: 480px; padding: 7px 14px; background: #0d0d1a; border: 1px solid #333; border-radius: 6px; font-family: monospace; font-size: 12px; color: #ccc; outline: none; }
-    .kite-bar input:focus { border-color: var(--gold); }
-    .kite-bar .kite-status { font-family: 'Segoe UI', sans-serif; font-size: 12px; margin-left: 8px; }
-    .kite-bar .kite-save-btn { padding: 7px 16px; background: var(--gold); color: #1a1a2e; border: none; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .kite-bar .kite-save-btn:hover { background: var(--gold-light); }
-    .kite-bar .kite-toggle { font-family: 'Segoe UI', sans-serif; font-size: 11px; color: #888; cursor: pointer; margin-left: auto; text-decoration: underline; }
+    .kite-bar { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 10px 40px; display: flex; align-items: center; gap: 12px; position: sticky; top: 48px; z-index: 99; }
+    .kite-bar label { font-size: 12px; color: #63b3ed; font-weight: 600; white-space: nowrap; }
+    .kite-bar input { flex: 1; max-width: 480px; padding: 7px 14px; background: #0f1117; border: 1px solid #2d3748; border-radius: 6px; font-family: monospace; font-size: 12px; color: #e2e8f0; outline: none; }
+    .kite-bar input:focus { border-color: #63b3ed; }
+    .kite-bar .kite-status { font-size: 12px; margin-left: 8px; }
+    .kite-bar .kite-save-btn { padding: 7px 16px; background: #63b3ed; color: #0f1117; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .kite-bar .kite-save-btn:hover { background: #90cdf4; }
+    .kite-bar .kite-toggle { font-size: 11px; color: #718096; cursor: pointer; margin-left: auto; text-decoration: underline; }
 
     /* TRADE ROW */
     .trade-row { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-    .qty-input { width: 64px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; text-align: center; outline: none; }
+    .qty-input { width: 64px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; text-align: center; outline: none; background: #0f1117; color: #e2e8f0; }
     .qty-input:focus { border-color: var(--gold); }
     .buy-btn { padding: 5px 14px; background: var(--green); color: #fff; border: none; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
     .buy-btn:hover { opacity: 0.85; }
@@ -230,7 +227,7 @@
     /* CONFIRMATION MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: var(--white); border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
     .modal h3 { font-size: 18px; margin-bottom: 8px; }
     .modal p { font-family: 'Segoe UI', sans-serif; font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
@@ -250,19 +247,13 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-brand">
-    <div class="logo">◈</div>
-    <div>
-      <h1>Research Desk</h1>
-      <span>Portfolio Intelligence</span>
-    </div>
-  </div>
+  <a href="/" class="nav-brand">📈 Portfolio</a>
   <div class="nav-links">
     <a href="/">Dashboard</a>
     <a href="/alpha">Alpha Finder</a>
     <a href="/research.html" class="active">Research Desk</a>
+    <a href="/connect">Connect Kite</a>
   </div>
-  <div class="nav-right">16 holdings · Updated 7 Apr 2026</div>
 </nav>
 
 <!-- KITE SESSION BAR -->

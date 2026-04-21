@@ -7,6 +7,7 @@
     { "source": "/alpha-score",   "destination": "/api/alpha-score" },
     { "source": "/symbol-search", "destination": "/api/symbol-search" },
     { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
+    { "source": "/connect",       "destination": "/dashboard/connect.html" },
     { "source": "/research.html", "destination": "/dashboard/research.html" },
     { "source": "/",              "destination": "/dashboard/index.html" }
   ]
