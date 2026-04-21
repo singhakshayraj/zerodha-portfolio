@@ -1,7 +1,8 @@
 import https from 'https';
 import { config } from '../config.js';
 
-const KITE_HOST = 'api.kite.trade';
+const KITE_HOST = 'kite.zerodha.com';
+const KITE_PATH_PREFIX = '/oms';
 
 // In-memory instruments cache (symbol → token), refreshed once per process
 let _instrumentsCache = null;
@@ -10,7 +11,7 @@ function kiteRequest(path, enctoken) {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: KITE_HOST,
-      path,
+      path: KITE_PATH_PREFIX + path,
       method: 'GET',
       headers: {
         'Authorization': `enctoken ${enctoken}`,
@@ -87,7 +88,7 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
   // Load instruments once
   if (!_instrumentsCache) {
     const csv = await new Promise((resolve, reject) => {
-      const opts = { hostname: KITE_HOST, path: '/instruments/NSE', method: 'GET',
+      const opts = { hostname: KITE_HOST, path: KITE_PATH_PREFIX + '/instruments/NSE', method: 'GET',
         headers: { 'Authorization': `enctoken ${enctoken}`, 'X-Kite-Version': '3' } };
       const req = https.request(opts, res => {
         let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
@@ -138,7 +139,7 @@ export async function placeOrder({ symbol, transactionType, quantity, enctoken, 
   return new Promise((resolve, reject) => {
     const options = {
       hostname: KITE_HOST,
-      path: '/orders/regular',
+      path: KITE_PATH_PREFIX + '/orders/regular',
       method: 'POST',
       headers: {
         'Authorization': `enctoken ${token}`,

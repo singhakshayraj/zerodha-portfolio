@@ -51,7 +51,7 @@
     .btn-danger:hover { background: rgba(252,129,129,0.1); opacity: 1; }
 
     /* TEST RESULT */
-    .test-result { margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; display: none; }
+    .test-result { margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; display: none; white-space: pre-wrap; font-family: monospace; }
     .test-result.ok { background: rgba(104,211,145,0.1); border: 1px solid rgba(104,211,145,0.3); color: #68d391; }
     .test-result.err { background: rgba(252,129,129,0.1); border: 1px solid rgba(252,129,129,0.3); color: #fc8181; }
 
@@ -177,19 +177,32 @@
     const token = localStorage.getItem(STORAGE_KEY);
     if (!token) { showResult('Save a token first.', false); return; }
 
-    showResult('Testing…', null);
+    showResult('Testing… fetching debug info from Kite', null);
     try {
-      const res = await fetch('/api/holdings', {
-        headers: { 'X-Kite-Enctoken': token }
-      });
-      const data = await res.json();
-      if (res.ok && data.data) {
-        const n = data.data.length;
-        setStatus(true, `Connected · ${n} holding${n !== 1 ? 's' : ''}`);
-        showResult(`✓ Connected successfully — ${n} holding${n !== 1 ? 's' : ''} found.`, true);
+      // First run the debug endpoint to show raw info
+      const dbgRes = await fetch('/api/kite-debug', { headers: { 'X-Kite-Enctoken': token } });
+      const dbg = await dbgRes.json();
+      const dbgLines = [
+        `Token length: ${dbg.token_after_decode_length} chars`,
+        `Token preview: ${dbg.token_first_10_chars} … ${dbg.token_last_5_chars}`,
+        `Kite HTTP status: ${dbg.kite_status}`,
+        `Kite raw response: ${dbg.kite_response}`,
+      ].join('\n');
+
+      // If Kite returned 200 on profile, token works — now try holdings
+      if (dbg.kite_status === 200) {
+        const res = await fetch('/api/holdings', { headers: { 'X-Kite-Enctoken': token } });
+        const data = await res.json();
+        if (res.ok && data.data) {
+          const n = data.data.length;
+          setStatus(true, `Connected · ${n} holding${n !== 1 ? 's' : ''}`);
+          showResult(`✓ Connected — ${n} holding${n !== 1 ? 's' : ''} found.\n\n${dbgLines}`, true);
+        } else {
+          showResult(`✗ Holdings failed: ${data.error}\n\n${dbgLines}`, false);
+        }
       } else {
         setStatus(false, 'Token invalid');
-        showResult('✗ ' + (data.error || 'Token rejected by Kite.'), false);
+        showResult(`✗ Kite rejected the token (HTTP ${dbg.kite_status})\n\n${dbgLines}`, false);
       }
     } catch (e) {
       setStatus(false, 'Connection failed');

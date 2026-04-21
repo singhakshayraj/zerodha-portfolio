@@ -15,8 +15,8 @@ export default async function handler(req, res) {
   // Make the raw Kite request and return everything
   const result = await new Promise(resolve => {
     const options = {
-      hostname: 'api.kite.trade',
-      path: '/user/profile',   // lighter endpoint than /portfolio/holdings
+      hostname: 'kite.zerodha.com',
+      path: '/oms/user/profile',
       method: 'GET',
       headers: {
         'Authorization': `enctoken ${trimmed}`,
