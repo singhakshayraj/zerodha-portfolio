@@ -117,11 +117,11 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
   from.setHours(3, 45, 0, 0); // 9:15 AM IST = 3:45 AM UTC
   const fmt = d => d.toISOString().slice(0, 19).replace('T', ' ');
 
-  const u = new URL(`https://api.kite.trade/instruments/historical/${token}/${interval}`);
+  const u = new URL(`https://kite.zerodha.com/oms/instruments/historical/${token}/${interval}`);
   u.searchParams.set('from', fmt(from));
   u.searchParams.set('to', fmt(now));
   const path = u.pathname + u.search;
-  return kiteRequest(path, enctoken, 'connect');
+  return kiteRequest(path, enctoken, 'oms');
 }
 
 /**
