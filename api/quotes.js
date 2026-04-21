@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       res.status(401).json({ error: 'Kite not connected. Go to /connect and save your enctoken.' });
       return;
     }
-
-    const data = await getQuotes(symbols, enc);
+    const decodedEnc = decodeURIComponent(effectiveEnc);
+    const data = await getQuotes(symbols, decodedEnc);
     res.status(200).json({ data });
   } catch (e) {
     res.status(500).json({ error: e.message });

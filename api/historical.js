@@ -10,12 +10,13 @@ export default async function handler(req, res) {
 
     if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
 
-    if (!enc && !process.env.KITE_ENCTOKEN) {
+    const effectiveEnc = enc || process.env.KITE_ENCTOKEN;
+    if (!effectiveEnc) {
       res.status(401).json({ error: 'Kite not connected. Go to /connect and save your enctoken.' });
       return;
     }
-
-    const data = await getHistorical(symbol, interval, enc);
+    const decodedEnc = decodeURIComponent(effectiveEnc);
+    const data = await getHistorical(symbol, interval, decodedEnc);
     res.status(200).json({ data });
   } catch (e) {
     res.status(500).json({ error: e.message });

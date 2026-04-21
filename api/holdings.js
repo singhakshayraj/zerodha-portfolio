@@ -9,7 +9,9 @@ export default async function handler(req, res) {
       res.status(401).json({ error: 'Kite not connected. Go to /connect and save your enctoken.' });
       return;
     }
-    const holdings = await getHoldings(effectiveEnc);
+    // URL-decode in case the token was copied from DevTools in encoded form (%2F → /)
+    const decodedEnc = decodeURIComponent(effectiveEnc);
+    const holdings = await getHoldings(decodedEnc);
     res.status(200).json({ data: holdings });
   } catch (e) {
     // Return full error so Connect page can show exactly what Kite said
