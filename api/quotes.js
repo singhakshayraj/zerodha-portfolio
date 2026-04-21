@@ -5,12 +5,20 @@ export default async function handler(req, res) {
   try {
     const enc = req.headers['x-kite-enctoken'];
 
-    // Vercel parses query string into req.query automatically
-    // Frontend sends: ?symbols=NSE%3AINFY,NSE%3ATCS (commas unencoded, each symbol encoded)
-    const raw = req.query?.symbols || '';
-    const symbols = raw.split(',').map(s => decodeURIComponent(s.trim())).filter(Boolean);
+    // Parse query string manually — req.query is unreliable in Vercel ESM functions
+    const url = new URL(req.url, 'https://placeholder.vercel.app');
+    const symbolsRaw = url.searchParams.get('symbols') || '';
+    const symbols = symbolsRaw.split(',').map(s => decodeURIComponent(s.trim())).filter(Boolean);
 
-    if (!symbols.length) { res.status(400).json({ error: 'symbols required' }); return; }
+    if (!symbols.length) {
+      res.status(400).json({ error: `No symbols received. Raw query: ${req.url}` });
+      return;
+    }
+
+    if (!enc && !process.env.KITE_ENCTOKEN) {
+      res.status(401).json({ error: 'Kite not connected. Go to /connect and save your enctoken.' });
+      return;
+    }
 
     const data = await getQuotes(symbols, enc);
     res.status(200).json({ data });

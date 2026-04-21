@@ -277,7 +277,10 @@ async function loadPulse() {
   try {
     const res = await fetch('/api/quotes?symbols=' + INDICES.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
     const { data, error } = await res.json();
-    if (error) return;
+    if (error) {
+      document.getElementById('lastRefresh').textContent = '⚠ ' + error;
+      return;
+    }
     INDICES.forEach((sym, i) => {
       const q = data[sym]; if (!q) return;
       const key = IKEYS[i];
@@ -373,7 +376,12 @@ async function refreshWatchlist() {
   try {
     const res = await fetch('/api/quotes?symbols=' + watchlist.map(s => encodeURIComponent(s)).join(','), { headers: headers() });
     const { data, error } = await res.json();
-    if (error) { toast(error, false); return; }
+    if (error) {
+      toast(error.includes('enctoken') || error.includes('connect')
+        ? '🔐 Kite not connected — go to Connect Kite page'
+        : error, false);
+      return;
+    }
     renderWatchlistRows(data);
   } catch(e) { toast('Quote fetch failed', false); }
 }
@@ -431,7 +439,12 @@ async function loadChart(sym) {
   try {
     const res = await fetch(`/api/historical?symbol=${bare}&interval=${chartInterval}`, { headers: headers() });
     const { data, error } = await res.json();
-    if (error) { container.innerHTML = `<div class="chart-empty">${error}</div>`; return; }
+    if (error) {
+      const msg = error.includes('enctoken') || error.includes('connect')
+        ? '🔐 Kite not connected — <a href="/connect" style="color:#63b3ed">Connect here</a>'
+        : error;
+      container.innerHTML = `<div class="chart-empty">${msg}</div>`; return;
+    }
     if (!data || !data.candles || !data.candles.length) {
       container.innerHTML = '<div class="chart-empty">No candle data yet — market may not have opened</div>'; return;
     }
