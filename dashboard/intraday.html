@@ -226,6 +226,7 @@
       <div class="pulse-card"><div class="pulse-label">BANK NIFTY</div><div class="pulse-ltp" id="p-BANKNIFTY">—</div><div class="pulse-chg muted" id="pc-BANKNIFTY">—</div><div class="pulse-ohlc" id="po-BANKNIFTY"></div></div>
       <div class="pulse-card"><div class="pulse-label">MIDCAP 50</div><div class="pulse-ltp" id="p-MIDCPNIFTY">—</div><div class="pulse-chg muted" id="pc-MIDCPNIFTY">—</div><div class="pulse-ohlc" id="po-MIDCPNIFTY"></div></div>
       <div class="pulse-card"><div class="pulse-label">INDIA VIX</div><div class="pulse-ltp" id="p-INDIAVIX">—</div><div class="pulse-chg muted" id="pc-INDIAVIX">—</div><div class="pulse-ohlc" id="po-INDIAVIX"></div></div>
+      <div class="pulse-card" style="border-left:2px solid #805ad5"><div class="pulse-label" style="color:#b794f4">GIFT NIFTY <span style="font-size:9px;color:#4a5568">Futures</span></div><div class="pulse-ltp" id="p-GIFTNIFTY">—</div><div class="pulse-chg muted" id="pc-GIFTNIFTY">—</div><div class="pulse-ohlc" id="po-GIFTNIFTY"></div></div>
     </div>
   </div>
 
@@ -394,8 +395,11 @@ function toast(msg, ok = true) {
 }
 
 // ── Market Pulse ─────────────────────────────────────────────────────────────
-const INDICES = ['NSE:NIFTY 50','NSE:NIFTY BANK','NSE:NIFTY MIDCAP 50','NSE:INDIA VIX'];
-const IKEYS   = ['NIFTY50','BANKNIFTY','MIDCPNIFTY','INDIAVIX'];
+const INDICES = ['NSE:NIFTY 50','NSE:NIFTY BANK','NSE:NIFTY MIDCAP 50','NSE:INDIA VIX','NSE:GIFT NIFTY'];
+const IKEYS   = ['NIFTY50','BANKNIFTY','MIDCPNIFTY','INDIAVIX','GIFTNIFTY'];
+
+// Store last Nifty 50 close for GIFT premium calc
+let _niftyClose = null;
 
 async function loadPulse() {
   try {
@@ -407,13 +411,35 @@ async function loadPulse() {
     INDICES.forEach((sym, i) => {
       const q = data[sym]; if (!q) return;
       const key = IKEYS[i];
-      const chg = q.net_change, chgPct = q.ohlc ? ((q.last_price - q.ohlc.open) / q.ohlc.open * 100) : 0;
-      const cls = chg >= 0 ? 'green' : 'red';
+
+      // Cache Nifty 50 previous close for GIFT premium
+      if (key === 'NIFTY50' && q.ohlc?.close) _niftyClose = q.ohlc.close;
+
+      const chg    = q.net_change ?? 0;
+      const chgPct = q.change_pct ?? (q.ohlc?.open ? (q.last_price - q.ohlc.open) / q.ohlc.open * 100 : 0);
+      const cls    = chg >= 0 ? 'green' : 'red';
+
       document.getElementById('p-'  + key).textContent = fmt(q.last_price);
-      document.getElementById('pc-' + key).textContent = `${chg >= 0 ? '▲' : '▼'} ${fmt(Math.abs(chg))} (${Math.abs(chgPct).toFixed(2)}%)`;
-      document.getElementById('pc-' + key).className = 'pulse-chg ' + cls;
-      if (q.ohlc) document.getElementById('po-' + key).textContent =
-        `O ${fmt(q.ohlc.open)}  H ${fmt(q.ohlc.high)}  L ${fmt(q.ohlc.low)}`;
+      document.getElementById('pc-' + key).className   = 'pulse-chg ' + cls;
+
+      if (key === 'GIFTNIFTY') {
+        // Show premium/discount vs Nifty 50 previous close — the key leading indicator
+        const premium = _niftyClose ? (q.last_price - _niftyClose) : chg;
+        const premPct = _niftyClose ? (premium / _niftyClose * 100) : chgPct;
+        const premSign = premium >= 0 ? '+' : '';
+        const gapLabel = premium >= 0 ? '▲ Gap-up' : '▼ Gap-dn';
+        const gapCls   = premium >= 0 ? 'green' : 'red';
+        document.getElementById('pc-' + key).textContent = `${chg >= 0 ? '▲' : '▼'} ${fmt(Math.abs(chg))} (${Math.abs(chgPct).toFixed(2)}%)`;
+        document.getElementById('pc-' + key).className   = 'pulse-chg ' + cls;
+        document.getElementById('po-' + key).innerHTML   =
+          `O ${fmt(q.ohlc?.open)}  H ${fmt(q.ohlc?.high)}  L ${fmt(q.ohlc?.low)}<br>` +
+          `<span class="${gapCls}" style="font-weight:700">${gapLabel} ${premSign}${fmt(premium)} (${premSign}${premPct.toFixed(2)}% vs prev close)</span>` +
+          (q.expiry ? `<span style="color:#4a5568"> · exp ${q.expiry}</span>` : '');
+      } else {
+        document.getElementById('pc-' + key).textContent = `${chg >= 0 ? '▲' : '▼'} ${fmt(Math.abs(chg))} (${Math.abs(chgPct).toFixed(2)}%)`;
+        if (q.ohlc) document.getElementById('po-' + key).textContent =
+          `O ${fmt(q.ohlc.open)}  H ${fmt(q.ohlc.high)}  L ${fmt(q.ohlc.low)}`;
+      }
     });
     document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN');
   } catch(e) {}

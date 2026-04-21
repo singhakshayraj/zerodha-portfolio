@@ -64,6 +64,7 @@ const SOURCES = [
   { label: 'JPMorgan',          q: '"JPMorgan" India stock market emerging markets', tier: 6, cat: 'Global Macro' },
   { label: 'ZeroHedge',         q: 'ZeroHedge India emerging markets risk macro', tier: 6, cat: 'Global Macro' },
   { label: 'Global Macro Risk', q: 'US Fed dollar DXY crude oil impact India NSE today', tier: 6, cat: 'Global Macro' },
+  { label: 'GIFT Nifty Signal', q: 'GIFT Nifty SGX Nifty premium discount gap up gap down NSE opening today', tier: 5, cat: 'Leading Indicator' },
 
   // ── Momentum & technicals ─────────────────────────────────────────────────
   { label: 'NSE Breakout',      q: 'NSE stock 52-week high breakout momentum rally today', tier: 3, cat: 'Technical' },
@@ -168,6 +169,13 @@ FACTOR 5 · TECHNICAL & OPTIONS OVERLAY
   If options signals (T4) show high PCR, unusual call buying, max pain above CMP → +2
   If stock near 52-week high breakout → +2 · If stock in oversold bounce zone → +1
   High delivery % + volume surge → +2
+
+FACTOR 5b · GIFT NIFTY LEADING SIGNAL (apply before other factors)
+  GIFT Nifty trades ~16 hrs/day before Indian market opens — it's the single best gap predictor.
+  If GIFT Nifty premium > +0.5% vs prev Nifty close → expect gap-up; boost high-beta stocks (banks, autos, metals)
+  If GIFT Nifty discount > -0.5% → expect gap-down; prefer defensive (pharma, FMCG, IT exporters)
+  If GIFT Nifty flat (±0.2%) → range-bound day likely; favour mean-reversion and options theta plays
+  Use any GIFT Nifty news/signal found in T5 sources to confirm or contradict the macro picture.
 
 FACTOR 6 · GLOBAL MACRO FILTER (T6 signals)
   If global risk-off (DXY up, crude spike, US yields spiking): penalise rate-sensitive (IT, NBFCs) by 0.7×

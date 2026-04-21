@@ -82,6 +82,35 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── GIFT Nifty (special symbol NSE:GIFT NIFTY) ───────────────────────────
+    if (symbols.includes('NSE:GIFT NIFTY')) {
+      try {
+        const r = await fetch('https://www.nseindia.com/api/giFtNifty', { headers: hdrs });
+        if (r.ok) {
+          const json = await r.json();
+          const row = (json.data || [])[0]; // front-month contract
+          if (row) {
+            const ltp  = row.lastPrice ?? row.last ?? 0;
+            const prev = row.previousClose ?? row.prevClose ?? 0;
+            const chg  = ltp - prev;
+            data['NSE:GIFT NIFTY'] = {
+              last_price: ltp,
+              net_change:  chg,
+              change_pct:  prev ? chg / prev * 100 : 0,
+              volume:      row.totalTradedVolume || row.volume || 0,
+              expiry:      row.expiryDate || row.expiry || '',
+              ohlc: {
+                open:  row.open  ?? ltp,
+                high:  row.high  ?? ltp,
+                low:   row.low   ?? ltp,
+                close: prev,
+              },
+            };
+          }
+        }
+      } catch (_) {}
+    }
+
     // ── Individual stocks ────────────────────────────────────────────────────
     const stockSyms = symbols.filter(s => !isIndex(s));
     await Promise.all(stockSyms.map(async sym => {
