@@ -180,7 +180,7 @@
         <button class="btn-sm btn-ai" onclick="loadBrain(true)">↻ Refresh</button>
       </div>
     </div>
-    <div id="brainContent"><div class="brain-loading">Fetching tweets from Vijay Kedia, Basant Maheshwari, Ramesh Damani &amp; others…</div></div>
+    <div id="brainContent"><div class="brain-loading">Searching Google News for Vijay Kedia, Basant Maheshwari, Ramesh Damani &amp; other expert signals…</div></div>
   </div>
 
   <!-- DATA SOURCE SELECTOR -->
@@ -736,8 +736,7 @@ async function loadBrain(bust = false) {
 
     _brainLoaded = true;
     const picks = data.picks || [];
-    const missed = data.handles_missed?.length ? ` · ${data.handles_missed.length} handles unavailable` : '';
-    status.textContent = `${data.tweet_count} posts · ${data.handles_fetched?.length || 0} experts · ${data.cached ? 'cached' : 'fresh'}${missed}`;
+    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} categories · ${data.cached ? 'cached 30min' : 'fresh'}`;
 
     // Sentiment badge
     const badge = document.getElementById('brainSentimentBadge');
