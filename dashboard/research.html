@@ -257,13 +257,11 @@
   </div>
 </nav>
 
-<!-- KITE SESSION BAR -->
-<div class="kite-bar" id="kiteBar">
-  <label>🔐 Kite Session:</label>
-  <input type="password" id="enctokenInput" placeholder="Paste your enctoken here (from Kite login)..." autocomplete="off"/>
-  <button class="kite-save-btn" onclick="saveEnctoken()">Save</button>
-  <span class="kite-status" id="kiteStatus"></span>
-  <span class="kite-toggle" onclick="toggleKiteBar()">hide</span>
+<!-- KITE STATUS BANNER -->
+<div id="kiteBanner" style="background:#1a1f2e;border-bottom:1px solid #2d3748;padding:8px 40px;font-size:12px;display:flex;align-items:center;gap:10px;">
+  <span id="kiteStatusDot" style="width:7px;height:7px;border-radius:50%;background:#fc8181;display:inline-block;"></span>
+  <span id="kiteStatusText" style="color:#718096;">Kite not connected</span>
+  <a href="/connect" style="color:#63b3ed;text-decoration:none;margin-left:4px;">→ Connect Kite</a>
 </div>
 
 <!-- CONFIRMATION MODAL -->
@@ -284,25 +282,19 @@
 <!-- HERO -->
 <div class="hero">
   <h2>Your <span>Stock Research</span> Intelligence</h2>
-  <p>AI-powered analysis for every stock you hold. Bull cases, bear cases, red flags and scores — all in one place.</p>
+  <p>Search to filter your holdings — or type any stock and hit Analyze for a full AI breakdown.</p>
   <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Search by stock name or sector..." oninput="filterStocks(this.value)"/>
-    <button onclick="filterStocks(document.getElementById('searchInput').value)">Search</button>
-  </div>
-  <div style="margin-top:20px; padding-top:20px; border-top:1px solid var(--gold-border);">
-    <p style="font-family:'Segoe UI',sans-serif; font-size:13px; color:var(--gold); font-weight:600; margin-bottom:10px;">✦ Analyze Any Stock</p>
-    <div class="search-bar" style="max-width:600px;">
-      <div class="suggest-wrap">
-        <input type="text" id="analyzeInput" placeholder="Enter any company name e.g. Reliance, Infosys, HDFC Bank..."
-          oninput="onAnalyzeInput(this.value)"
-          onkeydown="onAnalyzeKeydown(event)"
-          autocomplete="off"/>
-        <div class="suggest-list" id="analyzeSuggList"></div>
-      </div>
-      <button id="analyzeBtn" onclick="analyzeStock()">Analyze</button>
+    <div class="suggest-wrap">
+      <input type="text" id="analyzeInput" id2="searchInput"
+        placeholder="Search holdings or type any stock name…"
+        oninput="filterStocks(this.value); onAnalyzeInput(this.value)"
+        onkeydown="onAnalyzeKeydown(event)"
+        autocomplete="off"/>
+      <div class="suggest-list" id="analyzeSuggList"></div>
     </div>
-    <div id="analyzeError" style="display:none; font-family:'Segoe UI',sans-serif; font-size:12px; color:var(--red); margin-top:8px;"></div>
+    <button id="analyzeBtn" onclick="analyzeStock()">Analyze →</button>
   </div>
+  <div id="analyzeError" style="display:none; font-size:12px; color:var(--red); margin-top:8px;"></div>
 </div>
 
 <!-- FILTERS -->
@@ -1238,41 +1230,16 @@
   let _enctoken = localStorage.getItem('kite_enctoken') || '';
   let _pendingOrder = null;
 
-  (function initKiteBar() {
-    const inp = document.getElementById('enctokenInput');
+  (function initKiteStatus() {
+    const dot  = document.getElementById('kiteStatusDot');
+    const text = document.getElementById('kiteStatusText');
     if (_enctoken) {
-      inp.value = _enctoken;
-      setKiteStatus(true);
+      dot.style.background  = '#68d391';
+      text.textContent = 'Kite connected';
+      text.style.color = '#68d391';
+      document.querySelector('#kiteBanner a').style.display = 'none';
     }
-    // Hide bar initially if token already saved
-    if (_enctoken) document.getElementById('kiteBar').style.display = '';
   })();
-
-  function saveEnctoken() {
-    const val = document.getElementById('enctokenInput').value.trim();
-    if (!val) { showToast('Paste your enctoken first', 'error'); return; }
-    _enctoken = val;
-    localStorage.setItem('kite_enctoken', val);
-    setKiteStatus(true);
-    showToast('Kite session saved', 'success');
-  }
-
-  function setKiteStatus(ok) {
-    const el = document.getElementById('kiteStatus');
-    el.textContent = ok ? '✓ Connected' : '✗ No session';
-    el.style.color = ok ? '#4CAF50' : '#f44336';
-  }
-
-  function toggleKiteBar() {
-    const bar = document.getElementById('kiteBar');
-    const inp = bar.querySelector('input');
-    const btn = bar.querySelector('.kite-save-btn');
-    const toggle = bar.querySelector('.kite-toggle');
-    const hidden = inp.style.display === 'none';
-    inp.style.display = hidden ? '' : 'none';
-    btn.style.display = hidden ? '' : 'none';
-    toggle.textContent = hidden ? 'hide' : 'show token';
-  }
 
   // ── TRADE BUTTONS ──────────────────────────────────────────────
   function makeTradeRow(symbol) {
@@ -1364,7 +1331,7 @@
   function setFilter(type, btn) {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('searchInput').value = '';
+    document.getElementById('analyzeInput').value = '';
 
     document.querySelectorAll('.stock-card').forEach(card => {
       let show = true;
