@@ -7,6 +7,7 @@
     { "source": "/alpha-score",   "destination": "/api/alpha-score" },
     { "source": "/symbol-search", "destination": "/api/symbol-search" },
     { "source": "/api/yahoo-quotes", "destination": "/api/yahoo-quotes" },
+    { "source": "/api/market-brain", "destination": "/api/market-brain" },
     { "source": "/intraday",      "destination": "/dashboard/intraday.html" },
     { "source": "/alpha",         "destination": "/modules/alpha-scorer/report.html" },
     { "source": "/connect",       "destination": "/dashboard/connect.html" },

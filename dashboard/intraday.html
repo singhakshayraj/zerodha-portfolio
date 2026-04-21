@@ -116,6 +116,33 @@
 
     footer { text-align: center; padding: 32px; color: #4a5568; font-size: 12px; }
 
+    /* MARKET BRAIN */
+    .brain-card { overflow: hidden; }
+    .brain-status { font-size: 12px; color: #4a5568; }
+    .brain-summary { font-size: 13px; color: #a0aec0; margin-bottom: 14px; line-height: 1.5; padding: 10px 14px; background: #0f1117; border-radius: 8px; border-left: 3px solid #63b3ed; }
+    .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .pick-card { background: #0f1117; border: 1px solid #2d3748; border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.15s; }
+    .pick-card:hover { border-color: #4a5568; }
+    .pick-card.bullish  { border-left: 3px solid #68d391; }
+    .pick-card.bearish  { border-left: 3px solid #fc8181; }
+    .pick-card.neutral  { border-left: 3px solid #718096; }
+    .pick-sym  { font-size: 15px; font-weight: 800; color: #e2e8f0; }
+    .pick-co   { font-size: 11px; color: #718096; margin-bottom: 6px; }
+    .pick-reason { font-size: 11px; color: #a0aec0; line-height: 1.5; margin-bottom: 8px; }
+    .pick-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .pick-conf { font-size: 11px; color: #f6e05e; letter-spacing: 1px; }
+    .pick-by   { font-size: 10px; color: #4a5568; }
+    .pick-add  { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #2d3748; border-radius: 5px; color: #718096; font-size: 11px; padding: 2px 7px; cursor: pointer; }
+    .pick-add:hover { border-color: #63b3ed; color: #63b3ed; }
+    .pick-add.added { border-color: #68d391; color: #68d391; }
+    .brain-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+    .brain-loading { text-align: center; padding: 30px; color: #4a5568; font-size: 13px; }
+    .brain-error { padding: 16px; color: #fc8181; font-size: 13px; background: rgba(252,129,129,0.08); border-radius: 8px; }
+    .sentiment-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+    .sentiment-dot.bullish { background: #68d391; }
+    .sentiment-dot.bearish { background: #fc8181; }
+    .sentiment-dot.neutral  { background: #718096; }
+
     /* SOURCE SELECTOR */
     .source-bar { display: flex; align-items: center; gap: 10px; background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 10px 18px; }
     .source-label { font-size: 12px; color: #718096; white-space: nowrap; }
@@ -140,6 +167,21 @@
 </nav>
 
 <div class="page">
+
+  <!-- MARKET BRAIN -->
+  <div class="card brain-card">
+    <div class="sec-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="sec-title">🧠 AI Market Brain</div>
+        <span id="brainSentimentBadge" style="display:none;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px"></span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="brain-status" id="brainStatus">Loading picks from expert investors…</span>
+        <button class="btn-sm btn-ai" onclick="loadBrain(true)">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="brainContent"><div class="brain-loading">Fetching tweets from Vijay Kedia, Basant Maheshwari, Ramesh Damani &amp; others…</div></div>
+  </div>
 
   <!-- DATA SOURCE SELECTOR -->
   <div class="source-bar">
@@ -667,6 +709,116 @@ async function executeOrder() {
   }
 }
 
+// ── Market Brain ─────────────────────────────────────────────────────────────
+let _brainLoaded = false;
+
+function confidenceStars(n) {
+  return '★'.repeat(Math.min(5, Math.max(1, n))) + '☆'.repeat(5 - Math.min(5, Math.max(1, n)));
+}
+
+async function loadBrain(bust = false) {
+  if (!bust && _brainLoaded) return;
+  const content = document.getElementById('brainContent');
+  const status  = document.getElementById('brainStatus');
+  content.innerHTML = '<div class="brain-loading">Analysing expert tweets with AI… this may take 15–20s on first load</div>';
+  status.textContent = 'Thinking…';
+
+  try {
+    const url = '/api/market-brain' + (bust ? '?bust=1' : '');
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) {
+      content.innerHTML = `<div class="brain-error">⚠ ${data.error}${data.tip ? '<br><span style="color:#718096">'+data.tip+'</span>' : ''}</div>`;
+      status.textContent = 'Error';
+      return;
+    }
+
+    _brainLoaded = true;
+    const picks = data.picks || [];
+    const missed = data.handles_missed?.length ? ` · ${data.handles_missed.length} handles unavailable` : '';
+    status.textContent = `${data.tweet_count} posts · ${data.handles_fetched?.length || 0} experts · ${data.cached ? 'cached' : 'fresh'}${missed}`;
+
+    // Sentiment badge
+    const badge = document.getElementById('brainSentimentBadge');
+    const smtColors = { bullish: '#68d391', bearish: '#fc8181', neutral: '#718096' };
+    const smt = data.market_sentiment || 'neutral';
+    badge.style.display = 'inline-block';
+    badge.style.background = smtColors[smt] + '22';
+    badge.style.color = smtColors[smt];
+    badge.style.border = `1px solid ${smtColors[smt]}44`;
+    badge.textContent = smt.toUpperCase();
+
+    let html = '';
+    if (data.summary) {
+      html += `<div class="brain-summary"><span class="sentiment-dot ${smt}"></span>${data.summary}</div>`;
+    }
+
+    html += '<div class="brain-grid">';
+    picks.forEach((p, i) => {
+      const sym  = p.symbol || '';
+      const exch = p.exchange || 'NSE';
+      const full = `${exch}:${sym}`;
+      const inWl = watchlist.includes(full);
+      const byStr = (p.mentioned_by || []).map(h => '@'+h).join(', ') || 'AI-derived';
+      html += `
+      <div class="pick-card ${p.sentiment || 'neutral'}" id="pick-${i}">
+        <button class="pick-add ${inWl ? 'added' : ''}" id="pickbtn-${i}"
+          onclick="addPickToWatchlist('${full}','${i}')">${inWl ? '✓ Added' : '+ Watch'}</button>
+        <div class="pick-sym">${sym} <span style="font-size:10px;font-weight:400;color:#718096">${exch}</span></div>
+        <div class="pick-co">${p.company || ''}</div>
+        <div class="pick-reason">${p.reason || ''}</div>
+        <div class="pick-meta">
+          <span class="pick-conf" title="Confidence">${confidenceStars(p.confidence)}</span>
+          <span class="pick-by">${byStr}</span>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+
+    // Bulk add button
+    const notInWl = picks.filter(p => !watchlist.includes(`${p.exchange || 'NSE'}:${p.symbol}`));
+    if (notInWl.length) {
+      html += `<div class="brain-actions">
+        <button class="btn-sm btn-ai" onclick="addAllBrainPicks()">+ Add all ${notInWl.length} to watchlist</button>
+        <span style="font-size:11px;color:#4a5568">Picks refresh every 30 min · Not financial advice</span>
+      </div>`;
+    }
+
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = `<div class="brain-error">⚠ ${e.message}</div>`;
+    status.textContent = 'Error';
+  }
+}
+
+function addPickToWatchlist(full, idx) {
+  if (watchlist.includes(full)) return;
+  watchlist.push(full);
+  saveWatchlist();
+  refreshWatchlist();
+  const btn = document.getElementById('pickbtn-' + idx);
+  if (btn) { btn.textContent = '✓ Added'; btn.className = 'pick-add added'; }
+  toast(full.split(':')[1] + ' added to watchlist', true);
+}
+
+function addAllBrainPicks() {
+  const cards = document.querySelectorAll('.pick-card');
+  let added = 0;
+  cards.forEach((card, i) => {
+    const btn = document.getElementById('pickbtn-' + i);
+    if (btn && !btn.classList.contains('added')) {
+      const sym = card.querySelector('.pick-sym')?.firstChild?.textContent?.trim();
+      const exch = card.querySelector('.pick-sym span')?.textContent?.trim() || 'NSE';
+      if (!sym) return;
+      const full = `${exch}:${sym}`;
+      if (!watchlist.includes(full)) { watchlist.push(full); added++; }
+      btn.textContent = '✓ Added'; btn.className = 'pick-add added';
+    }
+  });
+  if (added) { saveWatchlist(); refreshWatchlist(); toast(`Added ${added} stocks to watchlist`, true); }
+}
+
 // ── Init + auto-refresh ───────────────────────────────────────────────────────
 function startRefresh() {
   loadPulse();
@@ -678,6 +830,7 @@ function startRefresh() {
 // Restore watchlist from localStorage and boot
 renderWatchlistRows(null);
 startRefresh();
+loadBrain();
 </script>
 </body>
 </html>
