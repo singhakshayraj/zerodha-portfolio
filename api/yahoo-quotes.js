@@ -61,16 +61,20 @@ export default async function handler(req, res) {
           const nseKey = INDEX_MAP[sym];
           const row = rows.find(r => r.indexSymbol === nseKey);
           if (!row) return;
-          const prev = row.previousClose || row.last - row.change;
+          // NSE allIndices uses 'last'/'current' and 'previousClose'; compute change manually
+          const ltp  = row.last ?? row.current ?? 0;
+          const prev = row.previousClose ?? 0;
+          const chg  = ltp - prev;
+          const chgPct = prev ? (chg / prev * 100) : (row.percentChange ?? 0);
           data[sym] = {
-            last_price: row.last,
-            net_change:  row.change,
-            change_pct:  row.percentChange,
+            last_price: ltp,
+            net_change:  chg,
+            change_pct:  chgPct,
             volume:      row.turnover || 0,
             ohlc: {
-              open:  row.open,
-              high:  row.high,
-              low:   row.low,
+              open:  row.open  ?? ltp,
+              high:  row.high  ?? ltp,
+              low:   row.low   ?? ltp,
               close: prev,
             },
           };

@@ -489,9 +489,16 @@ async function loadChart(sym) {
   chartSym = sym;
   const bare = sym.replace(/^[A-Z]+:/, '');
   document.getElementById('chartTitle').textContent = bare;
-  document.getElementById('chartMeta').textContent  = 'Loading ' + chartInterval + ' candles…';
 
   const container = document.getElementById('chartContainer');
+
+  if (quoteSource === 'yahoo') {
+    container.innerHTML = `<div class="chart-empty">Candlestick charts need Kite — <button class="src-btn" style="display:inline;padding:4px 10px;font-size:12px" onclick="setSource('kite');loadChart('${sym}')">Switch to Kite</button> or <a href="/connect" style="color:#63b3ed">connect enctoken</a></div>`;
+    document.getElementById('chartMeta').textContent = 'Switch to Kite source for charts';
+    return;
+  }
+
+  document.getElementById('chartMeta').textContent  = 'Loading ' + chartInterval + ' candles…';
   container.innerHTML = '';
 
   try {
