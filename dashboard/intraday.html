@@ -949,13 +949,19 @@ function renderTradePlan(i, pick, plan, enc) {
   if (!el) return;
   const f  = plan.factors || {};
   const factorLine = [
-    `ATR ${f.atr_pct}%`,
+    `${f.atr_source || 'ATR'} ${f.atr_pct}%`,
     `VIX ${f.vix} ×${f.vix_mul}`,
     `β${f.sector_beta}`,
     `Trend ${f.trend_pct > 0 ? '+' : ''}${f.trend_pct}%`,
     `Conf ×${f.conf_mul}`,
     `Day ×${f.day_factor}`,
   ].join(' · ');
+  const rsiHtml = plan.rsi != null
+    ? `<div class="tp-warn" style="color:${plan.rsi_ok ? '#68d391' : '#fc8181'}">${plan.rsi_signal}</div>`
+    : '';
+  const sizingHtml = plan.sizing_note
+    ? `<div style="font-size:9px;color:#4a5568;margin-bottom:6px">📐 ${plan.sizing_note}</div>`
+    : '';
 
   const hasKite = !!enc;
   const warnHtml = plan.time_warn === 'early-session'
@@ -986,11 +992,13 @@ function renderTradePlan(i, pick, plan, enc) {
       <span>R:R <strong>${plan.rr}</strong></span>
     </div>
     <div class="tp-factors">${factorLine}</div>
+    ${rsiHtml}
+    ${sizingHtml}
     ${warnHtml}
     <div class="tp-btn-row">
       ${hasKite
-        ? `<button class="tp-btn tp-btn-gtt" onclick="submitGTT(${i})">GTT OCO</button>
-           <button class="tp-btn tp-btn-buy" onclick="submitBuy(${i})">Market Buy</button>`
+        ? `<button class="tp-btn tp-btn-gtt" onclick="submitGTT(${i})" ${!plan.rsi_ok ? 'style="opacity:0.5" title="RSI overbought — consider skipping"' : ''}>GTT OCO</button>
+           <button class="tp-btn tp-btn-buy" onclick="submitBuy(${i})" ${!plan.rsi_ok ? 'style="opacity:0.5"' : ''}>Market Buy</button>`
         : `<a href="/connect" class="tp-btn tp-btn-gtt" style="text-align:center;text-decoration:none">Connect Kite to trade</a>`
       }
       <button class="tp-btn tp-btn-skip" onclick="document.getElementById('tp-${i}').style.display='none'">✕</button>
