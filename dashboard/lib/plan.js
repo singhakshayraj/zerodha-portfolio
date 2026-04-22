@@ -9,9 +9,8 @@
  */
 
 import https from 'https';
-import fs    from 'fs';
-import path  from 'path';
 import { atr14, rsi14, rsiSignal } from './indicators.js';
+import { getLatestSnapshot, listTrades } from './supabase.js';
 
 // ── Sector beta ───────────────────────────────────────────────────────────────
 const SECTOR_BETA = {
@@ -119,20 +118,13 @@ async function getHistory(symbol) {
 }
 
 // ── Portfolio value + open trade count (Priority 3) ──────────────────────────
-function getPortfolioContext() {
+async function getPortfolioContext() {
   try {
-    const histPath   = path.join(process.cwd(), 'data', 'history.json');
-    const tradesPath = path.join(process.cwd(), 'data', 'trades.json');
-
-    const history    = JSON.parse(fs.readFileSync(histPath, 'utf8'));
-    const snapshots  = history.snapshots || [];
-    const latest     = snapshots[snapshots.length - 1];
-    const portfolioValue = latest?.currentValue || 0;
-
-    const tradesDb   = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
-    const openTrades = (tradesDb.trades || []).filter(t => t.status === 'open').length;
-
-    return { portfolioValue, openTrades };
+    const [snapshot, trades] = await Promise.all([getLatestSnapshot(), listTrades('open')]);
+    return {
+      portfolioValue: snapshot?.current_value || 0,
+      openTrades:     trades.length,
+    };
   } catch {
     return { portfolioValue: 0, openTrades: 0 };
   }
@@ -296,7 +288,7 @@ export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
   const [market, candles, portfolio] = await Promise.all([
     getMarketSnapshot(),
     getHistory(symbol),
-    Promise.resolve(getPortfolioContext()),
+    getPortfolioContext(),
   ]);
   const atrRs = candles.length >= 2  ? atr14(candles) : null;
   const rsi   = candles.length >= 15 ? rsi14(candles) : null;
