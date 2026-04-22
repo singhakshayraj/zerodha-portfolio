@@ -355,32 +355,11 @@ let refreshTimer = null;
 let pendingOrder = null;
 let quoteSource = localStorage.getItem(SOURCE_KEY) || 'yahoo';
 
-// ── Source selector ───────────────────────────────────────────────────────────
+// Quote source is fixed to NSE India — no selector needed
 function setSource(src) {
-  quoteSource = src;
-  localStorage.setItem(SOURCE_KEY, src);
-  document.getElementById('srcYahoo').className = 'src-btn' + (src === 'yahoo' ? ' active' : '');
-  document.getElementById('srcKite').className  = 'src-btn' + (src === 'kite'  ? ' active' : '');
-  const isYahoo = src === 'yahoo';
-  document.getElementById('sourceNote').textContent = isYahoo
-    ? 'Free · Real-time · No login needed'
-    : 'Real-time · Requires Kite enctoken';
-  document.getElementById('footerNote').textContent = isYahoo
-    ? 'Prices from NSE India (real-time) · Auto-refreshes every 30 seconds · Not financial advice'
-    : 'Prices from Kite (real-time) · Auto-refreshes every 30 seconds · Not financial advice';
-  loadPulse();
-  refreshWatchlist();
+  quoteSource = 'yahoo';
+  localStorage.setItem(SOURCE_KEY, 'yahoo');
 }
-
-// Apply saved source on load
-(function applySource() {
-  if (quoteSource === 'kite') {
-    document.getElementById('srcYahoo').className = 'src-btn';
-    document.getElementById('srcKite').className  = 'src-btn active';
-    document.getElementById('sourceNote').textContent = 'Real-time · Requires Kite enctoken';
-    document.getElementById('footerNote').textContent = 'Prices from Kite (real-time) · Auto-refreshes every 30 seconds · Not financial advice';
-  }
-})();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function enc() { return localStorage.getItem(STORAGE_KEY) || ''; }
