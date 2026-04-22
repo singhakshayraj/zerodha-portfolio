@@ -1,4 +1,6 @@
 // Market Brain — named exports consumed by api/intel.js
+import fs   from 'fs';
+import path from 'path';
 
 // ── Source registry — grouped by tier for LLM weighting ──────────────────────
 // Each entry: { label, q (Google News query), tier, category }
@@ -303,9 +305,6 @@ Rules:
 }
 
 // ── Cache — /tmp persists across warm Lambda invocations on Vercel ────────────
-import fs   from 'fs';
-import path from 'path';
-
 const CACHE_FILE   = '/tmp/brain-cache.json';
 const CACHE_FRESH  = 30 * 60 * 1000;   // 30 min — return as fresh
 const CACHE_STALE  = 4  * 60 * 60 * 1000; // 4 hr  — serve stale, still fast
