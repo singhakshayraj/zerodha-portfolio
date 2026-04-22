@@ -9,7 +9,7 @@
  */
 
 import https from 'https';
-import { atr14, rsi14, rsiSignal, macd, bollingerBands, supertrend, emaCross, supportResistance, candlestickPatterns } from './indicators.js';
+import { atr14, rsi14, rsiSignal, macd, bollingerBands, supertrend, emaCross, supportResistance, candlestickPatterns, pivotPoints } from './indicators.js';
 import { getLatestSnapshot, listTrades } from './supabase.js';
 
 // ── Sector beta ───────────────────────────────────────────────────────────────
@@ -181,7 +181,7 @@ function priceConfirmation({ ltp, open, high, low, candles }) {
 // ── Core plan builder ─────────────────────────────────────────────────────────
 function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, niftyChgPct,
                      atrRs, rsi, portfolioValue, openTrades, candles,
-                     macdVal, bbVal, stVal, emaVal, srVal, patterns }) {
+                     macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots }) {
 
   // 1. ATR% — real 14-day Wilder ATR (falls back to 1% if history unavailable)
   const atrPct = atrRs ? Math.max(atrRs / ltp, 0.003) : 0.010;
@@ -282,6 +282,7 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
     supertrend:         stVal,
     ema_cross:          emaVal,
     support_resistance: srVal,
+    pivots,
     patterns,
     signal_score,
     signal_detail:      `${bull}/${total} signals bullish`,
@@ -323,12 +324,13 @@ export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
   const emaVal = candles.length >= 50 ? emaCross(candles)         : null;
   const srVal  = candles.length >= 5  ? supportResistance(candles): null;
   const patterns = candles.length >= 3 ? candlestickPatterns(candles) : null;
+  const pivots   = candles.length >= 2 ? pivotPoints(candles)         : null;
   const plan  = buildPlan({
     ltp: +ltp, open: +o, high: +h, low: +l,
     sector, confidence: +confidence, score: +score,
     vix: market.vix, niftyChgPct: market.niftyChgPct,
     atrRs, rsi, candles,
-    macdVal, bbVal, stVal, emaVal, srVal, patterns,
+    macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots,
     portfolioValue: portfolio.portfolioValue,
     openTrades:     portfolio.openTrades,
   });

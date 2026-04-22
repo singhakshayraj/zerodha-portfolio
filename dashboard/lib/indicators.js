@@ -204,6 +204,24 @@ export function supportResistance(candles) {
   return { support, resistance };
 }
 
+// ── Pivot Points (classic, from yesterday's OHLC) ────────────────────────────
+export function pivotPoints(candles) {
+  if (candles.length < 2) return null;
+  const { high, low, close } = candles[candles.length - 2]; // yesterday
+  const pp = (high + low + close) / 3;
+  const r1 = 2 * pp - low;
+  const r2 = pp + (high - low);
+  const s1 = 2 * pp - high;
+  const s2 = pp - (high - low);
+  return {
+    pp: +pp.toFixed(2),
+    r1: +r1.toFixed(2),
+    r2: +r2.toFixed(2),
+    s1: +s1.toFixed(2),
+    s2: +s2.toFixed(2),
+  };
+}
+
 // ── Candlestick Patterns (last 3 candles, needs open) ────────────────────────
 export function candlestickPatterns(candles) {
   if (candles.length < 3) return { bullish: [], bearish: [] };

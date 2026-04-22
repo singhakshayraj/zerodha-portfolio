@@ -1003,6 +1003,13 @@ function renderTradePlan(i, pick, plan, enc) {
         <div class="tp-val sl">₹${plan.sl?.toFixed(1)}</div>
       </div>
     </div>
+    ${plan.pivots ? `<div style="font-size:8px;color:#4a5568;margin-bottom:6px;letter-spacing:0.02em">
+      <span style="color:#fc8181">S2 ₹${plan.pivots.s2}</span> ·
+      <span style="color:#f6ad55">S1 ₹${plan.pivots.s1}</span> ·
+      <span style="color:#a0aec0">PP ₹${plan.pivots.pp}</span> ·
+      <span style="color:#68d391">R1 ₹${plan.pivots.r1}</span> ·
+      <span style="color:#76e4f7">R2 ₹${plan.pivots.r2}</span>
+    </div>` : ''}
     <div class="tp-stats">
       <span><strong>${plan.qty}</strong> shares · ₹${(plan.capital||0).toLocaleString()}</span>
       <span>Risk <strong style="color:#fc8181">₹${plan.risk_rs}</strong></span>
