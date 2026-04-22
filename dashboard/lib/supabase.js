@@ -97,3 +97,26 @@ export async function listSnapshots(limit = 90) {
   if (!r.ok) throw new Error(`Supabase listSnapshots: ${await r.text()}`);
   return r.json();
 }
+
+// ── brain_cache ───────────────────────────────────────────────────────────────
+// Single-row cache: id=1 always upserted. Stores full brain result + timestamp.
+
+export async function getBrainCache() {
+  configured();
+  const r = await fetch(`${BASE}/rest/v1/brain_cache?id=eq.1`, { headers: headers() });
+  if (!r.ok) return null;
+  const rows = await r.json();
+  return rows[0] ?? null;
+}
+
+export async function setBrainCache(data) {
+  configured();
+  const r = await fetch(`${BASE}/rest/v1/brain_cache`, {
+    method: 'POST',
+    headers: headers({ 'Prefer': 'resolution=merge-duplicates,return=representation' }),
+    body: JSON.stringify({ id: 1, data, updated_at: new Date().toISOString() }),
+  });
+  if (!r.ok) throw new Error(`Supabase setBrainCache: ${await r.text()}`);
+  const rows = await r.json();
+  return rows[0];
+}

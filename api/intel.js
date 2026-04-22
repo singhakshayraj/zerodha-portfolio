@@ -9,6 +9,9 @@ export const config = { maxDuration: 30 };
 import { getBrainResult }  from '../dashboard/lib/brain.js';
 import { getTradePlan }    from '../dashboard/lib/plan.js';
 import { analyzeStock }    from '../dashboard/lib/llm.js';
+import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
+
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,9 +26,25 @@ export default async function handler(req, res) {
     // ── Market Brain ────────────────────────────────────────────────────────
     if (action === 'brain') {
       if (req.method !== 'GET') { res.status(405).end(); return; }
-      const bust   = url.searchParams.get('bust');
-      const result = await getBrainResult(!!bust);
-      return res.status(200).json(result);
+      const force = url.searchParams.get('bust') || url.searchParams.get('force');
+
+      // Check Supabase cache unless force-refresh
+      if (!force) {
+        try {
+          const cached = await getBrainCache();
+          if (cached) {
+            const ageMs = Date.now() - new Date(cached.updated_at).getTime();
+            if (ageMs < CACHE_TTL_MS) {
+              return res.status(200).json({ ...cached.data, cached: true, cache_age_min: Math.floor(ageMs / 60000) });
+            }
+          }
+        } catch { /* cache miss — fall through to fresh fetch */ }
+      }
+
+      const result = await getBrainResult(true);
+      // Save to Supabase cache (non-blocking)
+      setBrainCache(result).catch(() => {});
+      return res.status(200).json({ ...result, cached: false, cache_age_min: 0 });
     }
 
     // ── Trade Plan ──────────────────────────────────────────────────────────

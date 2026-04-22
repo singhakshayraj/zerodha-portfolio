@@ -43,7 +43,15 @@ create table if not exists portfolio_snapshots (
   created_at      timestamptz default now()
 );
 
+-- ── brain_cache ───────────────────────────────────────────────────────────────
+create table if not exists brain_cache (
+  id         integer primary key default 1,  -- always a single row
+  data       jsonb not null,
+  updated_at timestamptz default now()
+);
+
 -- Disable Row Level Security so the anon key can read/write
 -- (this is a private single-user app gated by password)
 alter table trades               disable row level security;
 alter table portfolio_snapshots  disable row level security;
+alter table brain_cache          disable row level security;

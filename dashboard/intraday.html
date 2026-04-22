@@ -753,18 +753,15 @@ async function executeOrder() {
 }
 
 // ── Market Brain ─────────────────────────────────────────────────────────────
-let _brainLoaded = false;
-
 function confidenceStars(n) {
   return '★'.repeat(Math.min(5, Math.max(1, n))) + '☆'.repeat(5 - Math.min(5, Math.max(1, n)));
 }
 
 async function loadBrain(bust = false) {
-  if (!bust && _brainLoaded) return;
   const content = document.getElementById('brainContent');
   const status  = document.getElementById('brainStatus');
-  content.innerHTML = '<div class="brain-loading">Analysing expert tweets with AI… this may take 15–20s on first load</div>';
-  status.textContent = 'Thinking…';
+  content.innerHTML = `<div class="brain-loading">${bust ? 'Fetching fresh picks from AI… 15–20s' : 'Loading picks…'}</div>`;
+  status.textContent = bust ? 'Refreshing…' : 'Loading…';
 
   try {
     const url = '/api/market-brain' + (bust ? '?bust=1' : '');
@@ -777,12 +774,14 @@ async function loadBrain(bust = false) {
       return;
     }
 
-    _brainLoaded = true;
     const picks = data.picks || [];
     const smtColors = { bullish: '#68d391', bearish: '#fc8181', neutral: '#718096' };
     const smt = data.market_sentiment || 'neutral';
     const macroRisk = data.macro_risk || 'medium';
-    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} sources · ${data.cached ? 'cached 30min' : 'fresh'} · ⚡ ${data.powered_by || 'AI'}`;
+    const cacheLabel = data.cached
+      ? (data.cache_age_min === 0 ? 'cached just now' : `cached ${data.cache_age_min}m ago`)
+      : 'fresh · saved to cache';
+    status.textContent = `${data.article_count} articles · ${data.sources_fetched?.length || 0} sources · ${cacheLabel} · ⚡ ${data.powered_by || 'AI'}`;
 
     const badge = document.getElementById('brainSentimentBadge');
     badge.style.display = 'inline-block';
