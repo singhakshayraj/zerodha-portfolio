@@ -957,7 +957,16 @@ function renderTradePlan(i, pick, plan, enc) {
     `Day ×${f.day_factor}`,
   ].join(' · ');
   const rsiHtml = plan.rsi != null
-    ? `<div class="tp-warn" style="color:${plan.rsi_ok ? '#68d391' : '#fc8181'}">${plan.rsi_signal}</div>`
+    ? `<div style="font-size:9px;margin-bottom:4px;color:${plan.rsi_ok ? '#68d391' : '#fc8181'}">${plan.rsi_signal}</div>`
+    : '';
+  const pc = plan.price_confirmation || {};
+  const pcHtml = pc.signal
+    ? `<div style="font-size:9px;margin-bottom:4px;color:${pc.signal_ok ? '#68d391' : '#f6e05e'}">${pc.signal}${pc.vwap ? ` · VWAP ₹${pc.vwap}` : ''}</div>`
+    : '';
+  const readyBadge = plan.trade_ready === false
+    ? `<div style="font-size:9px;font-weight:700;color:#fc8181;margin-bottom:6px">⛔ NOT READY — signals conflict, consider waiting</div>`
+    : plan.trade_ready === true
+    ? `<div style="font-size:9px;font-weight:700;color:#68d391;margin-bottom:6px">✅ READY — all signals aligned</div>`
     : '';
   const sizingHtml = plan.sizing_note
     ? `<div style="font-size:9px;color:#4a5568;margin-bottom:6px">📐 ${plan.sizing_note}</div>`
@@ -993,6 +1002,8 @@ function renderTradePlan(i, pick, plan, enc) {
     </div>
     <div class="tp-factors">${factorLine}</div>
     ${rsiHtml}
+    ${pcHtml}
+    ${readyBadge}
     ${sizingHtml}
     ${warnHtml}
     <div class="tp-btn-row">
@@ -1033,10 +1044,10 @@ async function submitGTT(i) {
   // Step 2: GTT OCO
   try {
     toast(`Setting GTT: target ₹${target} / SL ₹${sl}…`, true);
-    const res  = await fetch('/api/gtt', {
+    const res  = await fetch('/trade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': enc },
-      body: JSON.stringify({ symbol: pick.symbol, exchange: pick.exchange || 'NSE',
+      body: JSON.stringify({ type: 'gtt', symbol: pick.symbol, exchange: pick.exchange || 'NSE',
                              qty, ltp: entry, target, sl }),
     });
     const data = await res.json();

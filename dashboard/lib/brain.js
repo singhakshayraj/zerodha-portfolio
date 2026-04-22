@@ -1,13 +1,4 @@
-/**
- * AI Market Brain — Multi-Source Intelligence Engine
- * ─────────────────────────────────────────────────────────────────────────────
- * Sources: Google News RSS across 6 expert tiers + official exchanges + global macro
- * Algorithm: 7-factor weighted scoring (credibility × signal × recency × consensus
- *            × technicals × options flow × global macro alignment)
- * Cache: 30 min. Force refresh: ?bust=1
- */
-
-export const config = { maxDuration: 30 };
+// Market Brain — named exports consumed by api/intel.js
 
 // ── Source registry — grouped by tier for LLM weighting ──────────────────────
 // Each entry: { label, q (Google News query), tier, category }
@@ -311,53 +302,75 @@ Rules:
   return { ...result, _provider: provider };
 }
 
-// ── Cache ─────────────────────────────────────────────────────────────────────
-let _cache = null;
-let _cacheAt = 0;
-const CACHE_TTL = 30 * 60 * 1000;
+// ── Cache — /tmp persists across warm Lambda invocations on Vercel ────────────
+import fs   from 'fs';
+import path from 'path';
 
-// ── Handler ───────────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method !== 'GET') { res.status(405).end(); return; }
+const CACHE_FILE   = '/tmp/brain-cache.json';
+const CACHE_FRESH  = 30 * 60 * 1000;   // 30 min — return as fresh
+const CACHE_STALE  = 4  * 60 * 60 * 1000; // 4 hr  — serve stale, still fast
 
-  const bust = new URL(req.url, 'https://x.com').searchParams.get('bust');
-  if (!bust && _cache && Date.now() - _cacheAt < CACHE_TTL) {
-    return res.status(200).json({ ..._cache, cached: true });
-  }
+// In-memory mirror so repeated requests within same invocation skip disk I/O
+let _mem = null;
 
+function readCache() {
+  if (_mem) return _mem;
   try {
-    // Fetch all source categories in parallel, max 4 items each
-    const results = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 3)));
-    const articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+    const raw = fs.readFileSync(CACHE_FILE, 'utf8');
+    _mem = JSON.parse(raw);
+    return _mem;
+  } catch { return null; }
+}
 
-    if (articles.length === 0) {
-      return res.status(503).json({
-        error: 'No news articles fetched. Google News RSS may be temporarily unavailable.',
-        tip: 'Try again in a few minutes.',
-      });
+function writeCache(data) {
+  _mem = data;
+  try { fs.writeFileSync(CACHE_FILE, JSON.stringify(data)); } catch {}
+}
+
+async function fetchFresh() {
+  const results  = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 3)));
+  const articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+  if (articles.length === 0) throw new Error('No articles fetched');
+
+  const analysis = await analyzeWithGroq(articles);
+  const result = {
+    ...analysis,
+    article_count:   articles.length,
+    sources_fetched: [...new Set(articles.map(a => a.source))],
+    tier_breakdown:  Object.fromEntries(
+      [1,2,3,4,5,6].map(t => [`tier_${t}`, articles.filter(a => a.tier === t).length])
+    ),
+    powered_by:   analysis._provider || 'Groq (llama-3.3-70b)',
+    generated_at: new Date().toISOString(),
+  };
+  delete result._provider;
+  writeCache(result);
+  return result;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+export async function getBrainResult(bust = false) {
+  if (!bust) {
+    const cached = readCache();
+    if (cached?.generated_at) {
+      const age = Date.now() - new Date(cached.generated_at).getTime();
+      if (age < CACHE_FRESH)
+        return { ...cached, cached: true, cache_age_min: Math.round(age / 60000) };
+      if (age < CACHE_STALE)
+        return { ...cached, cached: true, cache_age_min: Math.round(age / 60000),
+          stale_note: 'Serving cached result. Click Refresh to update.' };
     }
-
-    const analysis = await analyzeWithGroq(articles);
-
-    const result = {
-      ...analysis,
-      article_count: articles.length,
-      sources_fetched: [...new Set(articles.map(a => a.source))],
-      tier_breakdown: Object.fromEntries(
-        [1,2,3,4,5,6].map(t => [`tier_${t}`, articles.filter(a => a.tier === t).length])
-      ),
-      powered_by: analysis._provider || 'Groq (llama-3.3-70b)',
-      generated_at: new Date().toISOString(),
-      cached: false,
-    };
-    delete result._provider;
-
-    _cache = result;
-    _cacheAt = Date.now();
-    res.status(200).json(result);
+  }
+  try {
+    const result = await fetchFresh();
+    return { ...result, cached: false, cache_age_min: 0 };
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    const stale = readCache();
+    if (stale) {
+      const age = Math.round((Date.now() - new Date(stale.generated_at).getTime()) / 60000);
+      return { ...stale, cached: true, cache_age_min: age,
+        stale_note: `Live fetch failed (${e.message}). Serving ${age}min old cache.` };
+    }
+    throw e;
   }
 }

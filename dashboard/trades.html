@@ -65,6 +65,22 @@
     .out-stoploss { background: rgba(252,129,129,0.2); color: #fc8181; border: 1px solid rgba(252,129,129,0.3); }
     .out-manual   { background: rgba(113,128,150,0.2); color: #718096; border: 1px solid rgba(113,128,150,0.3); }
 
+    /* ANALYTICS */
+    .analytics { margin-top: 40px; }
+    .analytics h2 { font-size: 13px; font-weight: 700; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .ana-card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 18px; }
+    .ana-card h3 { font-size: 11px; color: #4a5568; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+    .ana-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ana-label { font-size: 11px; color: #718096; min-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ana-bar-wrap { flex: 1; background: #0f1117; border-radius: 4px; height: 6px; }
+    .ana-bar { height: 6px; border-radius: 4px; background: #63b3ed; transition: width 0.4s; }
+    .ana-bar.green { background: #68d391; }
+    .ana-bar.red   { background: #fc8181; }
+    .ana-pct { font-size: 11px; font-weight: 700; min-width: 36px; text-align: right; }
+    .ana-count { font-size: 10px; color: #4a5568; min-width: 28px; text-align: right; }
+    .ana-empty { font-size: 12px; color: #4a5568; padding: 12px 0; text-align: center; }
+
     /* EMPTY */
     .empty { text-align: center; padding: 60px 20px; color: #4a5568; font-size: 14px; }
     .empty a { color: #63b3ed; text-decoration: none; }
@@ -143,6 +159,29 @@
     </div>
   </div>
 
+  <!-- FEEDBACK LOOP ANALYTICS -->
+  <div class="analytics" id="analyticsSection" style="display:none">
+    <h2>📊 Feedback Loop — What's Actually Working</h2>
+    <div class="analytics-grid">
+      <div class="ana-card">
+        <h3>Win Rate by Sector</h3>
+        <div id="ana-sector"><div class="ana-empty">No closed trades yet</div></div>
+      </div>
+      <div class="ana-card">
+        <h3>Win Rate by Confidence</h3>
+        <div id="ana-conf"><div class="ana-empty">No closed trades yet</div></div>
+      </div>
+      <div class="ana-card">
+        <h3>Win Rate by Time of Day</h3>
+        <div id="ana-time"><div class="ana-empty">No closed trades yet</div></div>
+      </div>
+      <div class="ana-card">
+        <h3>P&amp;L Trend (last 20)</h3>
+        <div id="ana-pnl-trend"><div class="ana-empty">No closed trades yet</div></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="toast"></div>
@@ -158,9 +197,83 @@
       _all = data.trades || [];
       renderStats(data.stats || {});
       render();
+      renderAnalytics(_all);
     } catch(e) {
       toast('Failed to load trades: ' + e.message, false);
     }
+  }
+
+  function renderAnalytics(trades) {
+    const closed = trades.filter(t => t.status === 'closed');
+    if (closed.length < 2) return; // not enough data
+    document.getElementById('analyticsSection').style.display = 'block';
+
+    // Helper: group and compute win rate
+    function winRateRows(groups) {
+      return Object.entries(groups)
+        .map(([label, ts]) => {
+          const wins = ts.filter(t => t.exit_reason === 'target').length;
+          const wr   = Math.round(wins / ts.length * 100);
+          return { label, wins, total: ts.length, wr };
+        })
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 6);
+    }
+
+    function renderRows(elId, rows) {
+      if (!rows.length) return;
+      document.getElementById(elId).innerHTML = rows.map(r => `
+        <div class="ana-row">
+          <span class="ana-label" title="${r.label}">${r.label}</span>
+          <div class="ana-bar-wrap"><div class="ana-bar ${r.wr >= 50 ? 'green' : 'red'}" style="width:${r.wr}%"></div></div>
+          <span class="ana-pct" style="color:${r.wr >= 50 ? '#68d391' : '#fc8181'}">${r.wr}%</span>
+          <span class="ana-count">${r.wins}/${r.total}</span>
+        </div>`).join('');
+    }
+
+    // By sector
+    const bySector = {};
+    closed.forEach(t => {
+      const k = t.sector || 'Unknown';
+      (bySector[k] = bySector[k] || []).push(t);
+    });
+    renderRows('ana-sector', winRateRows(bySector));
+
+    // By confidence bracket
+    const byConf = {};
+    closed.forEach(t => {
+      const c = t.confidence || t.score || 0;
+      const k = c >= 80 ? 'High (80+)' : c >= 60 ? 'Medium (60-79)' : 'Low (<60)';
+      (byConf[k] = byConf[k] || []).push(t);
+    });
+    renderRows('ana-conf', winRateRows(byConf));
+
+    // By time of day (hour of trade open)
+    const byTime = {};
+    closed.forEach(t => {
+      const h = new Date(t.opened_at).getHours();
+      // Convert UTC to IST
+      const istH = (h + 5) % 24;
+      const k = istH < 10 ? '9–10 AM' : istH < 11 ? '10–11 AM'
+              : istH < 12 ? '11–12 PM' : istH < 13 ? '12–1 PM'
+              : istH < 14 ? '1–2 PM'   : istH < 15 ? '2–3 PM' : 'After 3 PM';
+      (byTime[k] = byTime[k] || []).push(t);
+    });
+    renderRows('ana-time', winRateRows(byTime));
+
+    // P&L trend — last 20 closed trades as mini bar chart
+    const last20 = closed.slice(-20);
+    const maxAbs = Math.max(...last20.map(t => Math.abs(t.pnl || 0)), 1);
+    document.getElementById('ana-pnl-trend').innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:3px;height:60px;margin-top:8px">
+        ${last20.map(t => {
+          const pnl  = t.pnl || 0;
+          const hPct = Math.round(Math.abs(pnl) / maxAbs * 100);
+          const col  = pnl >= 0 ? '#68d391' : '#fc8181';
+          return `<div title="₹${pnl}" style="flex:1;background:${col};height:${Math.max(hPct,4)}%;border-radius:2px 2px 0 0;min-height:3px"></div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:9px;color:#4a5568;margin-top:6px;text-align:right">Last ${last20.length} trades</div>`;
   }
 
   function renderStats(s) {

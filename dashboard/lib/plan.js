@@ -11,7 +11,7 @@
 import https from 'https';
 import fs    from 'fs';
 import path  from 'path';
-import { atr14, rsi14, rsiSignal } from '../dashboard/lib/indicators.js';
+import { atr14, rsi14, rsiSignal } from './indicators.js';
 
 // ── Sector beta ───────────────────────────────────────────────────────────────
 const SECTOR_BETA = {
@@ -138,9 +138,56 @@ function getPortfolioContext() {
   }
 }
 
+// ── Price confirmation — VWAP approx + range position (Priority 5) ───────────
+function priceConfirmation({ ltp, open, high, low, candles }) {
+  // Approximate VWAP using today's OHLC typical price
+  const vwap = (open + high + low + ltp) / 4;
+  const aboveVwap = ltp >= vwap;
+
+  // Where is price in today's range? 0 = at low, 1 = at high
+  const rangeWidth = high - low;
+  const rangePct   = rangeWidth > 0 ? (ltp - low) / rangeWidth : 0.5;
+  const rangeZone  = rangePct > 0.66 ? 'upper-third'
+                   : rangePct > 0.33 ? 'middle'
+                   : 'lower-third';
+
+  // Yesterday's close from candle history
+  const prevClose  = candles.length >= 2 ? candles[candles.length - 2].close : null;
+  const abovePrevClose = prevClose ? ltp > prevClose : null;
+
+  // Signal
+  let signal, signal_ok;
+  if (aboveVwap && rangePct > 0.33 && rangePct < 0.80) {
+    signal = '✅ Above VWAP · mid-range — good entry zone';
+    signal_ok = true;
+  } else if (!aboveVwap && rangePct < 0.40) {
+    signal = '⚠ Below VWAP · lower range — wait for bounce';
+    signal_ok = false;
+  } else if (rangePct > 0.85) {
+    signal = '⚠ Top of range — extended, wait for pullback';
+    signal_ok = false;
+  } else if (aboveVwap) {
+    signal = '✅ Above VWAP · momentum intact';
+    signal_ok = true;
+  } else {
+    signal = '⚠ Below VWAP · momentum weak';
+    signal_ok = false;
+  }
+
+  return {
+    vwap:             +vwap.toFixed(2),
+    above_vwap:       aboveVwap,
+    range_pct:        +( rangePct * 100).toFixed(1),
+    range_zone:       rangeZone,
+    above_prev_close: abovePrevClose,
+    signal,
+    signal_ok,
+  };
+}
+
 // ── Core plan builder ─────────────────────────────────────────────────────────
-function buildPlan({ ltp, sector, confidence, score, vix, niftyChgPct,
-                     atrRs, rsi, portfolioValue, openTrades }) {
+function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, niftyChgPct,
+                     atrRs, rsi, portfolioValue, openTrades, candles }) {
 
   // 1. ATR% — real 14-day Wilder ATR (falls back to 1% if history unavailable)
   const atrPct = atrRs ? Math.max(atrRs / ltp, 0.003) : 0.010;
@@ -196,8 +243,13 @@ function buildPlan({ ltp, sector, confidence, score, vix, niftyChgPct,
   const rewardRs = Math.round(qty * (target - ltp));
   const rr       = +(rewardRs / (riskRs || 1)).toFixed(2);
 
-  // RSI confirmation signal
-  const rsig = rsiSignal(rsi);
+  // RSI signal
+  const rsig  = rsiSignal(rsi);
+  // Price confirmation
+  const pconf = priceConfirmation({ ltp, open, high, low, candles: candles || [] });
+
+  // Overall trade readiness — all three must be ok
+  const trade_ready = rsig.ok && pconf.signal_ok;
 
   return {
     ltp,
@@ -215,6 +267,8 @@ function buildPlan({ ltp, sector, confidence, score, vix, niftyChgPct,
     rsi,
     rsi_signal: rsig.label,
     rsi_ok:     rsig.ok,
+    price_confirmation: pconf,
+    trade_ready,
     sizing_note: portfolioValue > 0
       ? `2% of ₹${(portfolioValue/1000).toFixed(0)}k portfolio ÷ ${openTrades + 1} trades`
       : 'Fixed capital (connect Kite for portfolio sizing)',
@@ -234,39 +288,25 @@ function buildPlan({ ltp, sector, confidence, score, vix, niftyChgPct,
   };
 }
 
-// ── Handler ───────────────────────────────────────────────────────────────────
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method !== 'POST') { res.status(405).end(); return; }
-
-  try {
-    const { symbol, exchange = 'NSE', sector = '',
-            confidence = 70, score = 70, ltp } = req.body ?? {};
-
-    if (!symbol || !ltp) {
-      res.status(400).json({ error: 'symbol and ltp are required' }); return;
-    }
-
-    // Fetch all three in parallel
-    const [market, candles, portfolio] = await Promise.all([
-      getMarketSnapshot(),
-      getHistory(symbol),
-      Promise.resolve(getPortfolioContext()),
-    ]);
-
-    const atrRs = candles.length >= 2 ? atr14(candles) : null;
-    const rsi   = candles.length >= 15 ? rsi14(candles) : null;
-
-    const plan = buildPlan({
-      ltp: +ltp, sector, confidence: +confidence, score: +score,
-      vix: market.vix, niftyChgPct: market.niftyChgPct,
-      atrRs, rsi,
-      portfolioValue: portfolio.portfolioValue,
-      openTrades:     portfolio.openTrades,
-    });
-
-    res.status(200).json({ symbol, exchange, sector, ...plan });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+// ── Public API ────────────────────────────────────────────────────────────────
+export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
+                                     confidence = 70, score = 70,
+                                     ltp, open, high, low }) {
+  const o = open ?? ltp; const h = high ?? ltp; const l = low ?? ltp;
+  const [market, candles, portfolio] = await Promise.all([
+    getMarketSnapshot(),
+    getHistory(symbol),
+    Promise.resolve(getPortfolioContext()),
+  ]);
+  const atrRs = candles.length >= 2  ? atr14(candles) : null;
+  const rsi   = candles.length >= 15 ? rsi14(candles) : null;
+  const plan  = buildPlan({
+    ltp: +ltp, open: +o, high: +h, low: +l,
+    sector, confidence: +confidence, score: +score,
+    vix: market.vix, niftyChgPct: market.niftyChgPct,
+    atrRs, rsi, candles,
+    portfolioValue: portfolio.portfolioValue,
+    openTrades:     portfolio.openTrades,
+  });
+  return { symbol, exchange, sector, ...plan };
 }
