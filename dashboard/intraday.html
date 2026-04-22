@@ -910,7 +910,7 @@ async function loadTradePlans(picks) {
     const syms = picks.map(p => encodeURIComponent(`${p.exchange||'NSE'}:${p.symbol}`)).join(',');
     const qRes = await fetch(`/api/yahoo-quotes?symbols=${syms}`);
     const qData = await qRes.json();
-    ltpMap = qData;
+    ltpMap = qData.data || qData;
   } catch {}
 
   picks.forEach((p, i) => {
