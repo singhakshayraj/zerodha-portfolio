@@ -652,10 +652,13 @@ async function loadAI(symbol) {
     const data = await res.json();
     if (data.error) { document.getElementById('aiContent').textContent = data.error; return; }
 
+    const verdict = (data.verdict || '').toLowerCase();
+    const buyLabel  = verdict.includes('sell') ? 'Re-entry at' : verdict.includes('hold') ? 'Accumulate at' : 'Buy at';
+    const sellLabel = verdict.includes('sell') ? 'Exit at'     : 'Target';
     const priceRow = (data.buy_price || data.sell_price)
       ? `<div style="display:flex;gap:16px;margin:10px 0;font-size:13px">
-           ${data.buy_price  ? `<span>Buy at <strong style="color:#68d391">₹${data.buy_price}</strong></span>`  : ''}
-           ${data.sell_price ? `<span>Target <strong style="color:#76e4f7">₹${data.sell_price}</strong></span>` : ''}
+           ${data.buy_price  ? `<span>${buyLabel} <strong style="color:#68d391">₹${data.buy_price}</strong></span>`  : ''}
+           ${data.sell_price ? `<span>${sellLabel} <strong style="color:#76e4f7">₹${data.sell_price}</strong></span>` : ''}
          </div>`
       : '';
     document.getElementById('aiContent').innerHTML = `

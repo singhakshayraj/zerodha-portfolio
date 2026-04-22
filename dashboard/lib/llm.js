@@ -15,8 +15,8 @@ Return ONLY a valid raw JSON object (no markdown, no code blocks) with exactly t
   "ratios": { "pe": <number>, "roe": <number>, "roce": <number>, "debtEquity": <number>, "dividendYield": <number> },
   "redFlags": ["flag 1"],
   "summary": "One sentence verdict with reasoning.",
-  "buy_price": <number — ideal entry price in INR based on current technicals and valuation, or null if not a Buy>,
-  "sell_price": <number — 6–12 month price target in INR, or null if not a Buy>
+  "buy_price": <number — ideal entry/accumulation price in INR based on current technicals and valuation>,
+  "sell_price": <number — price target or exit level in INR for the next 6–12 months>
 }`;
 
 async function analyzeWithGroq(company) {
