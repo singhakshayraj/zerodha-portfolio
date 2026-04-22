@@ -1,14 +1,5 @@
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import path from 'path';
-
-// Load .env from project root (one level up from dashboard/)
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
-const dotenv = require('dotenv');
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-dotenv.config({ path: path.join(__dirname, '.env') }); // also check dashboard/.env
-
+// On Vercel, env vars are injected directly into process.env — no dotenv needed.
+// For local development, run: export GROQ_API_KEY=xxx (or use a .env loader in your shell).
 export const config = {
   // Runtime mode: "local" = Claude Code + MCP, "server" = direct API keys
   runtimeMode: process.env.RUNTIME_MODE || 'local',
