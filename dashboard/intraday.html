@@ -943,11 +943,40 @@ function renderTradePlan(i, pick, plan, enc) {
   const pcHtml = pc.signal
     ? `<div style="font-size:9px;margin-bottom:4px;color:${pc.signal_ok ? '#68d391' : '#f6e05e'}">${pc.signal}${pc.vwap ? ` · VWAP ₹${pc.vwap}` : ''}</div>`
     : '';
-  const readyBadge = plan.trade_ready === false
-    ? `<div style="font-size:9px;font-weight:700;color:#fc8181;margin-bottom:6px">⛔ NOT READY — signals conflict, consider waiting</div>`
-    : plan.trade_ready === true
-    ? `<div style="font-size:9px;font-weight:700;color:#68d391;margin-bottom:6px">✅ READY — all signals aligned</div>`
+
+  // Signal pills
+  const pill = (label, bull, neutral) => {
+    const col = neutral ? '#a0aec0' : bull ? '#68d391' : '#fc8181';
+    const arr = neutral ? '' : bull ? ' ▲' : ' ▼';
+    return `<span style="display:inline-block;padding:1px 6px;border-radius:3px;border:1px solid ${col};color:${col};font-size:8px;white-space:nowrap">${label}${arr}</span>`;
+  };
+  const pillsArr = [];
+  if (plan.macd)               pillsArr.push(pill(`MACD`, plan.macd.crossover==='bullish', false));
+  if (plan.supertrend)         pillsArr.push(pill(`ST`, plan.supertrend.direction==='up', false));
+  if (plan.ema_cross)          pillsArr.push(pill(`EMA`, plan.ema_cross.signal==='bullish', plan.ema_cross.signal==='neutral'));
+  if (plan.bollinger) {
+    const bb = plan.bollinger;
+    const bLabel = bb.squeeze ? `BB squeeze` : `BB ${bb.pct_b}%`;
+    const bBull = !bb.squeeze && bb.pct_b > 40 && bb.pct_b < 80;
+    pillsArr.push(pill(bLabel, bBull, bb.squeeze));
+  }
+  if (plan.support_resistance)
+    pillsArr.push(`<span style="display:inline-block;padding:1px 6px;border-radius:3px;border:1px solid #4a5568;color:#a0aec0;font-size:8px">S ₹${plan.support_resistance.support} · R ₹${plan.support_resistance.resistance}</span>`);
+  if (plan.patterns) {
+    (plan.patterns.bullish||[]).forEach(p => pillsArr.push(`<span style="color:#68d391;font-size:8px">${p}</span>`));
+    (plan.patterns.bearish||[]).forEach(p => pillsArr.push(`<span style="color:#fc8181;font-size:8px">${p}</span>`));
+  }
+  const pillsHtml = pillsArr.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${pillsArr.join('')}</div>`
     : '';
+
+  const score = plan.signal_score ?? 50;
+  const detail = plan.signal_detail || '';
+  const readyBadge = score >= 80
+    ? `<div style="font-size:9px;font-weight:700;color:#68d391;margin-bottom:6px">✅ STRONG — ${detail}</div>`
+    : score >= 60
+    ? `<div style="font-size:9px;font-weight:700;color:#68d391;margin-bottom:6px">✅ READY — ${detail}</div>`
+    : `<div style="font-size:9px;font-weight:700;color:#fc8181;margin-bottom:6px">⛔ WAIT — ${detail}</div>`;
   const sizingHtml = plan.sizing_note
     ? `<div style="font-size:9px;color:#4a5568;margin-bottom:6px">📐 ${plan.sizing_note}</div>`
     : '';
@@ -983,6 +1012,7 @@ function renderTradePlan(i, pick, plan, enc) {
     <div class="tp-factors">${factorLine}</div>
     ${rsiHtml}
     ${pcHtml}
+    ${pillsHtml}
     ${readyBadge}
     ${sizingHtml}
     ${warnHtml}

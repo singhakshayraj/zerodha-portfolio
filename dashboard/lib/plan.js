@@ -9,7 +9,7 @@
  */
 
 import https from 'https';
-import { atr14, rsi14, rsiSignal } from './indicators.js';
+import { atr14, rsi14, rsiSignal, macd, bollingerBands, supertrend, emaCross, supportResistance, candlestickPatterns } from './indicators.js';
 import { getLatestSnapshot, listTrades } from './supabase.js';
 
 // ── Sector beta ───────────────────────────────────────────────────────────────
@@ -107,6 +107,7 @@ async function getHistory(symbol) {
   const candles = rows
     .sort((a, b) => new Date(a.CH_TIMESTAMP) - new Date(b.CH_TIMESTAMP))
     .map(r => ({
+      open:  parseFloat(r.CH_OPENING_PRICE || r.CH_CLOSING_PRICE),
       high:  parseFloat(r.CH_TRADE_HIGH_PRICE),
       low:   parseFloat(r.CH_TRADE_LOW_PRICE),
       close: parseFloat(r.CH_CLOSING_PRICE),
@@ -179,7 +180,8 @@ function priceConfirmation({ ltp, open, high, low, candles }) {
 
 // ── Core plan builder ─────────────────────────────────────────────────────────
 function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, niftyChgPct,
-                     atrRs, rsi, portfolioValue, openTrades, candles }) {
+                     atrRs, rsi, portfolioValue, openTrades, candles,
+                     macdVal, bbVal, stVal, emaVal, srVal, patterns }) {
 
   // 1. ATR% — real 14-day Wilder ATR (falls back to 1% if history unavailable)
   const atrPct = atrRs ? Math.max(atrRs / ltp, 0.003) : 0.010;
@@ -240,8 +242,23 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
   // Price confirmation
   const pconf = priceConfirmation({ ltp, open, high, low, candles: candles || [] });
 
-  // Overall trade readiness — all three must be ok
-  const trade_ready = rsig.ok && pconf.signal_ok;
+  // Composite signal score
+  let bull = 0, total = 0;
+  if (rsig.ok)                                              { bull++; total++; }
+  if (pconf.signal_ok)                                      { bull++; total++; }
+  if (macdVal?.crossover === 'bullish')                     { bull++; total++; }
+  else if (macdVal)                                         {         total++; }
+  if (stVal?.direction === 'up')                            { bull++; total++; }
+  else if (stVal)                                           {         total++; }
+  if (emaVal?.signal === 'bullish')                         { bull++; total++; }
+  else if (emaVal)                                          {         total++; }
+  if (bbVal && bbVal.pct_b > 40 && bbVal.pct_b < 80)       { bull++; total++; }
+  else if (bbVal)                                           {         total++; }
+  if ((patterns?.bullish?.length || 0) > 0)                { bull++; total++; }
+  else if ((patterns?.bearish?.length || 0) > 0)           {         total++; }
+
+  const signal_score = total ? Math.round(bull / total * 100) : 50;
+  const trade_ready  = signal_score >= 60;
 
   return {
     ltp,
@@ -260,6 +277,14 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
     rsi_signal: rsig.label,
     rsi_ok:     rsig.ok,
     price_confirmation: pconf,
+    macd:               macdVal,
+    bollinger:          bbVal,
+    supertrend:         stVal,
+    ema_cross:          emaVal,
+    support_resistance: srVal,
+    patterns,
+    signal_score,
+    signal_detail:      `${bull}/${total} signals bullish`,
     trade_ready,
     sizing_note: portfolioValue > 0
       ? `2% of ₹${(portfolioValue/1000).toFixed(0)}k portfolio ÷ ${openTrades + 1} trades`
@@ -290,13 +315,20 @@ export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
     getHistory(symbol),
     getPortfolioContext(),
   ]);
-  const atrRs = candles.length >= 2  ? atr14(candles) : null;
-  const rsi   = candles.length >= 15 ? rsi14(candles) : null;
+  const atrRs  = candles.length >= 2  ? atr14(candles)            : null;
+  const rsi    = candles.length >= 15 ? rsi14(candles)            : null;
+  const macdVal= candles.length >= 26 ? macd(candles)             : null;
+  const bbVal  = candles.length >= 20 ? bollingerBands(candles)   : null;
+  const stVal  = candles.length >= 14 ? supertrend(candles)       : null;
+  const emaVal = candles.length >= 50 ? emaCross(candles)         : null;
+  const srVal  = candles.length >= 5  ? supportResistance(candles): null;
+  const patterns = candles.length >= 3 ? candlestickPatterns(candles) : null;
   const plan  = buildPlan({
     ltp: +ltp, open: +o, high: +h, low: +l,
     sector, confidence: +confidence, score: +score,
     vix: market.vix, niftyChgPct: market.niftyChgPct,
     atrRs, rsi, candles,
+    macdVal, bbVal, stVal, emaVal, srVal, patterns,
     portfolioValue: portfolio.portfolioValue,
     openTrades:     portfolio.openTrades,
   });
