@@ -107,7 +107,9 @@
     <p>Day-on-day tracking · Zerodha Kite via Claude MCP</p>
   </div>
   <div style="display:flex;gap:20px;align-items:center;">
-    <span style="font-size:13px; color:#718096;">Updated: <strong style="color:#e2e8f0">21 Apr 2026</strong></span>
+    <span style="font-size:13px;color:#718096;">Updated: <strong id="lastUpdatedLabel" style="color:#e2e8f0">21 Apr 2026</strong></span>
+    <span id="liveIndicator" style="display:none;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(104,211,145,0.12);color:#68d391;border:1px solid #68d39144">● LIVE</span>
+    <button id="refreshBtn" onclick="refreshDashboard(true)" style="display:none;font-size:12px;padding:5px 12px;background:#1a1f2e;border:1px solid #2d3748;color:#a0aec0;border-radius:6px;cursor:pointer">↻ Refresh</button>
   </div>
 </header>
 
@@ -139,23 +141,23 @@
   <div class="cards">
     <div class="card">
       <div class="label">Total Invested</div>
-      <div class="value white">₹6,24,347</div>
-      <div class="delta muted">Across 18 holdings</div>
+      <div class="value white" id="cardInvested">₹6,24,347</div>
+      <div class="delta muted" id="cardHoldings">Across 18 holdings</div>
     </div>
     <div class="card">
       <div class="label">Current Value</div>
-      <div class="value white">₹5,87,180</div>
-      <div class="delta green">▲ ₹85,074 vs Apr 15</div>
+      <div class="value white" id="cardValue">₹5,87,180</div>
+      <div class="delta green" id="cardDayChange">▲ ₹85,074 vs Apr 15</div>
     </div>
     <div class="card">
       <div class="label">Total P&L</div>
-      <div class="value red">-₹37,167</div>
-      <div class="delta red">-5.95% overall</div>
+      <div class="value red" id="cardPnl">-₹37,167</div>
+      <div class="delta red" id="cardPnlPct">-5.95% overall</div>
     </div>
     <div class="card">
-      <div class="label">Days Tracked</div>
-      <div class="value white">3</div>
-      <div class="delta muted">Since 7 Apr 2026</div>
+      <div class="label">Day P&L</div>
+      <div class="value white" id="cardDayPnl">—</div>
+      <div class="delta muted" id="cardDayPnlNote">Live from Kite</div>
     </div>
   </div>
 
@@ -220,8 +222,8 @@
 
   <!-- Stock-level Day-on-Day -->
   <div class="section">
-    <h2>Stock Performance — 21 Apr 2026</h2>
-    <div class="stock-grid">
+    <h2 id="stockGridTitle">Stock Performance — 21 Apr 2026</h2>
+    <div class="stock-grid" id="stockGrid">
       <div class="stock-card">
         <div class="sym">AARTIIND</div>
         <div class="pnl red">-₹5,037 (-24.2%)</div>
@@ -317,7 +319,7 @@
 
 </div>
 
-<footer>
+<footer id="footerNote">
   Auto-generated daily via Claude + Zerodha Kite MCP · Data from Kite Connect API
 </footer>
 
@@ -497,6 +499,131 @@
     document.getElementById('qaResultPanel').style.display = 'block';
     document.getElementById('qaResultPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
+</script>
+
+<script>
+// ── Live Dashboard Refresh (Option A — client-side polling) ───────────────────
+const REFRESH_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+let _refreshTimer = null;
+let _lastRefreshAt = null;
+
+function fmt(n)      { return '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+function sign(n)     { return n >= 0 ? '+' : '-'; }
+function cls(n)      { return n >= 0 ? 'green' : 'red'; }
+function timeAgo(d)  {
+  const mins = Math.round((Date.now() - d) / 60000);
+  return mins < 1 ? 'just now' : mins < 60 ? `${mins}m ago` : `${Math.round(mins/60)}h ago`;
+}
+
+async function refreshDashboard(manual = false) {
+  const enc = localStorage.getItem('kite_enctoken');
+  if (!enc) return; // no token — stay on static data
+
+  try {
+    const res  = await fetch('/api/kite?action=holdings', {
+      headers: { 'X-Kite-Enctoken': enc }
+    });
+    if (!res.ok) return;
+    const json = await res.json();
+    const holdings = json.data || [];
+    if (!holdings.length) return;
+
+    // ── Compute totals ──────────────────────────────────────────────────────
+    let totalInvested = 0, currentValue = 0, dayPnl = 0;
+    holdings.forEach(h => {
+      const invested = h.average_price * h.quantity;
+      const current  = h.last_price   * h.quantity;
+      totalInvested += invested;
+      currentValue  += current;
+      dayPnl        += (h.day_change || 0) * h.quantity;
+    });
+    const totalPnl    = currentValue - totalInvested;
+    const totalPnlPct = totalInvested > 0 ? totalPnl / totalInvested * 100 : 0;
+
+    // ── Update summary cards ────────────────────────────────────────────────
+    document.getElementById('cardInvested').textContent  = fmt(totalInvested);
+    document.getElementById('cardHoldings').textContent  = `Across ${holdings.length} holdings`;
+    document.getElementById('cardValue').textContent     = fmt(currentValue);
+    document.getElementById('cardValue').className       = 'value white';
+    document.getElementById('cardDayChange').textContent = `Live · ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+
+    const pnlEl = document.getElementById('cardPnl');
+    pnlEl.textContent  = (totalPnl >= 0 ? '+' : '-') + fmt(totalPnl);
+    pnlEl.className    = 'value ' + cls(totalPnl);
+    document.getElementById('cardPnlPct').textContent  = `${sign(totalPnlPct)}${Math.abs(totalPnlPct).toFixed(2)}% overall`;
+    document.getElementById('cardPnlPct').className    = 'delta ' + cls(totalPnlPct);
+
+    const dayPnlEl = document.getElementById('cardDayPnl');
+    dayPnlEl.textContent = (dayPnl >= 0 ? '+' : '-') + fmt(dayPnl);
+    dayPnlEl.className   = 'value ' + cls(dayPnl);
+    document.getElementById('cardDayPnlNote').textContent = "Today's change";
+    document.getElementById('cardDayPnlNote').className   = 'delta ' + cls(dayPnl);
+
+    // ── Update stock grid ───────────────────────────────────────────────────
+    const today = new Date().toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+    document.getElementById('stockGridTitle').textContent = `Stock Performance — ${today}`;
+    const grid = document.getElementById('stockGrid');
+    grid.innerHTML = holdings
+      .sort((a, b) => (b.last_price * b.quantity - b.average_price * b.quantity) - (a.last_price * a.quantity - a.average_price * a.quantity))
+      .map(h => {
+        const pnl    = (h.last_price - h.average_price) * h.quantity;
+        const pnlPct = h.average_price > 0 ? (h.last_price - h.average_price) / h.average_price * 100 : 0;
+        const dayChg = h.day_change_percentage || 0;
+        const trendCls = dayChg > 0.05 ? 'trend-up' : dayChg < -0.05 ? 'trend-down' : 'trend-flat';
+        return `<div class="stock-card">
+          <div class="sym">${h.tradingsymbol}</div>
+          <div class="pnl ${cls(pnl)}">${pnl >= 0 ? '+' : '-'}${fmt(pnl)} (${sign(pnlPct)}${Math.abs(pnlPct).toFixed(1)}%)</div>
+          <div class="change ${trendCls}">Day: ${sign(dayChg)}${Math.abs(dayChg).toFixed(2)}%</div>
+        </div>`;
+      }).join('');
+
+    // ── Update header timestamp & indicators ──────────────────────────────
+    _lastRefreshAt = Date.now();
+    document.getElementById('lastUpdatedLabel').textContent = `Live · ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+    document.getElementById('liveIndicator').style.display = 'inline-block';
+    document.getElementById('refreshBtn').style.display    = 'inline-block';
+    document.getElementById('footerNote').textContent      = `Live from Kite · Last refreshed ${new Date().toLocaleTimeString('en-IN')} · Auto-refreshes every 30 min`;
+
+    // ── Save to Supabase (non-blocking) ────────────────────────────────────
+    saveSnapshot({ totalInvested, currentValue, totalPnl, totalPnlPct, dayPnl, holdings }).catch(() => {});
+
+  } catch(e) {
+    console.warn('Live refresh failed:', e.message);
+  }
+}
+
+async function saveSnapshot({ totalInvested, currentValue, totalPnl, totalPnlPct, dayPnl, holdings }) {
+  const today = new Date().toISOString().slice(0, 10);
+  await fetch('/api/orders?action=journal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      _action: 'upsert_snapshot',
+      snapshot_date:  today,
+      total_invested: totalInvested,
+      current_value:  currentValue,
+      total_pnl:      totalPnl,
+      total_pnl_pct:  totalPnlPct,
+      day_pnl:        dayPnl,
+      holdings:       holdings.map(h => ({
+        symbol:       h.tradingsymbol,
+        qty:          h.quantity,
+        avg_price:    h.average_price,
+        ltp:          h.last_price,
+        pnl:          (h.last_price - h.average_price) * h.quantity,
+        day_chg_pct:  h.day_change_percentage || 0,
+      })),
+    })
+  });
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+const _enc = localStorage.getItem('kite_enctoken');
+if (_enc) {
+  refreshDashboard();
+  _refreshTimer = setInterval(() => refreshDashboard(), REFRESH_INTERVAL_MS);
+  document.getElementById('refreshBtn').style.display = 'inline-block';
+}
 </script>
 
 </body>

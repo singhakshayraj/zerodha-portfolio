@@ -6,7 +6,7 @@
  * PATCH /api/orders?action=journal  — update trade outcome
  */
 import { placeOrder, placeGTT } from '../dashboard/lib/kite.js';
-import { listTrades, insertTrade, updateTrade, deleteTrades } from '../dashboard/lib/supabase.js';
+import { listTrades, insertTrade, updateTrade, deleteTrades, upsertSnapshot } from '../dashboard/lib/supabase.js';
 
 function stats(trades) {
   const closed      = trades.filter(t => t.status !== 'open');
@@ -45,8 +45,15 @@ export default async function handler(req, res) {
         return res.status(200).json({ trades, stats: stats(trades) });
       }
 
-      // POST — log new trade  OR  bulk-delete closed
+      // POST — log new trade  OR  bulk-delete closed  OR  upsert snapshot
       if (req.method === 'POST') {
+        // Upsert portfolio snapshot from live refresh
+        if (req.body?._action === 'upsert_snapshot') {
+          const { snapshot_date, total_invested, current_value, total_pnl, total_pnl_pct, day_pnl, holdings } = req.body;
+          await upsertSnapshot({ snapshot_date, total_invested, current_value, total_pnl, total_pnl_pct, day_pnl, holdings });
+          return res.status(200).json({ ok: true });
+        }
+
         // Bulk delete (clear-closed button on trades page)
         if (req.body?._delete_ids) {
           await deleteTrades(req.body._delete_ids);
