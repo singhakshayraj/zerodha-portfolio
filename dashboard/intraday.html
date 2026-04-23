@@ -622,6 +622,17 @@ async function loadChart(sym) {
     candleSeries.setData(candles);
     lwChart.timeScale().fitContent();
 
+    // Overlay trade plan levels if available for this symbol
+    const levels = _planLevels[bare];
+    if (levels) {
+      const addLine = (price, color, title) => {
+        candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title });
+      };
+      if (levels.entry)  addLine(levels.entry,  '#63b3ed', `Entry ₹${levels.entry}`);
+      if (levels.target) addLine(levels.target, '#68d391', `Target ₹${levels.target}`);
+      if (levels.sl)     addLine(levels.sl,     '#fc8181', `SL ₹${levels.sl}`);
+    }
+
     const last = data.candles[data.candles.length - 1];
     document.getElementById('chartMeta').textContent =
       `${chartInterval} · Last: ${fmt(last[4])}  O ${fmt(last[1])}  H ${fmt(last[2])}  L ${fmt(last[3])}  Vol ${fmtVol(last[5])}`;
@@ -850,6 +861,8 @@ async function loadBrain(bust = false) {
         <div class="pick-meta">
           <span class="pick-conf">${confidenceStars(p.confidence)}</span>
           <span class="pick-score">score ${(p.score||0).toFixed(1)}</span>
+          <button onclick="loadChart('${full}');document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'center'})"
+            style="margin-left:auto;padding:2px 8px;font-size:10px;background:none;border:1px solid #2d3748;color:#63b3ed;border-radius:4px;cursor:pointer">📈 Chart</button>
         </div>
         <div class="pick-by" title="${byStr}">${byStr}</div>
         <div class="trade-plan" id="tp-${i}">
@@ -886,7 +899,8 @@ function addPickToWatchlist(full, idx) {
 }
 
 // ── Trade Plan ────────────────────────────────────────────────────────────────
-let _brainPicks = [];
+let _brainPicks  = [];
+const _planLevels = {}; // symbol → { entry, target, sl }
 
 async function loadTradePlans(picks) {
   _brainPicks = picks;
@@ -936,6 +950,13 @@ async function loadTradePlans(picks) {
 function renderTradePlan(i, pick, plan, enc) {
   const el = document.getElementById('tp-' + i);
   if (!el) return;
+
+  // Store levels so chart can overlay them
+  if (plan.entry && pick.symbol) {
+    _planLevels[pick.symbol] = { entry: plan.entry, target: plan.target, sl: plan.sl };
+    if (chartSym && chartSym.replace(/^[A-Z]+:/, '') === pick.symbol) loadChart(chartSym);
+  }
+
   const f  = plan.factors || {};
   const factorLine = [
     `${f.atr_source || 'ATR'} ${f.atr_pct}%`,
