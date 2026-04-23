@@ -284,10 +284,10 @@
           <div class="chart-meta" id="chartMeta">Click any symbol in the watchlist to view its intraday chart</div>
         </div>
         <div class="interval-bar">
-          <button class="iv-btn active" onclick="setInterval('1minute',this)">1m</button>
-          <button class="iv-btn" onclick="setInterval('5minute',this)">5m</button>
-          <button class="iv-btn" onclick="setInterval('15minute',this)">15m</button>
-          <button class="iv-btn" onclick="setInterval('30minute',this)">30m</button>
+          <button class="iv-btn active" onclick="setChartInterval('1minute',this)">1m</button>
+          <button class="iv-btn" onclick="setChartInterval('5minute',this)">5m</button>
+          <button class="iv-btn" onclick="setChartInterval('15minute',this)">15m</button>
+          <button class="iv-btn" onclick="setChartInterval('30minute',this)">30m</button>
         </div>
       </div>
       <div id="chartContainer">
@@ -587,7 +587,7 @@ async function loadChart(sym) {
   container.innerHTML = '';
 
   try {
-    const res = await fetch(`/api/historical?symbol=${bare}&interval=${chartInterval}`, { headers: headers() });
+    const res = await fetch(`/api/kite?action=historical&symbol=${bare}&interval=${chartInterval}`, { headers: headers() });
     const { data, error } = await res.json();
     if (error) {
       const msg = error.includes('enctoken') || error.includes('connect')
@@ -644,7 +644,7 @@ async function loadChart(sym) {
   }
 }
 
-function setInterval(iv, btn) {
+function setChartInterval(iv, btn) {
   chartInterval = iv;
   document.querySelectorAll('.iv-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
