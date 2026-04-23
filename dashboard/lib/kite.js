@@ -57,6 +57,15 @@ export async function getHoldings(clientEnctoken) {
 }
 
 /**
+ * Fetch equity margins (available cash, used margin, net) from Kite.
+ */
+export async function getMargins(clientEnctoken) {
+  const enctoken = clientEnctoken || config.kite.enctoken;
+  if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
+  return kiteRequest('/user/margins', enctoken);
+}
+
+/**
  * Fetch positions (intraday) from Kite.
  */
 export async function getPositions(clientEnctoken) {
