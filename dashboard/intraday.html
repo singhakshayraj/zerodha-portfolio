@@ -284,15 +284,17 @@
           <div class="chart-meta" id="chartMeta">Click any symbol in the watchlist to view its intraday chart</div>
         </div>
         <div class="interval-bar">
-          <button class="iv-btn active" onclick="setChartInterval('1minute',this)">1m</button>
-          <button class="iv-btn" onclick="setChartInterval('5minute',this)">5m</button>
-          <button class="iv-btn" onclick="setChartInterval('15minute',this)">15m</button>
-          <button class="iv-btn" onclick="setChartInterval('30minute',this)">30m</button>
+          <button class="iv-btn active" onclick="setChartInterval('1',this)">1m</button>
+          <button class="iv-btn" onclick="setChartInterval('5',this)">5m</button>
+          <button class="iv-btn" onclick="setChartInterval('15',this)">15m</button>
+          <button class="iv-btn" onclick="setChartInterval('30',this)">30m</button>
+          <button class="iv-btn" onclick="setChartInterval('D',this)">1D</button>
         </div>
       </div>
-      <div id="chartContainer">
+      <div id="chartContainer" style="height:420px">
         <div class="chart-empty">No stock selected — click a symbol in the watchlist</div>
       </div>
+      <div id="chartLevels" style="display:none;padding:8px 14px;background:#0f1117;border-top:1px solid #2d3748;font-size:11px;display:flex;gap:20px;flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -349,8 +351,6 @@ const SOURCE_KEY = 'quote_source';
 let watchlist   = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
 let chartSym    = null;
 let chartInterval = '1minute';
-let lwChart     = null;
-let candleSeries = null;
 let refreshTimer = null;
 let pendingOrder = null;
 let quoteSource = localStorage.getItem(SOURCE_KEY) || 'yahoo';
@@ -567,80 +567,40 @@ function resetChart() {
   document.getElementById('chartTitle').textContent = 'Select a stock';
   document.getElementById('chartMeta').textContent  = 'Click any symbol in the watchlist';
   document.getElementById('chartContainer').innerHTML = '<div class="chart-empty">No stock selected — click a symbol in the watchlist</div>';
-  lwChart = null; candleSeries = null;
+  document.getElementById('chartLevels').style.display = 'none';
 }
 
-async function loadChart(sym) {
+function loadChart(sym) {
   chartSym = sym;
   const bare = sym.replace(/^[A-Z]+:/, '');
+  const exch = sym.includes(':') ? sym.split(':')[0] : 'NSE';
   document.getElementById('chartTitle').textContent = bare;
+  document.getElementById('chartMeta').textContent  = 'TradingView · ' + chartInterval + 'm';
 
   const container = document.getElementById('chartContainer');
+  container.style.height = '420px';
 
-  if (quoteSource === 'yahoo' && !enc()) {
-    container.innerHTML = `<div class="chart-empty">Candlestick charts need Kite — <button class="src-btn" style="display:inline;padding:4px 10px;font-size:12px" onclick="setSource('kite');loadChart('${sym}')">Switch to Kite</button> or <a href="/connect" style="color:#63b3ed">connect enctoken</a></div>`;
-    document.getElementById('chartMeta').textContent = 'Connect Kite enctoken for charts';
-    return;
-  }
+  // TradingView widget embed — no Kite needed, data comes from TradingView
+  const tvSymbol = `${exch}:${bare}`;
+  container.innerHTML = `<iframe
+    src="https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}&interval=${chartInterval}&theme=dark&style=1&locale=en&timezone=Asia%2FKolkata&hide_top_toolbar=0&hide_legend=0&save_image=0&backgroundColor=%230f1117&gridColor=%232d3748"
+    style="width:100%;height:420px;border:none"
+    allowtransparency="true"
+    scrolling="no"
+    allowfullscreen></iframe>`;
 
-  document.getElementById('chartMeta').textContent  = 'Loading ' + chartInterval + ' candles…';
-  container.innerHTML = '';
-
-  try {
-    const res = await fetch(`/api/kite?action=historical&symbol=${bare}&interval=${chartInterval}`, { headers: headers() });
-    const { data, error } = await res.json();
-    if (error) {
-      const msg = error.includes('enctoken') || error.includes('connect')
-        ? '🔐 Kite not connected — <a href="/connect" style="color:#63b3ed">Connect here</a>'
-        : error;
-      container.innerHTML = `<div class="chart-empty">${msg}</div>`; return;
-    }
-    if (!data || !data.candles || !data.candles.length) {
-      container.innerHTML = '<div class="chart-empty">No candle data yet — market may not have opened</div>'; return;
-    }
-
-    lwChart = LightweightCharts.createChart(container, {
-      width:  container.clientWidth,
-      height: 320,
-      layout: { background: { color: '#1a1f2e' }, textColor: '#a0aec0' },
-      grid:   { vertLines: { color: '#2d3748' }, horzLines: { color: '#2d3748' } },
-      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#2d3748' },
-      timeScale: { borderColor: '#2d3748', timeVisible: true, secondsVisible: false },
-    });
-
-    candleSeries = lwChart.addCandlestickSeries({
-      upColor: '#68d391', downColor: '#fc8181',
-      borderUpColor: '#68d391', borderDownColor: '#fc8181',
-      wickUpColor: '#68d391', wickDownColor: '#fc8181',
-    });
-
-    const candles = data.candles.map(c => ({
-      time: Math.floor(new Date(c[0]).getTime() / 1000),
-      open: c[1], high: c[2], low: c[3], close: c[4],
-    }));
-    candleSeries.setData(candles);
-    lwChart.timeScale().fitContent();
-
-    // Overlay trade plan levels if available for this symbol
-    const levels = _planLevels[bare];
-    if (levels) {
-      const addLine = (price, color, title) => {
-        candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title });
-      };
-      if (levels.entry)  addLine(levels.entry,  '#63b3ed', `Entry ₹${levels.entry}`);
-      if (levels.target) addLine(levels.target, '#68d391', `Target ₹${levels.target}`);
-      if (levels.sl)     addLine(levels.sl,     '#fc8181', `SL ₹${levels.sl}`);
-    }
-
-    const last = data.candles[data.candles.length - 1];
-    document.getElementById('chartMeta').textContent =
-      `${chartInterval} · Last: ${fmt(last[4])}  O ${fmt(last[1])}  H ${fmt(last[2])}  L ${fmt(last[3])}  Vol ${fmtVol(last[5])}`;
-
-    // Resize on window resize
-    window.addEventListener('resize', () => lwChart && lwChart.resize(container.clientWidth, 320));
-  } catch(e) {
-    container.innerHTML = `<div class="chart-empty">${e.message}</div>`;
+  // Show trade plan levels below chart
+  const levels = _planLevels[bare];
+  const levelsEl = document.getElementById('chartLevels');
+  if (levels) {
+    levelsEl.style.display = 'flex';
+    levelsEl.innerHTML = `
+      <span>Entry <strong style="color:#63b3ed">₹${levels.entry}</strong></span>
+      <span>Target <strong style="color:#68d391">₹${levels.target}</strong></span>
+      <span>SL <strong style="color:#fc8181">₹${levels.sl}</strong></span>
+      <span style="color:#4a5568">· Levels from trade plan</span>`;
+  } else {
+    levelsEl.style.display = 'none';
   }
 }
 
@@ -648,7 +608,7 @@ function setChartInterval(iv, btn) {
   chartInterval = iv;
   document.querySelectorAll('.iv-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if (chartSym) loadChart(chartSym);
+  if (chartSym) loadChart(chartSym); // reloads iframe with new interval
 }
 
 // ── AI Signal ─────────────────────────────────────────────────────────────────
