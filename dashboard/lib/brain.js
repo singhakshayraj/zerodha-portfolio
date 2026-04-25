@@ -278,16 +278,29 @@ async function callLLM(prompt) {
 }
 
 // ── Deterministic scoring layer ───────────────────────────────────────────────
+// All multipliers bounded. No single factor can dominate the final score.
 
+// Bounded 0.80–1.20. Tight range prevents signal_type from overwhelming
+// reliability, novelty, and baseline contributions.
 const SIGNAL_TYPE_WEIGHTS = {
-  smart_money:        1.5,
-  institutional_flow: 1.4,
-  market_direction:   1.3,
-  negative_events:    1.3,
-  derivatives:        1.2,
-  macro:              0.0,  // macro never scores per-stock; global cap/modifier only
-  media:              0.8,
+  smart_money:        1.20,
+  institutional_flow: 1.15,
+  market_direction:   1.10,
+  negative_events:    1.10,
+  derivatives:        1.05,
+  macro:              0.00, // excluded from per-stock scoring; global modifier only
+  media:              0.80,
 };
+
+// ── Reliability blending hook ─────────────────────────────────────────────────
+// Currently returns the prior / 10. When outcome tracking exists (Supabase
+// win-rate table per source), replace outcomeRate + sampleSize to blend.
+// decayFactor converges toward outcome data as sampleSize grows — no arch change needed.
+function blendedReliability(priorScore, outcomeRate = null, sampleSize = 0) {
+  if (outcomeRate === null || sampleSize < 10) return priorScore / 10;
+  const decay = Math.max(0.10, 1 - sampleSize / 100);
+  return (priorScore / 10) * decay + outcomeRate * (1 - decay);
+}
 
 // ── Signal-type-aware recency decay ──────────────────────────────────────────
 // Fast-moving signals (derivatives, market_direction) decay within hours.
@@ -307,10 +320,58 @@ function recencyDecay(signalType, hoursAgo) {
   return fn(hoursAgo ?? 24);
 }
 
-// ── Novelty scoring ───────────────────────────────────────────────────────────
-// Same story repeated across outlets inflates count without adding information.
-// We cluster articles by text similarity (Jaccard on trigrams) and apply
-// diminishing weights within each cluster: 1st = 1.0, 2nd = 0.6, 3rd = 0.3, 4th+ = 0.15
+// Per-article contribution hard cap — prevents a single viral article from
+// overwhelming the aggregate even after all per-article multipliers are applied.
+const PER_ARTICLE_CAP = 2.5;
+
+// Baseline normalization — floored at 0.15 and output capped at 2.5×.
+// Floor prevents rare signals from exploding into unbounded values.
+function baselineNorm(baselineRate) {
+  const floored = Math.max(baselineRate ?? 0.5, 0.15);
+  return Math.min(1 / floored, 2.5);
+}
+
+// ── Outlet families — hidden duplication guard ────────────────────────────────
+// Articles from the same media group are treated as one source family so that
+// ET Markets + ET Now + Economic Times don't count as three independent voices.
+const OUTLET_FAMILIES = {
+  economic_times:      ['Economic Times', 'ET Markets', 'ET Now', 'ETAuto', 'ETtech'],
+  ndtv:                ['NDTV', 'NDTV Profit', 'NDTV Business'],
+  business_standard:   ['Business Standard', 'BS Markets'],
+  mint:                ['Mint', 'Livemint', 'HT Media'],
+  moneycontrol:        ['Moneycontrol', 'Money Control', 'MC Pro'],
+  reuters:             ['Reuters', 'Reuters India'],
+  bloomberg:           ['Bloomberg', 'Bloomberg Quint', 'BQ Prime'],
+  cnbc:                ['CNBC TV18', 'CNBCTV18', 'CNBC'],
+};
+
+const OUTLET_TO_FAMILY = {};
+for (const [family, outlets] of Object.entries(OUTLET_FAMILIES)) {
+  for (const o of outlets) OUTLET_TO_FAMILY[o.toLowerCase()] = family;
+}
+
+function outletFamily(article) {
+  const o = (article.outlet || article.source || '').toLowerCase();
+  for (const [key, family] of Object.entries(OUTLET_TO_FAMILY)) {
+    if (o.includes(key.replace(/_/g, ' '))) return family;
+  }
+  return o;
+}
+
+// ── Novelty scoring — time-aware, per signal_type ─────────────────────────────
+// Novelty windows differ by signal_type so a derivatives cluster resets every 6h
+// while a smart_money cluster spans 48h. Articles from the same outlet family
+// within a cluster receive an additional 0.5× same-family penalty.
+const NOVELTY_WINDOW_BY_TYPE = {
+  derivatives:        6,
+  market_direction:   8,
+  smart_money:        48,
+  institutional_flow: 24,
+  negative_events:    24,
+  media:              24,
+  macro:              48,
+};
+
 function trigrams(text) {
   const t = text.toLowerCase().replace(/[^a-z0-9 ]/g, '');
   const words = t.split(/\s+/).filter(w => w.length > 2);
@@ -327,28 +388,40 @@ function jaccard(setA, setB) {
 
 function assignNoveltyWeights(articles) {
   const weights = new Array(articles.length).fill(1.0);
-  const tgs = articles.map(a => trigrams(a.text));
+  const tgs     = articles.map(a => trigrams(a.text));
   const NOVELTY_DECAY = [1.0, 0.6, 0.3, 0.15];
-
   const assigned = new Set();
+
   for (let i = 0; i < articles.length; i++) {
     if (assigned.has(i)) continue;
+    const windowHours = NOVELTY_WINDOW_BY_TYPE[articles[i].signal_type] ?? 24;
     const cluster = [i];
+
     for (let j = i + 1; j < articles.length; j++) {
-      if (!assigned.has(j) && jaccard(tgs[i], tgs[j]) > 0.45) cluster.push(j);
+      if (assigned.has(j)) continue;
+      const sameType     = articles[j].signal_type === articles[i].signal_type;
+      const withinWindow = Math.abs((articles[j].hoursAgo ?? 0) - (articles[i].hoursAgo ?? 0)) <= windowHours;
+      const similar      = jaccard(tgs[i], tgs[j]) > 0.45;
+      if (sameType && withinWindow && similar) cluster.push(j);
     }
+
+    const seedFamily = outletFamily(articles[cluster[0]]);
     cluster.forEach((idx, rank) => {
-      weights[idx] = NOVELTY_DECAY[Math.min(rank, NOVELTY_DECAY.length - 1)];
+      const baseNovelty  = NOVELTY_DECAY[Math.min(rank, NOVELTY_DECAY.length - 1)];
+      const sameFamily   = rank > 0 && outletFamily(articles[idx]) === seedFamily;
+      weights[idx] = baseNovelty * (sameFamily ? 0.5 : 1.0);
       assigned.add(idx);
     });
   }
   return weights;
 }
 
-// ── Symbol normalisation with confidence ─────────────────────────────────────
-// Maps known LLM variants to canonical NSE tickers (exact = 1.0 confidence).
-// Unknown symbols get a fuzzy fallback — short names (<4 chars) that don't
-// match any known ticker are flagged low-confidence (0.6) and penalised.
+// ── Symbol normalisation — confidence-based with drop threshold ───────────────
+// Exact alias hits = 1.0. LIQUID_NSE member = 1.0. Unknown ≥5 chars = 0.75.
+// Short unknown tokens = 0.50. Anything below CONFIDENCE_DROP_THRESHOLD is
+// dropped before scoring, not penalised — uncertain mappings corrupt aggregation.
+const CONFIDENCE_DROP_THRESHOLD = 0.60;
+
 const SYMBOL_ALIASES = {
   'HDFCBANK':   ['HDFC BANK', 'HDFCBANK', 'HDFC BANK LTD'],
   'ICICIBANK':  ['ICICI BANK', 'ICICIBANK'],
@@ -423,7 +496,9 @@ function normaliseSymbol(raw) {
   return { symbol: up, confidence };
 }
 
-// ── Event strength — macro-context-aware ─────────────────────────────────────
+// ── Event strength — versioned, regime-aware, bounded ────────────────────────
+const EVENT_STRENGTH_VERSION = '1.1';
+// Base strengths bounded 1.0–2.5. Output additionally bounded to 0.8–2.5.
 const EVENT_STRENGTH_BASE = {
   earnings_beat:      2.5,
   earnings_miss:      2.5,
@@ -439,118 +514,92 @@ const EVENT_STRENGTH_BASE = {
   results_guidance:   1.3,
   general_mention:    1.0,
 };
+const BULLISH_EVENTS = new Set(['earnings_beat','analyst_upgrade','price_target_raise','breakout_52wk','fii_buying','block_deal']);
+const BEARISH_EVENTS = new Set(['earnings_miss','analyst_downgrade','price_target_cut','fii_selling','sebi_action']);
 
 function eventStrengthMultiplier(eventType, regime) {
   const base = EVENT_STRENGTH_BASE[eventType] ?? 1.0;
-  // On high-risk / bear regimes, bullish event strength is dampened
-  if (regime === 'strong_bear' || regime === 'bear') {
-    const bullishEvents = ['earnings_beat','analyst_upgrade','price_target_raise','breakout_52wk','fii_buying'];
-    if (bullishEvents.includes(eventType)) return base * 0.6;
-  }
-  // On strong-bull regimes, bearish event strength is dampened
-  if (regime === 'strong_bull') {
-    const bearishEvents = ['earnings_miss','analyst_downgrade','price_target_cut','fii_selling','sebi_action'];
-    if (bearishEvents.includes(eventType)) return base * 0.7;
-  }
-  return base;
+  let adjusted = base;
+  if ((regime === 'strong_bear' || regime === 'bear') && BULLISH_EVENTS.has(eventType)) adjusted = base * 0.6;
+  if (regime === 'strong_bull' && BEARISH_EVENTS.has(eventType)) adjusted = base * 0.7;
+  return Math.max(0.8, Math.min(adjusted, 2.5));
 }
 
 // ── Market regime engine ──────────────────────────────────────────────────────
-// Consolidates macro signals into a discrete regime used for caps and event dampening.
 function deriveRegime(macroRisk, giftBias, vixState) {
   const riskHigh   = macroRisk === 'high';
-  const riskMed    = macroRisk === 'medium';
   const gapDown    = giftBias  === 'gap-down';
   const gapUp      = giftBias  === 'gap-up';
   const vixSpiking = vixState  === 'spiking';
   const vixLow     = vixState  === 'low';
-
-  if (riskHigh && gapDown)              return 'strong_bear';
+  if (riskHigh && gapDown)                 return 'strong_bear';
   if (riskHigh || (gapDown && vixSpiking)) return 'bear';
-  if (!riskHigh && gapUp && vixLow)    return 'strong_bull';
-  if (!riskHigh && (gapUp || vixLow))  return 'bull';
+  if (!riskHigh && gapUp && vixLow)        return 'strong_bull';
+  if (!riskHigh && (gapUp || vixLow))      return 'bull';
   return 'neutral';
 }
 
-// ── Market regime caps / tailwinds ────────────────────────────────────────────
-// Hard caps enforce the regime as a structural constraint, not a nudge.
 function applyRegimeCap(score, directionalBias, regime) {
   if (directionalBias === 'long') {
     if (regime === 'strong_bear') return score * 0.25;
     if (regime === 'bear')        return score * 0.50;
-    if (regime === 'neutral')     return score * 0.80;
-    if (regime === 'strong_bull') return score * 1.20;
+    if (regime === 'neutral')     return score * 0.90;
+    if (regime === 'bull')        return score * 1.05;
+    if (regime === 'strong_bull') return score * 1.15;
   }
   if (directionalBias === 'short') {
-    if (regime === 'strong_bear') return score * 1.40;
-    if (regime === 'bear')        return score * 1.20;
+    if (regime === 'strong_bear') return score * 1.35;
+    if (regime === 'bear')        return score * 1.15;
     if (regime === 'strong_bull') return score * 0.50;
-    if (regime === 'bull')        return score * 0.70;
+    if (regime === 'bull')        return score * 0.75;
   }
   return score;
 }
 
-// ── Directional bias derivation ───────────────────────────────────────────────
-// Separates textual sentiment from actual trade direction.
-// Nuanced cases: "profit booking" is bearish price action even if framed neutrally.
-const BEARISH_EVENT_TYPES = new Set([
-  'earnings_miss','analyst_downgrade','price_target_cut','fii_selling','sebi_action',
-]);
-const BULLISH_EVENT_TYPES = new Set([
-  'earnings_beat','analyst_upgrade','price_target_raise','fii_buying','breakout_52wk','block_deal',
-]);
-
-function deriveDirectionalBias(sentiment, eventType, regime) {
-  // Event type is stronger than sentiment label in ambiguous cases
-  if (BEARISH_EVENT_TYPES.has(eventType)) return 'short';
-  if (BULLISH_EVENT_TYPES.has(eventType)) return 'long';
-  // Fall back to sentiment
-  if (sentiment === 'bearish') return 'short';
-  if (sentiment === 'bullish') return 'long';
-  return 'neutral';
+// ── Directional bias — event-type-first, mismatch penalty ────────────────────
+function deriveDirectionalBias(sentiment, eventType) {
+  const eventDir = BEARISH_EVENTS.has(eventType) ? 'short'
+                 : BULLISH_EVENTS.has(eventType)  ? 'long'
+                 : null;
+  const sentDir  = sentiment === 'bearish' ? 'short'
+                 : sentiment === 'bullish'  ? 'long'
+                 : 'neutral';
+  if (eventDir) return { bias: eventDir, mismatch: eventDir !== sentDir && sentDir !== 'neutral' };
+  return { bias: sentDir, mismatch: false };
 }
 
-// ── Consensus — source + type diversity, log-capped ──────────────────────────
-// Beyond 3 unique sources, growth is logarithmic to prevent runaway amplification.
-// A diversity quality factor rewards high-reliability cross-type agreement
-// and penalises redundant same-outlet repetition.
+// ── Consensus — (outlet-family, signal_type) deduplicated, log-capped ─────────
 function consensusMultiplier(mentions) {
-  const distinctSources = new Set(mentions.map(m => m.source)).size;
-  const distinctTypes   = new Set(mentions.map(m => m.signal_type)).size;
+  const dedupKey  = m => `${outletFamily(m)}::${m.signal_type}`;
+  const deduped   = [...new Map(mentions.map(m => [dedupKey(m), m])).values()];
+  const distSrc   = new Set(deduped.map(m => m.source)).size;
+  const distTypes = new Set(deduped.map(m => m.signal_type)).size;
 
-  // Log-capped source base: 1 → 1.0, 2 → 1.6, 3 → 2.4, 4+ → 2.4 + log(n-3) × 0.4
-  const sourceBase = distinctSources <= 1 ? 1.0
-                   : distinctSources === 2 ? 1.6
-                   : distinctSources === 3 ? 2.4
-                   : 2.4 + Math.log(distinctSources - 2) * 0.4;
+  const sourceBase = distSrc <= 1 ? 1.0
+                   : distSrc === 2 ? 1.5
+                   : distSrc === 3 ? 2.2
+                   : Math.min(3.5, 2.2 + Math.log(distSrc - 2) * 0.5);
 
-  // Type diversity bonus — capped at 1.5×
-  const typeDiversityBonus = Math.min(1.5, 1.0 + (distinctTypes - 1) * 0.3);
+  const typeDiversityBonus = Math.min(1.4, 1.0 + (distTypes - 1) * 0.25);
 
-  // Cross-type conviction bonus
-  const types = [...new Set(mentions.map(m => m.signal_type))];
-  const crossBonus = types.includes('smart_money') && types.includes('derivatives') ? 1.5
-                   : types.includes('institutional_flow') && types.includes('derivatives') ? 1.3
-                   : types.includes('smart_money') && types.includes('institutional_flow') ? 1.2
+  const types = [...new Set(deduped.map(m => m.signal_type))];
+  const crossBonus = types.includes('smart_money')        && types.includes('derivatives')        ? 1.40
+                   : types.includes('institutional_flow') && types.includes('derivatives')        ? 1.25
+                   : types.includes('smart_money')        && types.includes('institutional_flow') ? 1.15
                    : 1.0;
 
-  // Diversity quality factor: penalise if >60% of mentions from same outlet
-  const outletCounts = {};
-  for (const m of mentions) outletCounts[m.outlet || m.source] = (outletCounts[m.outlet || m.source] || 0) + 1;
-  const maxOutletShare = Math.max(...Object.values(outletCounts)) / mentions.length;
-  const diversityQuality = maxOutletShare > 0.6 ? 0.7 : 1.0;
+  const familyCounts = {};
+  for (const m of deduped) { const f = outletFamily(m); familyCounts[f] = (familyCounts[f] || 0) + 1; }
+  const maxShare         = Math.max(...Object.values(familyCounts)) / deduped.length;
+  const diversityQuality = maxShare > 0.6 ? 0.70 : maxShare > 0.4 ? 0.85 : 1.0;
 
-  return sourceBase * typeDiversityBonus * crossBonus * diversityQuality;
+  return Math.min(4.0, sourceBase * typeDiversityBonus * crossBonus * diversityQuality);
 }
 
-// ── Baseline normalization ────────────────────────────────────────────────────
-// Divides per-article contribution by the source's baseline_rate so high-volume
-// signal_types (media, market_direction) don't dominate over rare, precious ones
-// (smart_money) purely due to article density.
-// baseline_rate is sourced from the SOURCES registry per article.
+// ── Baseline normalization — floored and capped ───────────────────────────────
 function baselineNorm(baselineRate) {
-  // Invert and clamp: low baseline (rare signal) → higher normalised weight
-  return 1 / Math.max(baselineRate ?? 0.5, 0.10);
+  const floored = Math.max(baselineRate ?? 0.5, 0.15);
+  return Math.min(1 / floored, 2.5);
 }
 
 // ── LLM — extraction only ─────────────────────────────────────────────────────
@@ -634,33 +683,35 @@ function scoreAndRank(extractions, articles, marketContext) {
   const regime    = deriveRegime(macroRisk, giftBias, vixState);
   const dow       = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
-  // Assign novelty weights to all articles before scoring
   const noveltyWeights = assignNoveltyWeights(articles);
 
-  const scored = extractions.map(ext => {
-    const { symbol: sym, confidence } = normaliseSymbol(ext.symbol);
+  // Strict universe filter: drop extractions below confidence threshold
+  const candidates = extractions
+    .map(ext => ({ ...ext, ...normaliseSymbol(ext.symbol) }))
+    .filter(ext => ext.confidence >= CONFIDENCE_DROP_THRESHOLD);
+
+  const scored = candidates.map(ext => {
+    const { bias: directionalBias, mismatch } = deriveDirectionalBias(ext.sentiment, ext.event_type);
     const co = (ext.company || '').toLowerCase();
 
-    // Derive directional bias from event_type + sentiment + regime
-    const directionalBias = deriveDirectionalBias(ext.sentiment, ext.event_type, regime);
-
-    // Match articles (excluding macro) to this stock
+    // Match articles to this stock (macro excluded — never per-stock)
     const matchedIdxs = [];
     articles.forEach((a, idx) => {
       if (a.signal_type === 'macro') return;
       const t = a.text.toLowerCase();
-      if (t.includes(sym.toLowerCase()) || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))))) {
+      if (t.includes(ext.symbol.toLowerCase()) || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))))) {
         matchedIdxs.push(idx);
       }
     });
     const mentions = matchedIdxs.map(i => articles[i]);
 
-    // Per-article score with novelty weight and baseline normalisation
+    // Per-article contributions — each capped at PER_ARTICLE_CAP before aggregation
+    const articleFactors = [];
     let totalScore = 0;
-    matchedIdxs.forEach((articleIdx, i) => {
+    matchedIdxs.forEach(articleIdx => {
       const m            = articles[articleIdx];
       const typeWeight   = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
-      const reliability  = (m.reliability ?? 5) / 10;
+      const reliability  = blendedReliability(m.reliability ?? 5);
       const decay        = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
       const novelty      = noveltyWeights[articleIdx];
       const baseline     = baselineNorm(m.baseline_rate);
@@ -669,44 +720,61 @@ function scoreAndRank(extractions, articles, marketContext) {
         : m.sentiment_bias === 'bullish'
         ? (directionalBias === 'long'  ?  1.0 : -0.3)
         : 0.7;
-      totalScore += typeWeight * reliability * decay * novelty * baseline * sentimentAlign;
+
+      const raw    = typeWeight * reliability * decay * novelty * baseline * sentimentAlign;
+      const capped = Math.min(Math.abs(raw), PER_ARTICLE_CAP) * Math.sign(raw || 1);
+      totalScore  += capped;
+
+      articleFactors.push({
+        source: m.source, signal_type: m.signal_type,
+        typeWeight, reliability: +reliability.toFixed(3),
+        decay: +decay.toFixed(3), novelty: +novelty.toFixed(3),
+        baseline: +baseline.toFixed(3), sentimentAlign,
+        contribution: +capped.toFixed(3),
+      });
     });
 
-    // Event strength — context-aware (dampened in adverse regimes)
-    const eventMult = eventStrengthMultiplier(ext.event_type || 'general_mention', regime);
+    // Small mismatch penalty when event_type contradicts sentiment label
+    const mismatchPenalty = mismatch ? 0.90 : 1.0;
 
-    // Consensus — log-capped, diversity-quality-adjusted
+    const eventMult = eventStrengthMultiplier(ext.event_type || 'general_mention', regime);
     const consensus = mentions.length ? consensusMultiplier(mentions) : 1.0;
 
-    let score = totalScore * eventMult * consensus;
+    // Sector modifier — strictly bounded ±20%
+    const sector    = (ext.sector || '').toLowerCase();
+    const boosted   = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
+    const penalised = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
+    const sectorMod = boosted ? 1.20 : penalised ? 0.80 : 1.0;
 
-    // Symbol confidence penalty — uncertain normalisations score less
-    score *= confidence;
+    // Timing modifier — subtle ±6% only
+    const timingMod = dow === 'Monday' && directionalBias === 'long' ? 1.06
+                    : dow === 'Friday' && directionalBias === 'long' ? 0.94
+                    : 1.0;
 
-    // Sector-level macro modifier (soft)
-    const sector   = (ext.sector || '').toLowerCase();
-    const boosted  = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
-    const penalise = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
-    score *= boosted ? 1.2 : penalise ? 0.7 : 1.0;
-
-    // Day-of-week timing
-    score *= dow === 'Monday' && directionalBias === 'long' ? 1.10
-           : dow === 'Friday' && directionalBias === 'long' ? 0.85
-           : 1.0;
-
-    // Regime hard cap / tailwind — structural constraint not nudge
+    let score = totalScore * mismatchPenalty * eventMult * consensus * ext.confidence * sectorMod * timingMod;
     score = applyRegimeCap(score, directionalBias, regime);
 
     return {
       ...ext,
-      symbol:          sym,
-      sym_confidence:  confidence,
-      directional_bias: directionalBias,
+      directional_bias:  directionalBias,
       regime,
-      score:           +score.toFixed(3),
-      mention_count:   mentions.length,
-      signal_types:    [...new Set(mentions.map(m => m.signal_type))],
-      distinct_sources: new Set(mentions.map(m => m.source)).size,
+      score:             +score.toFixed(3),
+      mention_count:     mentions.length,
+      signal_types:      [...new Set(mentions.map(m => m.signal_type))],
+      distinct_sources:  new Set(mentions.map(m => m.source)).size,
+      score_factors: {
+        event_type:             ext.event_type || 'general_mention',
+        event_strength:         +eventMult.toFixed(3),
+        consensus:              +consensus.toFixed(3),
+        sym_confidence:         ext.confidence,
+        mismatch_penalty:       mismatchPenalty,
+        sector_mod:             sectorMod,
+        timing_mod:             timingMod,
+        regime,
+        regime_cap_applied:     regime !== 'neutral',
+        event_strength_version: EVENT_STRENGTH_VERSION,
+        article_contributions:  articleFactors,
+      },
     };
   });
 
@@ -721,27 +789,27 @@ function scoreAndRank(extractions, articles, marketContext) {
     .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
     .slice(0, 10)
     .map((p, i) => ({
-      rank:             i + 1,
-      symbol:           p.symbol,
-      exchange:         p.exchange || 'NSE',
-      company:          p.company,
-      sector:           p.sector,
-      sentiment:        p.sentiment,
-      directional_bias: p.directional_bias,
-      event_type:       p.event_type || 'general_mention',
+      rank:               i + 1,
+      symbol:             p.symbol,
+      exchange:           p.exchange || 'NSE',
+      company:            p.company,
+      sector:             p.sector,
+      sentiment:          p.sentiment,
+      directional_bias:   p.directional_bias,
+      event_type:         p.event_type || 'general_mention',
       regime,
-      confidence:       Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 1.5))),
-      score:            p.score,
-      sym_confidence:   p.sym_confidence,
-      reason:           p.reason,
+      confidence:         Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 1.5))),
+      score:              p.score,
+      reason:             p.reason,
       detailed_reasoning: p.detailed_reasoning,
-      key_risk:         p.key_risk,
-      mentioned_by:     p.mentioned_by || [],
-      signal_types:     p.signal_types,
-      mention_count:    p.mention_count,
-      distinct_sources: p.distinct_sources,
-      intraday_note:    p.intraday_note || '',
-      context_only:     true,
+      key_risk:           p.key_risk,
+      mentioned_by:       p.mentioned_by || [],
+      signal_types:       p.signal_types,
+      mention_count:      p.mention_count,
+      distinct_sources:   p.distinct_sources,
+      intraday_note:      p.intraday_note || '',
+      score_factors:      p.score_factors,
+      context_only:       true,
     }));
 }
 
@@ -751,9 +819,8 @@ async function analyzeWithGroq(articles) {
 
   const extractions   = extracted.extractions   || [];
   const marketContext = extracted.market_context || {};
-
-  const picks = scoreAndRank(extractions, articles, marketContext);
-  const regime = picks[0]?.regime || deriveRegime(
+  const picks         = scoreAndRank(extractions, articles, marketContext);
+  const regime        = picks[0]?.regime || deriveRegime(
     marketContext.macro_risk || 'low',
     marketContext.gift_nifty_bias || 'unknown',
     marketContext.vix_state || 'unknown',
@@ -769,7 +836,7 @@ async function analyzeWithGroq(articles) {
     top_sectors:      marketContext.top_sectors      || [],
     avoid_sectors:    marketContext.avoid_sectors    || [],
     summary:          marketContext.summary          || '',
-    algo_note:        'Backend scorer: (typeWeight × reliability × recencyDecay × novelty × baselineNorm × sentimentAlign) × eventStrength(regime) × consensus(log-capped, diversity-quality) × symConfidence × sectorMod × regimeCap. LLM extracts only.',
+    algo_note:        `v${EVENT_STRENGTH_VERSION} | (typeWeight[0.8–1.2] × reliability × recencyDecay[type-aware] × novelty[window+outlet] × baselineNorm[floored,capped]) × eventStrength[regime-aware,bounded] × consensus[dedup,log-cap,≤4.0] × symConfidence × sectorMod[±20%] × timing[±6%] → regimeCap. LLM extracts only.`,
     _provider:        provider,
   };
 }
