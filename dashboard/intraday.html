@@ -877,11 +877,12 @@ async function loadTradePlans(picks) {
 
   picks.forEach((p, i) => {
     const full = `${p.exchange||'NSE'}:${p.symbol}`;
-    const q    = ltpMap[full] || ltpMap[p.symbol] || {};
-    const ltp  = q.last_price || 0;
-    const open = q.ohlc?.open || ltp;
-    const high = q.ohlc?.high || ltp;
-    const low  = q.ohlc?.low  || ltp;
+    const q      = ltpMap[full] || ltpMap[p.symbol] || {};
+    const ltp    = q.last_price || 0;
+    const open   = q.ohlc?.open || ltp;
+    const high   = q.ohlc?.high || ltp;
+    const low    = q.ohlc?.low  || ltp;
+    const volume = q.volume     || 0;
 
     if (!ltp) {
       const el = document.getElementById('tp-' + i);
@@ -895,7 +896,7 @@ async function loadTradePlans(picks) {
       body: JSON.stringify({
         symbol: p.symbol, exchange: p.exchange || 'NSE',
         sector: p.sector || '', confidence: p.confidence || 70,
-        score: p.score || 70, ltp, open, high, low,
+        score: p.score || 70, ltp, open, high, low, volume,
       }),
     })
     .then(r => r.json())
@@ -960,6 +961,23 @@ function renderTradePlan(i, pick, plan, enc) {
     ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${pillsArr.join('')}</div>`
     : '';
 
+  // Trigger badge (Layer 2 — price + volume confirmation)
+  const tr = plan.trigger;
+  const triggerHtml = tr
+    ? (() => {
+        const cfg = tr.status === 'triggered'
+          ? { bg: 'rgba(104,211,145,0.12)', col: '#68d391', icon: '🟢', label: 'TRIGGERED' }
+          : tr.status === 'price-only'
+          ? { bg: 'rgba(246,224,94,0.10)',  col: '#f6e05e', icon: '🟡', label: 'PRICE ONLY' }
+          : tr.status === 'volume-only'
+          ? { bg: 'rgba(118,228,247,0.10)', col: '#76e4f7', icon: '🔵', label: 'VOL SPIKE' }
+          : { bg: 'rgba(74,85,104,0.20)',   col: '#718096', icon: '⚪', label: 'WATCHING' };
+        return `<div style="margin-bottom:6px;padding:4px 8px;border-radius:5px;background:${cfg.bg};border:1px solid ${cfg.col}44;font-size:9px;font-weight:700;color:${cfg.col}">
+          ${cfg.icon} ${cfg.label} — ${tr.reason}
+        </div>`;
+      })()
+    : '';
+
   const score = plan.signal_score ?? 50;
   const detail = plan.signal_detail || '';
   const readyBadge = score >= 80
@@ -1009,6 +1027,7 @@ function renderTradePlan(i, pick, plan, enc) {
     <div class="tp-factors">${factorLine}</div>
     ${rsiHtml}
     ${pcHtml}
+    ${triggerHtml}
     ${pillsHtml}
     ${readyBadge}
     ${sizingHtml}

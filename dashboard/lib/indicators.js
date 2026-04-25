@@ -204,6 +204,41 @@ export function supportResistance(candles) {
   return { support, resistance };
 }
 
+// ── Volume Trigger (price > 1% AND volume > 1.5× 10-day avg) ─────────────────
+export function volumeTrigger(candles, todayVolume, priceChangePct) {
+  const PRICE_THRESH  = 1.0;  // % intraday move
+  const VOLUME_THRESH = 1.5;  // × 10-day avg volume
+
+  // Compute 10-day average volume from historical candles (exclude today)
+  const vols = candles.slice(-11, -1).map(c => c.volume || 0).filter(v => v > 0);
+  const avgVol = vols.length ? vols.reduce((s, v) => s + v, 0) / vols.length : 0;
+  const volumeRatio = avgVol > 0 && todayVolume > 0 ? +(todayVolume / avgVol).toFixed(2) : null;
+
+  const priceOk  = Math.abs(priceChangePct) >= PRICE_THRESH;
+  const volumeOk = volumeRatio !== null && volumeRatio >= VOLUME_THRESH;
+  const triggered = priceOk && volumeOk;
+
+  const status = triggered           ? 'triggered'
+               : priceOk            ? 'price-only'
+               : volumeOk           ? 'volume-only'
+               :                      'watching';
+
+  return {
+    triggered,
+    status,
+    priceChangePct: +priceChangePct.toFixed(2),
+    volumeRatio,
+    avgVol: Math.round(avgVol),
+    reason: triggered
+      ? `+${Math.abs(priceChangePct).toFixed(1)}% move · ${volumeRatio}× avg volume`
+      : !priceOk && !volumeOk
+      ? `Flat · ${volumeRatio !== null ? volumeRatio+'× vol' : 'no vol data'}`
+      : !priceOk
+      ? `${volumeRatio}× vol but only ${Math.abs(priceChangePct).toFixed(1)}% move`
+      : `${Math.abs(priceChangePct).toFixed(1)}% move but only ${volumeRatio !== null ? volumeRatio+'×' : 'no'} vol`,
+  };
+}
+
 // ── Pivot Points (classic, from yesterday's OHLC) ────────────────────────────
 export function pivotPoints(candles) {
   if (candles.length < 2) return null;

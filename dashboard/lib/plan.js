@@ -9,7 +9,7 @@
  */
 
 import https from 'https';
-import { atr14, rsi14, rsiSignal, macd, bollingerBands, supertrend, emaCross, supportResistance, candlestickPatterns, pivotPoints } from './indicators.js';
+import { atr14, rsi14, rsiSignal, macd, bollingerBands, supertrend, emaCross, supportResistance, candlestickPatterns, pivotPoints, volumeTrigger } from './indicators.js';
 import { getLatestSnapshot, listTrades } from './supabase.js';
 
 // ── Sector beta ───────────────────────────────────────────────────────────────
@@ -107,10 +107,11 @@ async function getHistory(symbol) {
   const candles = rows
     .sort((a, b) => new Date(a.CH_TIMESTAMP) - new Date(b.CH_TIMESTAMP))
     .map(r => ({
-      open:  parseFloat(r.CH_OPENING_PRICE || r.CH_CLOSING_PRICE),
-      high:  parseFloat(r.CH_TRADE_HIGH_PRICE),
-      low:   parseFloat(r.CH_TRADE_LOW_PRICE),
-      close: parseFloat(r.CH_CLOSING_PRICE),
+      open:   parseFloat(r.CH_OPENING_PRICE || r.CH_CLOSING_PRICE),
+      high:   parseFloat(r.CH_TRADE_HIGH_PRICE),
+      low:    parseFloat(r.CH_TRADE_LOW_PRICE),
+      close:  parseFloat(r.CH_CLOSING_PRICE),
+      volume: parseFloat(r.CH_TOT_TRADED_QTY || 0),
     }))
     .filter(c => c.high > 0);
 
@@ -181,7 +182,7 @@ function priceConfirmation({ ltp, open, high, low, candles }) {
 // ── Core plan builder ─────────────────────────────────────────────────────────
 function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, niftyChgPct,
                      atrRs, rsi, portfolioValue, openTrades, candles,
-                     macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots }) {
+                     macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots, trigger }) {
 
   // 1. ATR% — real 14-day Wilder ATR (falls back to 1% if history unavailable)
   const atrPct = atrRs ? Math.max(atrRs / ltp, 0.003) : 0.010;
@@ -284,6 +285,7 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
     support_resistance: srVal,
     pivots,
     patterns,
+    trigger,
     signal_score,
     signal_detail:      `${bull}/${total} signals bullish`,
     trade_ready,
@@ -309,7 +311,7 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
 // ── Public API ────────────────────────────────────────────────────────────────
 export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
                                      confidence = 70, score = 70,
-                                     ltp, open, high, low }) {
+                                     ltp, open, high, low, volume = 0 }) {
   const o = open ?? ltp; const h = high ?? ltp; const l = low ?? ltp;
   const [market, candles, portfolio] = await Promise.all([
     getMarketSnapshot(),
@@ -325,12 +327,14 @@ export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
   const srVal  = candles.length >= 5  ? supportResistance(candles): null;
   const patterns = candles.length >= 3 ? candlestickPatterns(candles) : null;
   const pivots   = candles.length >= 2 ? pivotPoints(candles)         : null;
+  const priceChangePct = o > 0 ? ((+ltp - +o) / +o) * 100 : 0;
+  const trigger  = candles.length >= 11 ? volumeTrigger(candles, +volume, priceChangePct) : null;
   const plan  = buildPlan({
     ltp: +ltp, open: +o, high: +h, low: +l,
     sector, confidence: +confidence, score: +score,
     vix: market.vix, niftyChgPct: market.niftyChgPct,
     atrRs, rsi, candles,
-    macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots,
+    macdVal, bbVal, stVal, emaVal, srVal, patterns, pivots, trigger,
     portfolioValue: portfolio.portfolioValue,
     openTrades:     portfolio.openTrades,
   });
