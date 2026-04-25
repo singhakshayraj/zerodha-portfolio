@@ -288,74 +288,143 @@ const SIGNAL_TYPE_WEIGHTS = {
   market_direction:   1.3,
   negative_events:    1.3,
   derivatives:        1.2,
-  macro:              0.9,  // applied as global modifier, not per-stock boost
+  macro:              0.0,  // macro never scores per-stock; it's a global cap/modifier only
   media:              0.8,
 };
 
-// Macro signal_type articles are not stock-specific — they set a global sector modifier.
-// All other signal_types contribute to per-stock conviction scores.
-const MACRO_BOOST_SECTORS    = ['Energy', 'Metals', 'IT', 'Pharma', 'Banking', 'Auto'];
-const MACRO_PENALISE_SECTORS = ['Aviation', 'NBFC', 'Paint', 'Realty'];
+// Per-signal-type recency decay curves.
+// derivatives and market_direction are intraday signals — stale in hours.
+// smart_money and institutional_flow persist for days.
+// media and negative_events decay at a medium rate.
+const RECENCY_DECAY_BY_TYPE = {
+  derivatives:        h => h <  4 ? 1.00 : h <  8 ? 0.80 : h < 12 ? 0.50 : h < 24 ? 0.20 : 0.05,
+  market_direction:   h => h <  4 ? 1.00 : h <  8 ? 0.85 : h < 12 ? 0.65 : h < 24 ? 0.30 : 0.10,
+  smart_money:        h => h < 24 ? 1.00 : h < 48 ? 0.85 : h < 72 ? 0.65 : h < 96 ? 0.45 : 0.25,
+  institutional_flow: h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
+  negative_events:    h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
+  media:              h => h < 12 ? 1.00 : h < 24 ? 0.75 : h < 48 ? 0.50 : h < 72 ? 0.30 : 0.15,
+  macro:              h => 1.0, // macro is always current context; decay handled by max_age_hours
+};
 
-function recencyDecay(hoursAgo) {
-  if (hoursAgo <  6) return 1.00;
-  if (hoursAgo < 12) return 0.90;
-  if (hoursAgo < 24) return 0.75;
-  if (hoursAgo < 48) return 0.55;
-  if (hoursAgo < 72) return 0.40;
-  return 0.25;
+function recencyDecay(signalType, hoursAgo) {
+  const fn = RECENCY_DECAY_BY_TYPE[signalType] ?? (h => h < 24 ? 0.8 : 0.4);
+  return fn(hoursAgo ?? 24);
 }
 
+// Consensus is based on SOURCE diversity and SIGNAL-TYPE diversity, not raw count.
+// Duplicate articles from the same source on the same signal_type count as one.
 function consensusMultiplier(mentions) {
-  const n = mentions.length;
-  const base = n === 1 ? 1.0 : n === 2 ? 1.8 : n === 3 ? 3.0 : 5.0;
+  const distinctSources = new Set(mentions.map(m => m.source)).size;
+  const distinctTypes   = new Set(mentions.map(m => m.signal_type)).size;
+
+  // Base: source diversity (each unique source adds diminishing returns)
+  const sourceBase = distinctSources === 1 ? 1.0
+                   : distinctSources === 2 ? 1.6
+                   : distinctSources === 3 ? 2.5
+                   : 3.5;
+
+  // Type diversity bonus: each additional signal_type adds 0.3× up to 1.5×
+  const typeDiversityBonus = Math.min(1.5, 1.0 + (distinctTypes - 1) * 0.3);
+
+  // High-conviction cross-type bonus: smart_money + derivatives = strongest combo
   const types = [...new Set(mentions.map(m => m.signal_type))];
-  // Cross-type bonus: smart_money + derivatives on same stock
-  const crossBonus = types.includes('smart_money') && types.includes('derivatives') ? 1.5 : 1.0;
-  return base * crossBonus;
+  const crossBonus = types.includes('smart_money') && types.includes('derivatives') ? 1.5
+                   : types.includes('institutional_flow') && types.includes('derivatives') ? 1.3
+                   : 1.0;
+
+  return sourceBase * typeDiversityBonus * crossBonus;
 }
 
-// Build a map of { SYMBOL → [article, ...] } from all articles that name a stock.
-// The LLM tells us which symbols appear — this map is pre-built for the scorer.
-function buildSymbolMentions(articles) {
-  // Returns the raw articles array; scorer joins against LLM extractions by symbol.
-  // We keep the full article objects so scorer has signal_type, reliability, hoursAgo.
-  return articles;
+// ── Symbol normalisation ──────────────────────────────────────────────────────
+// Maps common LLM output variants to canonical NSE tickers.
+// Prevents "HDFC Bank", "HDFCBank", "HDFCBANK" from fragmenting into 3 buckets.
+const SYMBOL_ALIASES = {
+  'HDFCBANK':  ['HDFC BANK', 'HDFCBANK', 'HDFC BANK LTD'],
+  'ICICIBANK': ['ICICI BANK', 'ICICIBANK'],
+  'RELIANCE':  ['RELIANCE INDUSTRIES', 'RIL'],
+  'TCS':       ['TATA CONSULTANCY', 'TATA CONSULTANCY SERVICES'],
+  'INFY':      ['INFOSYS', 'INFOSYS LTD'],
+  'WIPRO':     ['WIPRO LTD', 'WIPRO LIMITED'],
+  'SBIN':      ['SBI', 'STATE BANK', 'STATE BANK OF INDIA'],
+  'BAJFINANCE':['BAJAJ FINANCE', 'BAJFINANCE'],
+  'BHARTIARTL':['BHARTI AIRTEL', 'AIRTEL'],
+  'HINDUNILVR':['HUL', 'HINDUSTAN UNILEVER'],
+  'KOTAKBANK': ['KOTAK BANK', 'KOTAK MAHINDRA BANK'],
+  'AXISBANK':  ['AXIS BANK', 'AXISBANK'],
+  'LT':        ['LARSEN', 'L&T', 'LARSEN AND TOUBRO'],
+  'TATAMOTORS':['TATA MOTORS', 'TATAMOTORS'],
+  'TATASTEEL': ['TATA STEEL', 'TATASTEEL'],
+  'MARUTI':    ['MARUTI SUZUKI', 'MARUTI SUZUKI INDIA'],
+  'SUNPHARMA': ['SUN PHARMA', 'SUN PHARMACEUTICAL'],
+  'DRREDDY':   ['DR REDDYS', "DR. REDDY'S", 'DR REDDYS LABORATORIES'],
+  'NTPC':      ['NTPC LTD', 'NTPC LIMITED'],
+  'POWERGRID': ['POWER GRID', 'POWER GRID CORP'],
+  'ONGC':      ['ONGC LTD', 'OIL AND NATURAL GAS'],
+  'COALINDIA': ['COAL INDIA', 'COALINDIA'],
+  'ADANIENT':  ['ADANI ENTERPRISES', 'ADANI ENT'],
+  'ADANIPORTS':['ADANI PORTS', 'APSEZ'],
+};
+
+const ALIAS_LOOKUP = {};
+for (const [canonical, aliases] of Object.entries(SYMBOL_ALIASES)) {
+  for (const alias of aliases) ALIAS_LOOKUP[alias.toUpperCase()] = canonical;
 }
 
-// Score a single extracted stock against all articles that mention it.
-function scoreExtraction(symbol, sentiment, mentions, macroContext) {
-  if (!mentions.length) return 0;
+function normaliseSymbol(raw) {
+  const up = (raw || '').toUpperCase().trim();
+  return ALIAS_LOOKUP[up] ?? up;
+}
 
-  let totalScore = 0;
-  for (const m of mentions) {
-    const typeWeight    = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
-    const reliability   = (m.reliability ?? 5) / 10;
-    const decay         = recencyDecay(m.hoursAgo ?? 24);
-    // Sentiment alignment: bearish article on a bearish extraction scores positively
-    const sentimentSign = m.sentiment_bias === 'bearish'
-      ? (sentiment === 'bearish' ? 1 : -0.5)
-      : m.sentiment_bias === 'bullish'
-      ? (sentiment === 'bullish' ? 1 : -0.3)
-      : 0.7; // neutral articles always contribute positively, but at reduced weight
-    totalScore += typeWeight * reliability * decay * sentimentSign;
+// Event strength: LLM extracts this; we translate to a 1–5 multiplier.
+// Weak mention = 1.0, strong event (earnings beat, block deal, SEBI action) = up to 2.5
+const EVENT_STRENGTH_MAP = {
+  earnings_beat:    2.5,
+  earnings_miss:    2.5,  // strong negative event
+  block_deal:       2.2,
+  analyst_upgrade:  1.8,
+  analyst_downgrade:1.8,
+  price_target_raise: 1.6,
+  price_target_cut:   1.6,
+  breakout_52wk:    1.5,
+  fii_buying:       1.4,
+  fii_selling:      1.4,
+  sebi_action:      2.0,
+  results_guidance: 1.3,
+  general_mention:  1.0,
+};
+
+function eventStrengthMultiplier(eventType) {
+  return EVENT_STRENGTH_MAP[eventType] ?? 1.0;
+}
+
+// ── Macro risk cap ────────────────────────────────────────────────────────────
+// When macro risk is high or GIFT Nifty signals a gap-down, impose hard caps
+// on bullish scores rather than soft multipliers — this enforces the global
+// environment as a structural constraint, not just a nudge.
+function applyMacroCap(score, sentiment, macroRisk, giftNiftyBias) {
+  const isHighRisk = macroRisk === 'high';
+  const isGapDown  = giftNiftyBias === 'gap-down';
+
+  if (sentiment === 'bullish') {
+    if (isHighRisk && isGapDown) return Math.min(score, score * 0.30); // hard cap: 30%
+    if (isHighRisk)              return Math.min(score, score * 0.50); // hard cap: 50%
+    if (isGapDown)               return Math.min(score, score * 0.60); // hard cap: 60%
   }
-
-  const consensus = consensusMultiplier(mentions);
-  let score = totalScore * consensus;
-
-  // Apply macro sector modifier if LLM extracted a sector for this stock
-  // macroContext.boost / penalise are sector keyword arrays
-  return +score.toFixed(3);
+  if (sentiment === 'bearish') {
+    // Bearish picks get a tailwind when macro risk is high
+    if (isHighRisk) return score * 1.4;
+    if (isGapDown)  return score * 1.2;
+  }
+  return score;
 }
 
-// ── LLM — extraction only ────────────────────────────────────────────────────
+// ── LLM — extraction only ─────────────────────────────────────────────────────
 async function extractWithLLM(articles) {
   const key = process.env.GROQ_API_KEY || process.env.GOOGLE_API_KEY;
   if (!key) throw new Error('No LLM API key set (GROQ_API_KEY or GOOGLE_API_KEY)');
 
-  const today      = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const dayOfWeek  = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
+  const today     = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dayOfWeek = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
   const block = articles.map(a =>
     `[${a.signal_type}·R${a.reliability}·${a.hoursAgo}h·${a.sentiment_bias}·${a.source}]: ${a.text}`
@@ -363,25 +432,26 @@ async function extractWithLLM(articles) {
 
   const prompt = `You are an intelligence extraction engine for an Indian equity trading system. Today is ${today} (${dayOfWeek}).
 
-Your ONLY job is to READ the news feed below and EXTRACT structured data. Do NOT score, rank, or decide picks — that is handled by a separate deterministic engine. Extract accurately; do not hallucinate stocks not present in the feed.
+Your ONLY job is to READ the news feed and EXTRACT structured data. Do NOT score, rank, or decide which stocks to buy. A separate deterministic scoring engine handles that. Extract accurately — do not hallucinate stocks not present in the feed.
 
 INTELLIGENCE FEED (${articles.length} signals):
 ${block}
 
-Extract and return ONLY valid JSON:
+Return ONLY valid JSON:
 
 {
   "extractions": [
     {
-      "symbol": "RELIANCE",
+      "symbol": "HDFCBANK",
       "exchange": "NSE",
-      "company": "Reliance Industries Ltd",
-      "sector": "Energy",
+      "company": "HDFC Bank Ltd",
+      "sector": "Banking",
       "sentiment": "bullish",
+      "event_type": "analyst_upgrade",
       "reason": "One crisp sentence: what the signal says about this stock",
-      "detailed_reasoning": "2-3 sentences covering what was reported, by whom, and why it matters for today",
+      "detailed_reasoning": "2-3 sentences: what was reported, by whom, why it matters today",
       "key_risk": "One sentence: what could invalidate this signal today",
-      "mentioned_by": ["FII DII Net Flow", "Goldman India"],
+      "mentioned_by": ["Goldman India", "FII DII Net Flow"],
       "signal_types_seen": ["institutional_flow"],
       "intraday_note": "Specific price level or setup to watch, if mentioned in the feed"
     }
@@ -400,65 +470,100 @@ Extract and return ONLY valid JSON:
 }
 
 Rules:
-- Extract EVERY stock mentioned with a specific buy/sell/short/downgrade/upgrade/earnings signal
-- sentiment per stock: "bullish" | "bearish" | "neutral"
+- symbol must be the canonical NSE ticker (e.g. HDFCBANK not "HDFC Bank")
+- Extract EVERY stock with a specific signal: buy/sell/short/downgrade/upgrade/earnings/block deal/OI buildup
+- sentiment: "bullish" | "bearish" | "neutral"
+- event_type: one of — earnings_beat | earnings_miss | analyst_upgrade | analyst_downgrade |
+  price_target_raise | price_target_cut | block_deal | breakout_52wk | fii_buying | fii_selling |
+  sebi_action | results_guidance | general_mention
 - gift_nifty_bias: "gap-up" | "gap-down" | "flat" | "unknown"
 - vix_state: "low" | "elevated" | "spiking" | "unknown"
 - macro_risk: "low" | "medium" | "high"
-- Only NSE/BSE listed Indian stocks
-- If a stock is mentioned negatively (downgrade, miss, fraud) → sentiment: "bearish"
-- Do not invent stocks not present in the feed
-- ${dayOfWeek === 'Monday' ? 'Note: Monday — flag any weekend gap-up catalysts.' : ''}
-- ${dayOfWeek === 'Thursday' ? 'Note: Expiry day — flag any max pain or options pinning signals.' : ''}
-- ${dayOfWeek === 'Friday' ? 'Note: Friday — flag any position-squaring or weekend-risk signals.' : ''}`;
+- Negative signals (downgrade, miss, SEBI, fraud) → sentiment: "bearish"
+- Do not invent stocks absent from the feed
+- This layer is a CONTEXT INTELLIGENCE ENGINE — it captures what is being talked about.
+  Whether a stock actually moves is determined by price/volume triggers in a separate layer.
+- ${dayOfWeek === 'Monday'   ? 'Monday: flag weekend gap-up catalysts and short-covering candidates.' : ''}
+- ${dayOfWeek === 'Thursday' ? 'Thursday expiry: flag max pain levels and options-pinning signals.' : ''}
+- ${dayOfWeek === 'Friday'   ? 'Friday: flag position-squaring and weekend-risk signals.' : ''}`;
 
   const { result, provider } = await callLLM(prompt);
   return { result, provider };
 }
 
-// ── Deterministic scorer — runs after LLM extraction ─────────────────────────
+// ── Deterministic scorer ───────────────────────────────────────────────────────
 function scoreAndRank(extractions, articles, marketContext) {
-  // Index articles by every word 3+ chars — used for fuzzy symbol matching
-  // Simple approach: check if article text or source references the symbol/company
+  const macroRisk    = marketContext.macro_risk     || 'low';
+  const giftBias     = marketContext.gift_nifty_bias || 'unknown';
+  const dow          = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
+
   const scored = extractions.map(ext => {
-    const sym = (ext.symbol || '').toUpperCase();
+    const sym = normaliseSymbol(ext.symbol);
     const co  = (ext.company || '').toLowerCase();
 
-    // Find articles that are likely about this stock
+    // Match articles to this stock by symbol or first 12 chars of company name
     const mentions = articles.filter(a => {
+      if (a.signal_type === 'macro') return false; // macro never scores per-stock
       const t = a.text.toLowerCase();
-      return t.includes(sym.toLowerCase()) || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))));
+      return t.includes(sym.toLowerCase())
+          || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))));
     });
 
-    const score = scoreExtraction(sym, ext.sentiment, mentions, marketContext);
+    // Per-article score
+    let totalScore = 0;
+    for (const m of mentions) {
+      const typeWeight    = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
+      const reliability   = (m.reliability ?? 5) / 10;
+      const decay         = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
+      const sentimentSign = m.sentiment_bias === 'bearish'
+        ? (ext.sentiment === 'bearish' ?  1.0 : -0.5)
+        : m.sentiment_bias === 'bullish'
+        ? (ext.sentiment === 'bullish' ?  1.0 : -0.3)
+        : 0.7;
+      totalScore += typeWeight * reliability * decay * sentimentSign;
+    }
 
-    // Macro sector modifier: boost/penalise based on LLM's market_context
+    // Event strength multiplier (from LLM-extracted event_type)
+    const eventMult = eventStrengthMultiplier(ext.event_type || 'general_mention');
+
+    // Consensus based on source + signal-type diversity, not raw count
+    const consensus = mentions.length ? consensusMultiplier(mentions) : 1.0;
+
+    let score = totalScore * eventMult * consensus;
+
+    // Sector modifier from macro context (soft)
     const sector = (ext.sector || '').toLowerCase();
-    const boostMatch    = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
-    const penaliseMatch = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
-    const macroMod = boostMatch ? 1.2 : penaliseMatch ? 0.7 : 1.0;
+    const boosted    = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
+    const penalised  = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
+    score *= boosted ? 1.2 : penalised ? 0.7 : 1.0;
 
-    // Day-of-week timing modifier
-    const dow = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
-    const timingMod = dow === 'Monday' && ext.sentiment === 'bullish' ? 1.1
-                    : dow === 'Friday' && ext.sentiment === 'bullish' ? 0.85
-                    : 1.0;
+    // Day-of-week timing
+    score *= dow === 'Monday' && ext.sentiment === 'bullish' ? 1.10
+           : dow === 'Friday' && ext.sentiment === 'bullish' ? 0.85
+           : 1.0;
 
-    const finalScore = +(score * macroMod * timingMod).toFixed(3);
+    // Macro hard cap — enforces global environment as a structural constraint
+    score = applyMacroCap(score, ext.sentiment, macroRisk, giftBias);
 
     return {
       ...ext,
-      score:         finalScore,
+      symbol:        sym,
+      score:         +score.toFixed(3),
       mention_count: mentions.length,
       signal_types:  [...new Set(mentions.map(m => m.signal_type))],
+      distinct_sources: new Set(mentions.map(m => m.source)).size,
     };
   });
 
-  // Sort by score desc, deduplicate by symbol (keep highest score), take top 10
-  const seen = new Set();
-  const ranked = scored
+  // Deduplicate by canonical symbol (keep highest |score|), sort, top 10
+  const bySymbol = new Map();
+  for (const p of scored) {
+    const existing = bySymbol.get(p.symbol);
+    if (!existing || Math.abs(p.score) > Math.abs(existing.score)) bySymbol.set(p.symbol, p);
+  }
+
+  return [...bySymbol.values()]
     .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
-    .filter(p => { if (seen.has(p.symbol)) return false; seen.add(p.symbol); return true; })
     .slice(0, 10)
     .map((p, i) => ({
       rank:               i + 1,
@@ -467,7 +572,8 @@ function scoreAndRank(extractions, articles, marketContext) {
       company:            p.company,
       sector:             p.sector,
       sentiment:          p.sentiment,
-      confidence:         Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 2))),
+      event_type:         p.event_type || 'general_mention',
+      confidence:         Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 1.5))),
       score:              p.score,
       reason:             p.reason,
       detailed_reasoning: p.detailed_reasoning,
@@ -475,13 +581,13 @@ function scoreAndRank(extractions, articles, marketContext) {
       mentioned_by:       p.mentioned_by || [],
       signal_types:       p.signal_types,
       mention_count:      p.mention_count,
+      distinct_sources:   p.distinct_sources,
       intraday_note:      p.intraday_note || '',
+      context_only:       true, // this layer captures what is talked about; price/volume trigger is the execution gate
     }));
-
-  return ranked;
 }
 
-// ── Orchestrator ──────────────────────────────────────────────────────────────
+// ── Orchestrator ───────────────────────────────────────────────────────────────
 async function analyzeWithGroq(articles) {
   const { result: extracted, provider } = await extractWithLLM(articles);
 
@@ -494,10 +600,12 @@ async function analyzeWithGroq(articles) {
     picks,
     market_sentiment: marketContext.market_sentiment || 'neutral',
     macro_risk:       marketContext.macro_risk       || 'medium',
+    gift_nifty_bias:  marketContext.gift_nifty_bias  || 'unknown',
+    vix_state:        marketContext.vix_state        || 'unknown',
     top_sectors:      marketContext.top_sectors      || [],
     avoid_sectors:    marketContext.avoid_sectors    || [],
     summary:          marketContext.summary          || '',
-    algo_note:        `Scored by backend: signal_type × reliability × recency_decay × consensus. LLM used for extraction only.`,
+    algo_note:        'Backend scorer: signal_type_weight × (reliability/10) × signal_type_recency_decay × event_strength × consensus(source+type diversity) × macro_hard_cap. LLM extracts only.',
     _provider:        provider,
   };
 }
