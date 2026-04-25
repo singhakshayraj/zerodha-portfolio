@@ -3,157 +3,154 @@ import fs   from 'fs';
 import path from 'path';
 
 // ── Source registry ───────────────────────────────────────────────────────────
-// signal_type: smart_money | institutional_flow | derivatives | market_direction
-//              macro | media | negative_events
-// sentiment_bias: bullish | bearish | neutral
-// reliability_score: 1–10 (how often this source leads to real price moves)
-// dynamic_weight: multiplier applied to each article's base score (start at 1.0)
-// max_age_hours: articles older than this are dropped per signal_type
+// baseline_rate: expected article density for this signal_type (0–1).
+//   High = naturally voluminous (media), low = rare and precious (smart_money).
+//   Used to normalize scores so high-volume types don't dominate by sheer count.
 const SOURCES = [
-  // ── Smart Money — legend investors with disclosed/rumoured positions ────────
+  // ── Smart Money ───────────────────────────────────────────────────────────
   {
     label: 'Vijay Kedia', tier: 1,
     q: '"Vijay Kedia" stock buy accumulate NSE portfolio 2024 2025',
     signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72,
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.15,
   },
   {
     label: 'Basant Maheshwari', tier: 1,
     q: '"Basant Maheshwari" equity picks NSE accumulate strong buy',
     signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72,
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.15,
   },
   {
     label: 'Deepak Shenoy', tier: 1,
     q: '"Deepak Shenoy" OR "Capital Mind" stock buy NSE analysis 2025',
     signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.20,
   },
   {
     label: 'Mitesh Engineer', tier: 1,
     q: '"Mitesh Engineer" OR "@Mitesh_Engr" stock buy target NSE intraday',
     signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.15,
   },
   {
     label: 'Porinju Veliyath', tier: 1,
     q: '"Porinju Veliyath" stock portfolio NSE smallcap multibagger',
     signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 96,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 96, baseline_rate: 0.15,
   },
 
-  // ── Institutional Flow — FII/DII/broker block deals ──────────────────────
+  // ── Institutional Flow ────────────────────────────────────────────────────
   {
     label: 'FII DII Net Flow', tier: 5,
     q: 'FII DII net buying selling India NSE BSE crore today 2025',
     signal_type: 'institutional_flow', sentiment_bias: 'neutral',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.40,
   },
   {
     label: 'Block Deals', tier: 5,
     q: 'NSE BSE block deal bulk deal FII institutional buy sell today India',
     signal_type: 'institutional_flow', sentiment_bias: 'neutral',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.35,
   },
   {
     label: 'Goldman India', tier: 6,
     q: '"Goldman Sachs" India stock upgrade target raise NSE sector 2025',
     signal_type: 'institutional_flow', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 72,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.25,
   },
   {
     label: 'JPMorgan India', tier: 6,
     q: '"JPMorgan" India stock overweight upgrade price target 2025',
     signal_type: 'institutional_flow', sentiment_bias: 'bullish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 72,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.25,
   },
 
-  // ── Derivatives — OI buildup, PCR, unusual options activity ─────────────
+  // ── Derivatives ───────────────────────────────────────────────────────────
   {
     label: 'Nifty Options OI', tier: 4,
     q: 'Nifty options OI buildup call put PCR unusual activity today NSE',
     signal_type: 'derivatives', sentiment_bias: 'neutral',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.45,
   },
   {
     label: 'BankNifty Flow', tier: 4,
     q: 'BankNifty options OI max pain support resistance expiry today',
     signal_type: 'derivatives', sentiment_bias: 'neutral',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.40,
   },
   {
     label: 'Stock OI Buildup', tier: 4,
     q: 'NSE stock options open interest long buildup short covering today India',
     signal_type: 'derivatives', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.40,
   },
 
-  // ── Market Direction — GIFT Nifty, VIX, breadth ──────────────────────────
+  // ── Market Direction ──────────────────────────────────────────────────────
   {
     label: 'GIFT Nifty Signal', tier: 5,
     q: 'GIFT Nifty SGX gap up gap down premium discount NSE opening today',
     signal_type: 'market_direction', sentiment_bias: 'neutral',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 8,
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 8, baseline_rate: 0.50,
   },
   {
     label: 'India VIX', tier: 5,
     q: 'India VIX fear greed NSE volatility index spike fall today',
     signal_type: 'market_direction', sentiment_bias: 'neutral',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.35,
   },
   {
     label: 'NSE Breakouts', tier: 3,
     q: 'NSE stock 52-week high breakout volume surge momentum rally today India',
     signal_type: 'market_direction', sentiment_bias: 'bullish',
-    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.55,
   },
 
-  // ── Macro — RBI, budget, policy, global risk ─────────────────────────────
+  // ── Macro ─────────────────────────────────────────────────────────────────
   {
     label: 'RBI Policy', tier: 5,
     q: 'RBI repo rate policy decision India inflation banking stock impact 2025',
     signal_type: 'macro', sentiment_bias: 'neutral',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.30,
   },
   {
     label: 'Global Macro Risk', tier: 6,
     q: 'US Fed DXY dollar crude oil treasury yield India NSE impact today',
     signal_type: 'macro', sentiment_bias: 'neutral',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.45,
   },
 
-  // ── Media — earnings, upgrades, analyst targets ───────────────────────────
+  // ── Media ─────────────────────────────────────────────────────────────────
   {
     label: 'Earnings Beats', tier: 5,
     q: 'India quarterly results earnings beat profit above estimate NSE stock today',
     signal_type: 'media', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.70,
   },
   {
     label: 'Analyst Upgrades', tier: 2,
     q: 'India NSE stock analyst upgrade buy strong buy target raised ICICI Morgan Motilal 2025',
     signal_type: 'media', sentiment_bias: 'bullish',
-    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.65,
   },
 
-  // ── Negative Events — downgrades, warnings, weak guidance ────────────────
+  // ── Negative Events ───────────────────────────────────────────────────────
   {
     label: 'Earnings Misses', tier: 5,
     q: 'India quarterly results earnings miss profit below estimate NSE stock today',
     signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.55,
   },
   {
     label: 'Analyst Downgrades', tier: 2,
     q: 'India NSE stock analyst downgrade sell reduce underperform target cut 2025',
     signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48,
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.50,
   },
   {
     label: 'Regulatory Risk', tier: 5,
     q: 'India NSE stock SEBI penalty fraud promoter pledge warning circuit today',
     signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.30,
   },
 ];
 
@@ -288,14 +285,13 @@ const SIGNAL_TYPE_WEIGHTS = {
   market_direction:   1.3,
   negative_events:    1.3,
   derivatives:        1.2,
-  macro:              0.0,  // macro never scores per-stock; it's a global cap/modifier only
+  macro:              0.0,  // macro never scores per-stock; global cap/modifier only
   media:              0.8,
 };
 
-// Per-signal-type recency decay curves.
-// derivatives and market_direction are intraday signals — stale in hours.
-// smart_money and institutional_flow persist for days.
-// media and negative_events decay at a medium rate.
+// ── Signal-type-aware recency decay ──────────────────────────────────────────
+// Fast-moving signals (derivatives, market_direction) decay within hours.
+// High-conviction signals (smart_money) persist for days.
 const RECENCY_DECAY_BY_TYPE = {
   derivatives:        h => h <  4 ? 1.00 : h <  8 ? 0.80 : h < 12 ? 0.50 : h < 24 ? 0.20 : 0.05,
   market_direction:   h => h <  4 ? 1.00 : h <  8 ? 0.85 : h < 12 ? 0.65 : h < 24 ? 0.30 : 0.10,
@@ -303,7 +299,7 @@ const RECENCY_DECAY_BY_TYPE = {
   institutional_flow: h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
   negative_events:    h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
   media:              h => h < 12 ? 1.00 : h < 24 ? 0.75 : h < 48 ? 0.50 : h < 72 ? 0.30 : 0.15,
-  macro:              h => 1.0, // macro is always current context; decay handled by max_age_hours
+  macro:              _h => 1.0,
 };
 
 function recencyDecay(signalType, hoursAgo) {
@@ -311,111 +307,250 @@ function recencyDecay(signalType, hoursAgo) {
   return fn(hoursAgo ?? 24);
 }
 
-// Consensus is based on SOURCE diversity and SIGNAL-TYPE diversity, not raw count.
-// Duplicate articles from the same source on the same signal_type count as one.
-function consensusMultiplier(mentions) {
-  const distinctSources = new Set(mentions.map(m => m.source)).size;
-  const distinctTypes   = new Set(mentions.map(m => m.signal_type)).size;
-
-  // Base: source diversity (each unique source adds diminishing returns)
-  const sourceBase = distinctSources === 1 ? 1.0
-                   : distinctSources === 2 ? 1.6
-                   : distinctSources === 3 ? 2.5
-                   : 3.5;
-
-  // Type diversity bonus: each additional signal_type adds 0.3× up to 1.5×
-  const typeDiversityBonus = Math.min(1.5, 1.0 + (distinctTypes - 1) * 0.3);
-
-  // High-conviction cross-type bonus: smart_money + derivatives = strongest combo
-  const types = [...new Set(mentions.map(m => m.signal_type))];
-  const crossBonus = types.includes('smart_money') && types.includes('derivatives') ? 1.5
-                   : types.includes('institutional_flow') && types.includes('derivatives') ? 1.3
-                   : 1.0;
-
-  return sourceBase * typeDiversityBonus * crossBonus;
+// ── Novelty scoring ───────────────────────────────────────────────────────────
+// Same story repeated across outlets inflates count without adding information.
+// We cluster articles by text similarity (Jaccard on trigrams) and apply
+// diminishing weights within each cluster: 1st = 1.0, 2nd = 0.6, 3rd = 0.3, 4th+ = 0.15
+function trigrams(text) {
+  const t = text.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+  const words = t.split(/\s+/).filter(w => w.length > 2);
+  const tg = new Set();
+  for (let i = 0; i < words.length - 2; i++) tg.add(`${words[i]}_${words[i+1]}_${words[i+2]}`);
+  return tg;
 }
 
-// ── Symbol normalisation ──────────────────────────────────────────────────────
-// Maps common LLM output variants to canonical NSE tickers.
-// Prevents "HDFC Bank", "HDFCBank", "HDFCBANK" from fragmenting into 3 buckets.
+function jaccard(setA, setB) {
+  if (!setA.size && !setB.size) return 0;
+  const intersection = [...setA].filter(x => setB.has(x)).length;
+  return intersection / (setA.size + setB.size - intersection);
+}
+
+function assignNoveltyWeights(articles) {
+  const weights = new Array(articles.length).fill(1.0);
+  const tgs = articles.map(a => trigrams(a.text));
+  const NOVELTY_DECAY = [1.0, 0.6, 0.3, 0.15];
+
+  const assigned = new Set();
+  for (let i = 0; i < articles.length; i++) {
+    if (assigned.has(i)) continue;
+    const cluster = [i];
+    for (let j = i + 1; j < articles.length; j++) {
+      if (!assigned.has(j) && jaccard(tgs[i], tgs[j]) > 0.45) cluster.push(j);
+    }
+    cluster.forEach((idx, rank) => {
+      weights[idx] = NOVELTY_DECAY[Math.min(rank, NOVELTY_DECAY.length - 1)];
+      assigned.add(idx);
+    });
+  }
+  return weights;
+}
+
+// ── Symbol normalisation with confidence ─────────────────────────────────────
+// Maps known LLM variants to canonical NSE tickers (exact = 1.0 confidence).
+// Unknown symbols get a fuzzy fallback — short names (<4 chars) that don't
+// match any known ticker are flagged low-confidence (0.6) and penalised.
 const SYMBOL_ALIASES = {
-  'HDFCBANK':  ['HDFC BANK', 'HDFCBANK', 'HDFC BANK LTD'],
-  'ICICIBANK': ['ICICI BANK', 'ICICIBANK'],
-  'RELIANCE':  ['RELIANCE INDUSTRIES', 'RIL'],
-  'TCS':       ['TATA CONSULTANCY', 'TATA CONSULTANCY SERVICES'],
-  'INFY':      ['INFOSYS', 'INFOSYS LTD'],
-  'WIPRO':     ['WIPRO LTD', 'WIPRO LIMITED'],
-  'SBIN':      ['SBI', 'STATE BANK', 'STATE BANK OF INDIA'],
-  'BAJFINANCE':['BAJAJ FINANCE', 'BAJFINANCE'],
-  'BHARTIARTL':['BHARTI AIRTEL', 'AIRTEL'],
-  'HINDUNILVR':['HUL', 'HINDUSTAN UNILEVER'],
-  'KOTAKBANK': ['KOTAK BANK', 'KOTAK MAHINDRA BANK'],
-  'AXISBANK':  ['AXIS BANK', 'AXISBANK'],
-  'LT':        ['LARSEN', 'L&T', 'LARSEN AND TOUBRO'],
-  'TATAMOTORS':['TATA MOTORS', 'TATAMOTORS'],
-  'TATASTEEL': ['TATA STEEL', 'TATASTEEL'],
-  'MARUTI':    ['MARUTI SUZUKI', 'MARUTI SUZUKI INDIA'],
-  'SUNPHARMA': ['SUN PHARMA', 'SUN PHARMACEUTICAL'],
-  'DRREDDY':   ['DR REDDYS', "DR. REDDY'S", 'DR REDDYS LABORATORIES'],
-  'NTPC':      ['NTPC LTD', 'NTPC LIMITED'],
-  'POWERGRID': ['POWER GRID', 'POWER GRID CORP'],
-  'ONGC':      ['ONGC LTD', 'OIL AND NATURAL GAS'],
-  'COALINDIA': ['COAL INDIA', 'COALINDIA'],
-  'ADANIENT':  ['ADANI ENTERPRISES', 'ADANI ENT'],
-  'ADANIPORTS':['ADANI PORTS', 'APSEZ'],
+  'HDFCBANK':   ['HDFC BANK', 'HDFCBANK', 'HDFC BANK LTD'],
+  'ICICIBANK':  ['ICICI BANK', 'ICICIBANK'],
+  'RELIANCE':   ['RELIANCE INDUSTRIES', 'RIL', 'RELIANCE IND'],
+  'TCS':        ['TATA CONSULTANCY', 'TATA CONSULTANCY SERVICES'],
+  'INFY':       ['INFOSYS', 'INFOSYS LTD'],
+  'WIPRO':      ['WIPRO LTD', 'WIPRO LIMITED'],
+  'SBIN':       ['SBI', 'STATE BANK', 'STATE BANK OF INDIA'],
+  'BAJFINANCE': ['BAJAJ FINANCE', 'BAJFINANCE'],
+  'BHARTIARTL': ['BHARTI AIRTEL', 'AIRTEL'],
+  'HINDUNILVR': ['HUL', 'HINDUSTAN UNILEVER', 'HINDUSTAN UNILEVER LTD'],
+  'KOTAKBANK':  ['KOTAK BANK', 'KOTAK MAHINDRA BANK'],
+  'AXISBANK':   ['AXIS BANK', 'AXISBANK'],
+  'LT':         ['LARSEN', 'L&T', 'LARSEN AND TOUBRO', 'LARSEN & TOUBRO'],
+  'TATAMOTORS': ['TATA MOTORS', 'TATAMOTORS'],
+  'TATASTEEL':  ['TATA STEEL', 'TATASTEEL'],
+  'MARUTI':     ['MARUTI SUZUKI', 'MARUTI SUZUKI INDIA'],
+  'SUNPHARMA':  ['SUN PHARMA', 'SUN PHARMACEUTICAL', 'SUN PHARMA IND'],
+  'DRREDDY':    ['DR REDDYS', "DR. REDDY'S", 'DR REDDYS LABORATORIES'],
+  'NTPC':       ['NTPC LTD', 'NTPC LIMITED'],
+  'POWERGRID':  ['POWER GRID', 'POWER GRID CORP', 'PGCIL'],
+  'ONGC':       ['ONGC LTD', 'OIL AND NATURAL GAS', 'OIL & NATURAL GAS'],
+  'COALINDIA':  ['COAL INDIA', 'COALINDIA', 'CIL'],
+  'ADANIENT':   ['ADANI ENTERPRISES', 'ADANI ENT'],
+  'ADANIPORTS': ['ADANI PORTS', 'APSEZ'],
+  'BAJAJFINSV': ['BAJAJ FINSERV', 'BAJAJFINSV'],
+  'HCLTECH':    ['HCL TECH', 'HCL TECHNOLOGIES'],
+  'TECHM':      ['TECH MAHINDRA', 'TECHM'],
+  'ULTRACEMCO': ['ULTRATECH CEMENT', 'ULTRATECH'],
+  'TITAN':      ['TITAN COMPANY', 'TITAN CO'],
+  'NESTLEIND':  ['NESTLE INDIA', 'NESTLE'],
+  'DIVISLAB':   ["DIVI'S LABORATORIES", 'DIVI LAB', 'DIVISLAB'],
+  'CIPLA':      ['CIPLA LTD', 'CIPLA LIMITED'],
+  'EICHERMOT':  ['EICHER MOTORS', 'EICHERMOT'],
+  'HEROMOTOCO': ['HERO MOTOCORP', 'HERO MOTO'],
+  'BPCL':       ['BHARAT PETROLEUM', 'BPCL'],
+  'IOC':        ['INDIAN OIL', 'IOCL'],
 };
+
+// Liquid Nifty-100 universe — stocks outside this set get a confidence penalty.
+const LIQUID_NSE = new Set([
+  'RELIANCE','TCS','HDFCBANK','INFY','ICICIBANK','HINDUNILVR','SBIN','BHARTIARTL',
+  'KOTAKBANK','LT','AXISBANK','BAJFINANCE','WIPRO','HCLTECH','ASIANPAINT','MARUTI',
+  'ULTRACEMCO','TITAN','SUNPHARMA','NTPC','POWERGRID','ONGC','TATAMOTORS','TATASTEEL',
+  'COALINDIA','ADANIENT','ADANIPORTS','BAJAJFINSV','TECHM','NESTLEIND','DIVISLAB',
+  'CIPLA','DRREDDY','EICHERMOT','HEROMOTOCO','BPCL','IOC','INDUSINDBK','M&M',
+  'BRITANNIA','SHREECEM','GRASIM','JSWSTEEL','HINDALCO','VEDL','APOLLOHOSP',
+  'DMART','TATACONSUM','DABUR','GODREJCP','BERGEPAINT','PIDILITIND','HAVELLS',
+  'VOLTAS','WHIRLPOOL','ABB','SIEMENS','BOSCH','CUMMINSIND','THERMAX',
+  'MPHASIS','LTIM','PERSISTENT','COFORGE','OFSS','NAUKRI','ZOMATO','PAYTM',
+  'IRCTC','HDFCLIFE','SBILIFE','ICICIPRULI','ICICIGI','BAJAJHLDNG','CHOLAFIN',
+  'MFIN','MANAPPURAM','AAVAS','HOMEFIRST','CREDITACC','SBICARD','PNB','BANKBARODA',
+  'CANBK','UNIONBANK','IDFCFIRSTB','FEDERALBNK','BANDHANBNK','RBLBANK',
+]);
 
 const ALIAS_LOOKUP = {};
 for (const [canonical, aliases] of Object.entries(SYMBOL_ALIASES)) {
+  ALIAS_LOOKUP[canonical] = canonical; // self-map
   for (const alias of aliases) ALIAS_LOOKUP[alias.toUpperCase()] = canonical;
 }
 
 function normaliseSymbol(raw) {
-  const up = (raw || '').toUpperCase().trim();
-  return ALIAS_LOOKUP[up] ?? up;
+  const up = (raw || '').toUpperCase().trim().replace(/\s+/g, ' ');
+  const exact = ALIAS_LOOKUP[up];
+  if (exact) return { symbol: exact, confidence: 1.0 };
+
+  // Fuzzy fallback: check if raw is already a known NSE ticker
+  if (LIQUID_NSE.has(up)) return { symbol: up, confidence: 1.0 };
+
+  // Short unknown tokens are likely noise; longer ones may be valid smallcap tickers
+  const confidence = up.length >= 5 ? 0.75 : 0.50;
+  return { symbol: up, confidence };
 }
 
-// Event strength: LLM extracts this; we translate to a 1–5 multiplier.
-// Weak mention = 1.0, strong event (earnings beat, block deal, SEBI action) = up to 2.5
-const EVENT_STRENGTH_MAP = {
-  earnings_beat:    2.5,
-  earnings_miss:    2.5,  // strong negative event
-  block_deal:       2.2,
-  analyst_upgrade:  1.8,
-  analyst_downgrade:1.8,
+// ── Event strength — macro-context-aware ─────────────────────────────────────
+const EVENT_STRENGTH_BASE = {
+  earnings_beat:      2.5,
+  earnings_miss:      2.5,
+  block_deal:         2.2,
+  sebi_action:        2.0,
+  analyst_upgrade:    1.8,
+  analyst_downgrade:  1.8,
   price_target_raise: 1.6,
   price_target_cut:   1.6,
-  breakout_52wk:    1.5,
-  fii_buying:       1.4,
-  fii_selling:      1.4,
-  sebi_action:      2.0,
-  results_guidance: 1.3,
-  general_mention:  1.0,
+  breakout_52wk:      1.5,
+  fii_buying:         1.4,
+  fii_selling:        1.4,
+  results_guidance:   1.3,
+  general_mention:    1.0,
 };
 
-function eventStrengthMultiplier(eventType) {
-  return EVENT_STRENGTH_MAP[eventType] ?? 1.0;
+function eventStrengthMultiplier(eventType, regime) {
+  const base = EVENT_STRENGTH_BASE[eventType] ?? 1.0;
+  // On high-risk / bear regimes, bullish event strength is dampened
+  if (regime === 'strong_bear' || regime === 'bear') {
+    const bullishEvents = ['earnings_beat','analyst_upgrade','price_target_raise','breakout_52wk','fii_buying'];
+    if (bullishEvents.includes(eventType)) return base * 0.6;
+  }
+  // On strong-bull regimes, bearish event strength is dampened
+  if (regime === 'strong_bull') {
+    const bearishEvents = ['earnings_miss','analyst_downgrade','price_target_cut','fii_selling','sebi_action'];
+    if (bearishEvents.includes(eventType)) return base * 0.7;
+  }
+  return base;
 }
 
-// ── Macro risk cap ────────────────────────────────────────────────────────────
-// When macro risk is high or GIFT Nifty signals a gap-down, impose hard caps
-// on bullish scores rather than soft multipliers — this enforces the global
-// environment as a structural constraint, not just a nudge.
-function applyMacroCap(score, sentiment, macroRisk, giftNiftyBias) {
-  const isHighRisk = macroRisk === 'high';
-  const isGapDown  = giftNiftyBias === 'gap-down';
+// ── Market regime engine ──────────────────────────────────────────────────────
+// Consolidates macro signals into a discrete regime used for caps and event dampening.
+function deriveRegime(macroRisk, giftBias, vixState) {
+  const riskHigh   = macroRisk === 'high';
+  const riskMed    = macroRisk === 'medium';
+  const gapDown    = giftBias  === 'gap-down';
+  const gapUp      = giftBias  === 'gap-up';
+  const vixSpiking = vixState  === 'spiking';
+  const vixLow     = vixState  === 'low';
 
-  if (sentiment === 'bullish') {
-    if (isHighRisk && isGapDown) return Math.min(score, score * 0.30); // hard cap: 30%
-    if (isHighRisk)              return Math.min(score, score * 0.50); // hard cap: 50%
-    if (isGapDown)               return Math.min(score, score * 0.60); // hard cap: 60%
+  if (riskHigh && gapDown)              return 'strong_bear';
+  if (riskHigh || (gapDown && vixSpiking)) return 'bear';
+  if (!riskHigh && gapUp && vixLow)    return 'strong_bull';
+  if (!riskHigh && (gapUp || vixLow))  return 'bull';
+  return 'neutral';
+}
+
+// ── Market regime caps / tailwinds ────────────────────────────────────────────
+// Hard caps enforce the regime as a structural constraint, not a nudge.
+function applyRegimeCap(score, directionalBias, regime) {
+  if (directionalBias === 'long') {
+    if (regime === 'strong_bear') return score * 0.25;
+    if (regime === 'bear')        return score * 0.50;
+    if (regime === 'neutral')     return score * 0.80;
+    if (regime === 'strong_bull') return score * 1.20;
   }
-  if (sentiment === 'bearish') {
-    // Bearish picks get a tailwind when macro risk is high
-    if (isHighRisk) return score * 1.4;
-    if (isGapDown)  return score * 1.2;
+  if (directionalBias === 'short') {
+    if (regime === 'strong_bear') return score * 1.40;
+    if (regime === 'bear')        return score * 1.20;
+    if (regime === 'strong_bull') return score * 0.50;
+    if (regime === 'bull')        return score * 0.70;
   }
   return score;
+}
+
+// ── Directional bias derivation ───────────────────────────────────────────────
+// Separates textual sentiment from actual trade direction.
+// Nuanced cases: "profit booking" is bearish price action even if framed neutrally.
+const BEARISH_EVENT_TYPES = new Set([
+  'earnings_miss','analyst_downgrade','price_target_cut','fii_selling','sebi_action',
+]);
+const BULLISH_EVENT_TYPES = new Set([
+  'earnings_beat','analyst_upgrade','price_target_raise','fii_buying','breakout_52wk','block_deal',
+]);
+
+function deriveDirectionalBias(sentiment, eventType, regime) {
+  // Event type is stronger than sentiment label in ambiguous cases
+  if (BEARISH_EVENT_TYPES.has(eventType)) return 'short';
+  if (BULLISH_EVENT_TYPES.has(eventType)) return 'long';
+  // Fall back to sentiment
+  if (sentiment === 'bearish') return 'short';
+  if (sentiment === 'bullish') return 'long';
+  return 'neutral';
+}
+
+// ── Consensus — source + type diversity, log-capped ──────────────────────────
+// Beyond 3 unique sources, growth is logarithmic to prevent runaway amplification.
+// A diversity quality factor rewards high-reliability cross-type agreement
+// and penalises redundant same-outlet repetition.
+function consensusMultiplier(mentions) {
+  const distinctSources = new Set(mentions.map(m => m.source)).size;
+  const distinctTypes   = new Set(mentions.map(m => m.signal_type)).size;
+
+  // Log-capped source base: 1 → 1.0, 2 → 1.6, 3 → 2.4, 4+ → 2.4 + log(n-3) × 0.4
+  const sourceBase = distinctSources <= 1 ? 1.0
+                   : distinctSources === 2 ? 1.6
+                   : distinctSources === 3 ? 2.4
+                   : 2.4 + Math.log(distinctSources - 2) * 0.4;
+
+  // Type diversity bonus — capped at 1.5×
+  const typeDiversityBonus = Math.min(1.5, 1.0 + (distinctTypes - 1) * 0.3);
+
+  // Cross-type conviction bonus
+  const types = [...new Set(mentions.map(m => m.signal_type))];
+  const crossBonus = types.includes('smart_money') && types.includes('derivatives') ? 1.5
+                   : types.includes('institutional_flow') && types.includes('derivatives') ? 1.3
+                   : types.includes('smart_money') && types.includes('institutional_flow') ? 1.2
+                   : 1.0;
+
+  // Diversity quality factor: penalise if >60% of mentions from same outlet
+  const outletCounts = {};
+  for (const m of mentions) outletCounts[m.outlet || m.source] = (outletCounts[m.outlet || m.source] || 0) + 1;
+  const maxOutletShare = Math.max(...Object.values(outletCounts)) / mentions.length;
+  const diversityQuality = maxOutletShare > 0.6 ? 0.7 : 1.0;
+
+  return sourceBase * typeDiversityBonus * crossBonus * diversityQuality;
+}
+
+// ── Baseline normalization ────────────────────────────────────────────────────
+// Divides per-article contribution by the source's baseline_rate so high-volume
+// signal_types (media, market_direction) don't dominate over rare, precious ones
+// (smart_money) purely due to article density.
+// baseline_rate is sourced from the SOURCES registry per article.
+function baselineNorm(baselineRate) {
+  // Invert and clamp: low baseline (rare signal) → higher normalised weight
+  return 1 / Math.max(baselineRate ?? 0.5, 0.10);
 }
 
 // ── LLM — extraction only ─────────────────────────────────────────────────────
@@ -432,7 +567,7 @@ async function extractWithLLM(articles) {
 
   const prompt = `You are an intelligence extraction engine for an Indian equity trading system. Today is ${today} (${dayOfWeek}).
 
-Your ONLY job is to READ the news feed and EXTRACT structured data. Do NOT score, rank, or decide which stocks to buy. A separate deterministic scoring engine handles that. Extract accurately — do not hallucinate stocks not present in the feed.
+Your ONLY job is to READ the news feed and EXTRACT structured data. Do NOT score, rank, or decide which stocks to buy or sell. A separate deterministic engine handles scoring. Extract accurately — do not hallucinate stocks not present in the feed.
 
 INTELLIGENCE FEED (${articles.length} signals):
 ${block}
@@ -449,7 +584,7 @@ Return ONLY valid JSON:
       "sentiment": "bullish",
       "event_type": "analyst_upgrade",
       "reason": "One crisp sentence: what the signal says about this stock",
-      "detailed_reasoning": "2-3 sentences: what was reported, by whom, why it matters today",
+      "detailed_reasoning": "2-3 sentences: what was reported, by whom, and why it matters today",
       "key_risk": "One sentence: what could invalidate this signal today",
       "mentioned_by": ["Goldman India", "FII DII Net Flow"],
       "signal_types_seen": ["institutional_flow"],
@@ -470,19 +605,19 @@ Return ONLY valid JSON:
 }
 
 Rules:
-- symbol must be the canonical NSE ticker (e.g. HDFCBANK not "HDFC Bank")
-- Extract EVERY stock with a specific signal: buy/sell/short/downgrade/upgrade/earnings/block deal/OI buildup
+- symbol: use best-known NSE ticker (e.g. HDFCBANK, RELIANCE, SBIN)
+- Extract EVERY stock with a specific signal: buy/sell/short/upgrade/downgrade/earnings/block deal/OI buildup
 - sentiment: "bullish" | "bearish" | "neutral"
-- event_type: one of — earnings_beat | earnings_miss | analyst_upgrade | analyst_downgrade |
+- event_type: earnings_beat | earnings_miss | analyst_upgrade | analyst_downgrade |
   price_target_raise | price_target_cut | block_deal | breakout_52wk | fii_buying | fii_selling |
   sebi_action | results_guidance | general_mention
 - gift_nifty_bias: "gap-up" | "gap-down" | "flat" | "unknown"
 - vix_state: "low" | "elevated" | "spiking" | "unknown"
 - macro_risk: "low" | "medium" | "high"
-- Negative signals (downgrade, miss, SEBI, fraud) → sentiment: "bearish"
+- Negative signals → sentiment: "bearish"
 - Do not invent stocks absent from the feed
-- This layer is a CONTEXT INTELLIGENCE ENGINE — it captures what is being talked about.
-  Whether a stock actually moves is determined by price/volume triggers in a separate layer.
+- This layer is a CONTEXT INTELLIGENCE ENGINE: it captures what is being discussed.
+  Price and volume triggers in a separate layer determine actual trade execution.
 - ${dayOfWeek === 'Monday'   ? 'Monday: flag weekend gap-up catalysts and short-covering candidates.' : ''}
 - ${dayOfWeek === 'Thursday' ? 'Thursday expiry: flag max pain levels and options-pinning signals.' : ''}
 - ${dayOfWeek === 'Friday'   ? 'Friday: flag position-squaring and weekend-risk signals.' : ''}`;
@@ -493,64 +628,84 @@ Rules:
 
 // ── Deterministic scorer ───────────────────────────────────────────────────────
 function scoreAndRank(extractions, articles, marketContext) {
-  const macroRisk    = marketContext.macro_risk     || 'low';
-  const giftBias     = marketContext.gift_nifty_bias || 'unknown';
-  const dow          = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
+  const macroRisk = marketContext.macro_risk      || 'low';
+  const giftBias  = marketContext.gift_nifty_bias || 'unknown';
+  const vixState  = marketContext.vix_state       || 'unknown';
+  const regime    = deriveRegime(macroRisk, giftBias, vixState);
+  const dow       = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
+
+  // Assign novelty weights to all articles before scoring
+  const noveltyWeights = assignNoveltyWeights(articles);
 
   const scored = extractions.map(ext => {
-    const sym = normaliseSymbol(ext.symbol);
-    const co  = (ext.company || '').toLowerCase();
+    const { symbol: sym, confidence } = normaliseSymbol(ext.symbol);
+    const co = (ext.company || '').toLowerCase();
 
-    // Match articles to this stock by symbol or first 12 chars of company name
-    const mentions = articles.filter(a => {
-      if (a.signal_type === 'macro') return false; // macro never scores per-stock
+    // Derive directional bias from event_type + sentiment + regime
+    const directionalBias = deriveDirectionalBias(ext.sentiment, ext.event_type, regime);
+
+    // Match articles (excluding macro) to this stock
+    const matchedIdxs = [];
+    articles.forEach((a, idx) => {
+      if (a.signal_type === 'macro') return;
       const t = a.text.toLowerCase();
-      return t.includes(sym.toLowerCase())
-          || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))));
+      if (t.includes(sym.toLowerCase()) || (co.length > 4 && t.includes(co.slice(0, Math.min(co.length, 12))))) {
+        matchedIdxs.push(idx);
+      }
+    });
+    const mentions = matchedIdxs.map(i => articles[i]);
+
+    // Per-article score with novelty weight and baseline normalisation
+    let totalScore = 0;
+    matchedIdxs.forEach((articleIdx, i) => {
+      const m            = articles[articleIdx];
+      const typeWeight   = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
+      const reliability  = (m.reliability ?? 5) / 10;
+      const decay        = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
+      const novelty      = noveltyWeights[articleIdx];
+      const baseline     = baselineNorm(m.baseline_rate);
+      const sentimentAlign = m.sentiment_bias === 'bearish'
+        ? (directionalBias === 'short' ?  1.0 : -0.5)
+        : m.sentiment_bias === 'bullish'
+        ? (directionalBias === 'long'  ?  1.0 : -0.3)
+        : 0.7;
+      totalScore += typeWeight * reliability * decay * novelty * baseline * sentimentAlign;
     });
 
-    // Per-article score
-    let totalScore = 0;
-    for (const m of mentions) {
-      const typeWeight    = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
-      const reliability   = (m.reliability ?? 5) / 10;
-      const decay         = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
-      const sentimentSign = m.sentiment_bias === 'bearish'
-        ? (ext.sentiment === 'bearish' ?  1.0 : -0.5)
-        : m.sentiment_bias === 'bullish'
-        ? (ext.sentiment === 'bullish' ?  1.0 : -0.3)
-        : 0.7;
-      totalScore += typeWeight * reliability * decay * sentimentSign;
-    }
+    // Event strength — context-aware (dampened in adverse regimes)
+    const eventMult = eventStrengthMultiplier(ext.event_type || 'general_mention', regime);
 
-    // Event strength multiplier (from LLM-extracted event_type)
-    const eventMult = eventStrengthMultiplier(ext.event_type || 'general_mention');
-
-    // Consensus based on source + signal-type diversity, not raw count
+    // Consensus — log-capped, diversity-quality-adjusted
     const consensus = mentions.length ? consensusMultiplier(mentions) : 1.0;
 
     let score = totalScore * eventMult * consensus;
 
-    // Sector modifier from macro context (soft)
-    const sector = (ext.sector || '').toLowerCase();
-    const boosted    = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
-    const penalised  = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
-    score *= boosted ? 1.2 : penalised ? 0.7 : 1.0;
+    // Symbol confidence penalty — uncertain normalisations score less
+    score *= confidence;
+
+    // Sector-level macro modifier (soft)
+    const sector   = (ext.sector || '').toLowerCase();
+    const boosted  = (marketContext.boost_sectors    || []).some(s => sector.includes(s.toLowerCase()));
+    const penalise = (marketContext.penalise_sectors || []).some(s => sector.includes(s.toLowerCase()));
+    score *= boosted ? 1.2 : penalise ? 0.7 : 1.0;
 
     // Day-of-week timing
-    score *= dow === 'Monday' && ext.sentiment === 'bullish' ? 1.10
-           : dow === 'Friday' && ext.sentiment === 'bullish' ? 0.85
+    score *= dow === 'Monday' && directionalBias === 'long' ? 1.10
+           : dow === 'Friday' && directionalBias === 'long' ? 0.85
            : 1.0;
 
-    // Macro hard cap — enforces global environment as a structural constraint
-    score = applyMacroCap(score, ext.sentiment, macroRisk, giftBias);
+    // Regime hard cap / tailwind — structural constraint not nudge
+    score = applyRegimeCap(score, directionalBias, regime);
 
     return {
       ...ext,
-      symbol:        sym,
-      score:         +score.toFixed(3),
-      mention_count: mentions.length,
-      signal_types:  [...new Set(mentions.map(m => m.signal_type))],
+      symbol:          sym,
+      sym_confidence:  confidence,
+      directional_bias: directionalBias,
+      regime,
+      score:           +score.toFixed(3),
+      mention_count:   mentions.length,
+      signal_types:    [...new Set(mentions.map(m => m.signal_type))],
       distinct_sources: new Set(mentions.map(m => m.source)).size,
     };
   });
@@ -566,24 +721,27 @@ function scoreAndRank(extractions, articles, marketContext) {
     .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
     .slice(0, 10)
     .map((p, i) => ({
-      rank:               i + 1,
-      symbol:             p.symbol,
-      exchange:           p.exchange || 'NSE',
-      company:            p.company,
-      sector:             p.sector,
-      sentiment:          p.sentiment,
-      event_type:         p.event_type || 'general_mention',
-      confidence:         Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 1.5))),
-      score:              p.score,
-      reason:             p.reason,
+      rank:             i + 1,
+      symbol:           p.symbol,
+      exchange:         p.exchange || 'NSE',
+      company:          p.company,
+      sector:           p.sector,
+      sentiment:        p.sentiment,
+      directional_bias: p.directional_bias,
+      event_type:       p.event_type || 'general_mention',
+      regime,
+      confidence:       Math.min(5, Math.max(1, Math.round(Math.abs(p.score) * 1.5))),
+      score:            p.score,
+      sym_confidence:   p.sym_confidence,
+      reason:           p.reason,
       detailed_reasoning: p.detailed_reasoning,
-      key_risk:           p.key_risk,
-      mentioned_by:       p.mentioned_by || [],
-      signal_types:       p.signal_types,
-      mention_count:      p.mention_count,
-      distinct_sources:   p.distinct_sources,
-      intraday_note:      p.intraday_note || '',
-      context_only:       true, // this layer captures what is talked about; price/volume trigger is the execution gate
+      key_risk:         p.key_risk,
+      mentioned_by:     p.mentioned_by || [],
+      signal_types:     p.signal_types,
+      mention_count:    p.mention_count,
+      distinct_sources: p.distinct_sources,
+      intraday_note:    p.intraday_note || '',
+      context_only:     true,
     }));
 }
 
@@ -595,6 +753,11 @@ async function analyzeWithGroq(articles) {
   const marketContext = extracted.market_context || {};
 
   const picks = scoreAndRank(extractions, articles, marketContext);
+  const regime = picks[0]?.regime || deriveRegime(
+    marketContext.macro_risk || 'low',
+    marketContext.gift_nifty_bias || 'unknown',
+    marketContext.vix_state || 'unknown',
+  );
 
   return {
     picks,
@@ -602,10 +765,11 @@ async function analyzeWithGroq(articles) {
     macro_risk:       marketContext.macro_risk       || 'medium',
     gift_nifty_bias:  marketContext.gift_nifty_bias  || 'unknown',
     vix_state:        marketContext.vix_state        || 'unknown',
+    regime,
     top_sectors:      marketContext.top_sectors      || [],
     avoid_sectors:    marketContext.avoid_sectors    || [],
     summary:          marketContext.summary          || '',
-    algo_note:        'Backend scorer: signal_type_weight × (reliability/10) × signal_type_recency_decay × event_strength × consensus(source+type diversity) × macro_hard_cap. LLM extracts only.',
+    algo_note:        'Backend scorer: (typeWeight × reliability × recencyDecay × novelty × baselineNorm × sentimentAlign) × eventStrength(regime) × consensus(log-capped, diversity-quality) × symConfidence × sectorMod × regimeCap. LLM extracts only.',
     _provider:        provider,
   };
 }
