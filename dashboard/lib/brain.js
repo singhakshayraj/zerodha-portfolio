@@ -2,67 +2,159 @@
 import fs   from 'fs';
 import path from 'path';
 
-// ── Source registry — grouped by tier for LLM weighting ──────────────────────
-// Each entry: { label, q (Google News query), tier, category }
-// tier: 1=legend investors, 2=professional analysts, 3=fin-educators,
-//       4=options/derivatives, 5=data/official, 6=global macro
+// ── Source registry ───────────────────────────────────────────────────────────
+// signal_type: smart_money | institutional_flow | derivatives | market_direction
+//              macro | media | negative_events
+// sentiment_bias: bullish | bearish | neutral
+// reliability_score: 1–10 (how often this source leads to real price moves)
+// dynamic_weight: multiplier applied to each article's base score (start at 1.0)
+// max_age_hours: articles older than this are dropped per signal_type
 const SOURCES = [
-  // ── Tier 1 · Legend investors (weight 1.5×) ───────────────────────────────
-  { label: 'Vijay Kedia',       q: '"Vijay Kedia" stock portfolio NSE buy', tier: 1, cat: 'Legend Investor' },
-  { label: 'Basant Maheshwari', q: '"Basant Maheshwari" equity stock picks NSE', tier: 1, cat: 'Legend Investor' },
-  { label: 'Ramesh Damani',     q: '"Ramesh Damani" NSE stock recommendation', tier: 1, cat: 'Legend Investor' },
-  { label: 'Porinju Veliyath',  q: '"Porinju" stock multibagger portfolio India', tier: 1, cat: 'Legend Investor' },
-  { label: 'Nilesh Shah',       q: '"Nilesh Shah" stock market India', tier: 1, cat: 'Legend Investor' },
-  { label: 'Sanjay Bakshi',     q: '"Sanjay Bakshi" value investing India', tier: 1, cat: 'Legend Investor' },
-  { label: 'Mohnish Pabrai',    q: '"Pabrai" India stock investment', tier: 1, cat: 'Legend Investor' },
-  { label: 'Deepak Shenoy',     q: '"Deepak Shenoy" OR "Capital Mind" stock analysis India', tier: 1, cat: 'Legend Investor' },
-  { label: 'Mitesh Engineer',   q: '"Mitesh Engineer" OR "@Mitesh_Engr" stock buy India', tier: 1, cat: 'Legend Investor' },
-  { label: 'Raoul Pal',         q: '"Raoul Pal" emerging markets India macro', tier: 1, cat: 'Global Macro' },
+  // ── Smart Money — legend investors with disclosed/rumoured positions ────────
+  {
+    label: 'Vijay Kedia', tier: 1,
+    q: '"Vijay Kedia" stock buy accumulate NSE portfolio 2024 2025',
+    signal_type: 'smart_money', sentiment_bias: 'bullish',
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72,
+  },
+  {
+    label: 'Basant Maheshwari', tier: 1,
+    q: '"Basant Maheshwari" equity picks NSE accumulate strong buy',
+    signal_type: 'smart_money', sentiment_bias: 'bullish',
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72,
+  },
+  {
+    label: 'Deepak Shenoy', tier: 1,
+    q: '"Deepak Shenoy" OR "Capital Mind" stock buy NSE analysis 2025',
+    signal_type: 'smart_money', sentiment_bias: 'bullish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+  },
+  {
+    label: 'Mitesh Engineer', tier: 1,
+    q: '"Mitesh Engineer" OR "@Mitesh_Engr" stock buy target NSE intraday',
+    signal_type: 'smart_money', sentiment_bias: 'bullish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+  },
+  {
+    label: 'Porinju Veliyath', tier: 1,
+    q: '"Porinju Veliyath" stock portfolio NSE smallcap multibagger',
+    signal_type: 'smart_money', sentiment_bias: 'bullish',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 96,
+  },
 
-  // ── Tier 2 · Professional analysts & educators (weight 1.0×) ─────────────
-  { label: 'CA Rachana Ranade', q: '"Rachana Ranade" stock analysis fundamental NSE', tier: 2, cat: 'Analyst' },
-  { label: 'Pranjal Kamra',     q: '"Pranjal Kamra" stock pick India Finology', tier: 2, cat: 'Analyst' },
-  { label: 'Sharan Hegde',      q: '"Sharan Hegde" personal finance India stock', tier: 2, cat: 'Analyst' },
-  { label: 'Ankur Warikoo',     q: '"Ankur Warikoo" invest stock India', tier: 2, cat: 'Educator' },
-  { label: 'Varsity Zerodha',   q: '"Zerodha Varsity" stock market education India', tier: 2, cat: 'Educator' },
-  { label: 'QuantInsti',        q: '"QuantInsti" algorithmic trading India NSE strategy', tier: 2, cat: 'Quant' },
-  { label: 'ValuePickr',        q: 'ValuePickr stock research India fundamental', tier: 2, cat: 'Community' },
-  { label: 'El-Erian',          q: '"El-Erian" OR "Mohamed El Erian" emerging markets India', tier: 2, cat: 'Global Macro' },
+  // ── Institutional Flow — FII/DII/broker block deals ──────────────────────
+  {
+    label: 'FII DII Net Flow', tier: 5,
+    q: 'FII DII net buying selling India NSE BSE crore today 2025',
+    signal_type: 'institutional_flow', sentiment_bias: 'neutral',
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 24,
+  },
+  {
+    label: 'Block Deals', tier: 5,
+    q: 'NSE BSE block deal bulk deal FII institutional buy sell today India',
+    signal_type: 'institutional_flow', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+  },
+  {
+    label: 'Goldman India', tier: 6,
+    q: '"Goldman Sachs" India stock upgrade target raise NSE sector 2025',
+    signal_type: 'institutional_flow', sentiment_bias: 'bullish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 72,
+  },
+  {
+    label: 'JPMorgan India', tier: 6,
+    q: '"JPMorgan" India stock overweight upgrade price target 2025',
+    signal_type: 'institutional_flow', sentiment_bias: 'bullish',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 72,
+  },
 
-  // ── Tier 3 · Stock research community (weight 0.8×) ──────────────────────
-  { label: 'Investyadnya',      q: '"Investyadnya" stock pick India NSE BSE', tier: 3, cat: 'Research' },
-  { label: 'Alpha Ideas',       q: '"Alpha Ideas" OR "AlphaIdeas" stock India NSE', tier: 3, cat: 'Research' },
-  { label: 'StockMarketNerd',   q: '"StockMarketNerd" India stock analysis', tier: 3, cat: 'Research' },
-  { label: 'InvestingDaddy',    q: '"InvestingDaddy" stock India NSE recommendation', tier: 3, cat: 'Research' },
-  { label: 'EquityRush',        q: 'EquityRush India NSE stock momentum', tier: 3, cat: 'Research' },
-  { label: 'TradeSmartLive',    q: '"TradeSmartLive" OR "TradeSmart" India stock trade', tier: 3, cat: 'Research' },
-  { label: 'FundamentalCap',    q: 'Fundamental Capital India stock NSE analysis', tier: 3, cat: 'Research' },
-  { label: 'FI InvestIndia',    q: '"Invest India" FII FDI sector stock news', tier: 3, cat: 'Research' },
+  // ── Derivatives — OI buildup, PCR, unusual options activity ─────────────
+  {
+    label: 'Nifty Options OI', tier: 4,
+    q: 'Nifty options OI buildup call put PCR unusual activity today NSE',
+    signal_type: 'derivatives', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12,
+  },
+  {
+    label: 'BankNifty Flow', tier: 4,
+    q: 'BankNifty options OI max pain support resistance expiry today',
+    signal_type: 'derivatives', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12,
+  },
+  {
+    label: 'Stock OI Buildup', tier: 4,
+    q: 'NSE stock options open interest long buildup short covering today India',
+    signal_type: 'derivatives', sentiment_bias: 'bullish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12,
+  },
 
-  // ── Tier 4 · Options & derivatives (weight 1.1× for intraday) ────────────
-  { label: 'Options Signals',   q: 'Nifty BankNifty options OI unusual activity call put today', tier: 4, cat: 'Options' },
-  { label: 'BankNifty Flow',    q: 'BankNifty options strategy PCR OI today India', tier: 4, cat: 'Options' },
-  { label: 'Derivatives Flow',  q: 'NSE derivatives open interest buildup India stock', tier: 4, cat: 'Options' },
-  { label: 'Volatility',        q: 'India VIX volatility options theta strategy NSE', tier: 4, cat: 'Options' },
+  // ── Market Direction — GIFT Nifty, VIX, breadth ──────────────────────────
+  {
+    label: 'GIFT Nifty Signal', tier: 5,
+    q: 'GIFT Nifty SGX gap up gap down premium discount NSE opening today',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 8,
+  },
+  {
+    label: 'India VIX', tier: 5,
+    q: 'India VIX fear greed NSE volatility index spike fall today',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12,
+  },
+  {
+    label: 'NSE Breakouts', tier: 3,
+    q: 'NSE stock 52-week high breakout volume surge momentum rally today India',
+    signal_type: 'market_direction', sentiment_bias: 'bullish',
+    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 24,
+  },
 
-  // ── Tier 5 · Official & data sources (weight 1.3×) ───────────────────────
-  { label: 'NSE Official',      q: 'NSE India official announcement stock circuit today', tier: 5, cat: 'Official' },
-  { label: 'BSE Official',      q: 'BSE India official announcement stock result today', tier: 5, cat: 'Official' },
-  { label: 'Stats of India',    q: 'India economic data GDP inflation RBI stock market impact', tier: 5, cat: 'Data' },
-  { label: 'India Data Hub',    q: 'India sector data FII DII flow stock market', tier: 5, cat: 'Data' },
-  { label: 'FII DII Flow',      q: 'FII DII buying selling India stock today NSE BSE', tier: 5, cat: 'Data' },
+  // ── Macro — RBI, budget, policy, global risk ─────────────────────────────
+  {
+    label: 'RBI Policy', tier: 5,
+    q: 'RBI repo rate policy decision India inflation banking stock impact 2025',
+    signal_type: 'macro', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+  },
+  {
+    label: 'Global Macro Risk', tier: 6,
+    q: 'US Fed DXY dollar crude oil treasury yield India NSE impact today',
+    signal_type: 'macro', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24,
+  },
 
-  // ── Tier 6 · Global macro (weight 0.9× applied as risk filter) ───────────
-  { label: 'Goldman Sachs',     q: '"Goldman Sachs" India emerging markets stock outlook', tier: 6, cat: 'Global Macro' },
-  { label: 'JPMorgan',          q: '"JPMorgan" India stock market emerging markets', tier: 6, cat: 'Global Macro' },
-  { label: 'ZeroHedge',         q: 'ZeroHedge India emerging markets risk macro', tier: 6, cat: 'Global Macro' },
-  { label: 'Global Macro Risk', q: 'US Fed dollar DXY crude oil impact India NSE today', tier: 6, cat: 'Global Macro' },
-  { label: 'GIFT Nifty Signal', q: 'GIFT Nifty SGX Nifty premium discount gap up gap down NSE opening today', tier: 5, cat: 'Leading Indicator' },
+  // ── Media — earnings, upgrades, analyst targets ───────────────────────────
+  {
+    label: 'Earnings Beats', tier: 5,
+    q: 'India quarterly results earnings beat profit above estimate NSE stock today',
+    signal_type: 'media', sentiment_bias: 'bullish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+  },
+  {
+    label: 'Analyst Upgrades', tier: 2,
+    q: 'India NSE stock analyst upgrade buy strong buy target raised ICICI Morgan Motilal 2025',
+    signal_type: 'media', sentiment_bias: 'bullish',
+    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 48,
+  },
 
-  // ── Momentum & technicals ─────────────────────────────────────────────────
-  { label: 'NSE Breakout',      q: 'NSE stock 52-week high breakout momentum rally today', tier: 3, cat: 'Technical' },
-  { label: 'Midcap Momentum',   q: 'Indian midcap smallcap stock breakout rally today NSE BSE', tier: 3, cat: 'Technical' },
-  { label: 'Results Season',    q: 'India quarterly results earnings beat stock NSE today', tier: 3, cat: 'Fundamental' },
+  // ── Negative Events — downgrades, warnings, weak guidance ────────────────
+  {
+    label: 'Earnings Misses', tier: 5,
+    q: 'India quarterly results earnings miss profit below estimate NSE stock today',
+    signal_type: 'negative_events', sentiment_bias: 'bearish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48,
+  },
+  {
+    label: 'Analyst Downgrades', tier: 2,
+    q: 'India NSE stock analyst downgrade sell reduce underperform target cut 2025',
+    signal_type: 'negative_events', sentiment_bias: 'bearish',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48,
+  },
+  {
+    label: 'Regulatory Risk', tier: 5,
+    q: 'India NSE stock SEBI penalty fraud promoter pledge warning circuit today',
+    signal_type: 'negative_events', sentiment_bias: 'bearish',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24,
+  },
 ];
 
 const NEWS_BASE = 'https://news.google.com/rss/search';
@@ -78,7 +170,8 @@ async function fetchNewsItems(source, maxItems = 4) {
     if (!res.ok) return [];
     const xml = await res.text();
 
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const maxAgeMs = (source.max_age_hours ?? 168) * 60 * 60 * 1000;
+    const cutoff   = Date.now() - maxAgeMs;
     const items = [];
     const itemRe = /<item>([\s\S]*?)<\/item>/g;
     let m;
@@ -86,7 +179,7 @@ async function fetchNewsItems(source, maxItems = 4) {
       const block = m[1];
       const dateStr = (block.match(/<pubDate>(.*?)<\/pubDate>/) || [])[1];
       const ts = dateStr ? new Date(dateStr).getTime() : Date.now();
-      if (ts < oneWeekAgo) continue;
+      if (ts < cutoff) continue;
 
       const titleRaw = (block.match(/<title>([\s\S]*?)<\/title>/) || [])[1] || '';
       const descRaw  = (block.match(/<description>([\s\S]*?)<\/description>/) || [])[1] || '';
@@ -104,12 +197,15 @@ async function fetchNewsItems(source, maxItems = 4) {
       // Cap text at 220 chars to keep total prompt under Groq's 12k TPM limit
       const trimmed = text.length > 220 ? text.slice(0, 217) + '…' : text;
       if (trimmed.length > 40) items.push({
-        source: source.label,
-        tier: source.tier,
-        cat: source.cat,
-        outlet: clean(outletRaw),
-        text: trimmed,
-        daysAgo: Math.round((Date.now() - ts) / 86400000),
+        source:      source.label,
+        tier:        source.tier,
+        signal_type: source.signal_type,
+        sentiment_bias: source.sentiment_bias,
+        reliability: source.reliability_score,
+        outlet:      clean(outletRaw),
+        text:        trimmed,
+        daysAgo:     Math.round((Date.now() - ts) / 86400000),
+        hoursAgo:    Math.round((Date.now() - ts) / 3600000),
       });
     }
     return items;
@@ -196,72 +292,72 @@ async function analyzeWithGroq(articles) {
   const dayOfWeek = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
   const block = articles.map(a =>
-    `[T${a.tier}·${a.cat}·${a.daysAgo}d·${a.source}·${a.outlet}]: ${a.text}`
+    `[${a.signal_type}·R${a.reliability}·${a.hoursAgo}h·${a.sentiment_bias}·${a.source}·${a.outlet}]: ${a.text}`
   ).join('\n\n');
 
-  const prompt = `You are the CIO of a top Indian quant hedge fund. Today is ${today} (${dayOfWeek}). Your job is to identify the TOP 10 Indian NSE/BSE stocks with the highest probability of POSITIVE intraday price movement today.
+  const prompt = `You are the CIO of a top Indian quant hedge fund. Today is ${today} (${dayOfWeek}). Identify the TOP 10 Indian NSE/BSE stocks with the highest probability of SIGNIFICANT intraday price movement today — long OR short.
 
-You have ${articles.length} intelligence signals below, tagged with:
-- T1=Legend Investors (1.5× weight) · T2=Professional Analysts (1.0×) · T3=Community Research (0.8×)
-- T4=Options/Derivatives (1.1× for intraday) · T5=Official/Data (1.3×) · T6=Global Macro (risk filter)
-- Days-ago field = signal recency (0d=today=1.0×, 1d=0.85×, 2-3d=0.65×, 4-7d=0.4×)
+You have ${articles.length} intelligence signals tagged with:
+  signal_type · reliability (R1–R10) · age in hours · sentiment_bias · source name · outlet
+
+SIGNAL TYPES AND BASE WEIGHTS:
+  smart_money       = 1.5× (legend investors with skin in the game)
+  institutional_flow= 1.4× (FII/DII/block deals — real money moving)
+  derivatives       = 1.2× (OI buildup, PCR — forward-looking)
+  market_direction  = 1.3× (GIFT Nifty, VIX — market-wide setup)
+  macro             = 0.9× (RBI, global — risk filter, not alpha source)
+  media             = 0.8× (analyst reports, news — lagging, lower weight)
+  negative_events   = 1.3× (downgrades, misses, fraud — SHORT candidates)
+
+RELIABILITY SCORE: multiply base weight by (R / 10). R10 source = full weight, R5 = half.
 
 ═══════════════════════════════════════════════════════════
 INTELLIGENCE FEED:
 ${block}
 ═══════════════════════════════════════════════════════════
 
-ALGORITHM — apply ALL 7 factors for each stock candidate:
+SCORING ALGORITHM — apply all factors:
 
-FACTOR 1 · EXPERT CREDIBILITY (use tier weights above)
-  Score each mention by the source tier and multiply.
+FACTOR 1 · SIGNAL TYPE WEIGHT × RELIABILITY
+  Use table above. A smart_money R9 source = 1.5 × 0.9 = 1.35 multiplier.
 
-FACTOR 2 · SIGNAL STRENGTH
-  Explicit buy/accumulate: +5 | Price target raised: +4 | Earnings beat/strong results: +4
-  Technical breakout (52wk high, volume surge): +3 | Sector rotation inflow: +3
-  Unusual options activity / high OI buildup: +4 | FII/DII net buying: +3
-  Analyst upgrade: +3 | General mention/bullish commentary: +1
+FACTOR 2 · SIGNAL STRENGTH (per article)
+  BULLISH signals: Explicit buy/accumulate +5 | Target raised +4 | Earnings beat +4
+    52wk breakout/volume surge +3 | FII net buying +3 | Unusual call OI +4 | Upgrade +3
+  BEARISH signals (negative_events bias): Earnings miss −4 | Downgrade/target cut −4
+    SEBI action/fraud −5 | Profit booking / weak guidance −3 | Short buildup OI −3
+  Neutral: general mention ±1
 
-FACTOR 3 · RECENCY DECAY
-  Apply: 0d=1.0 · 1d=0.85 · 2-3d=0.65 · 4-7d=0.4 multiplier to raw score.
+FACTOR 3 · RECENCY DECAY (use hoursAgo field)
+  <6h=1.0 · 6–12h=0.9 · 12–24h=0.75 · 24–48h=0.55 · 48–72h=0.4 · >72h=0.25
 
 FACTOR 4 · CONSENSUS MULTIPLIER
-  1 expert=1× · 2 experts=1.8× · 3=3× · 4+=5×
-  Cross-tier consensus (T1 + T4 options signal on same stock) = extra 1.5× bonus.
+  1 source=1× · 2 sources=1.8× · 3=3× · 4+=5×
+  Cross-type consensus (smart_money + derivatives on same stock) = +1.5× bonus.
 
-FACTOR 5 · TECHNICAL & OPTIONS OVERLAY
-  If options signals (T4) show high PCR, unusual call buying, max pain above CMP → +2
-  If stock near 52-week high breakout → +2 · If stock in oversold bounce zone → +1
-  High delivery % + volume surge → +2
+FACTOR 5 · DERIVATIVES & MARKET DIRECTION OVERLAY
+  market_direction: If GIFT Nifty premium >+0.5% → gap-up day; boost high-beta (banks, autos, metals)
+                    If GIFT Nifty discount >−0.5% → gap-down; prefer defensive (pharma, FMCG, IT exporters)
+                    If VIX spiking → reduce position size on all picks; favour put-side
+  derivatives:      High PCR + unusual call buying + max pain above CMP → +2
+                    High put OI buildup / short interest rising → bearish signal −2
 
-FACTOR 5b · GIFT NIFTY LEADING SIGNAL (apply before other factors)
-  GIFT Nifty trades ~16 hrs/day before Indian market opens — it's the single best gap predictor.
-  If GIFT Nifty premium > +0.5% vs prev Nifty close → expect gap-up; boost high-beta stocks (banks, autos, metals)
-  If GIFT Nifty discount > -0.5% → expect gap-down; prefer defensive (pharma, FMCG, IT exporters)
-  If GIFT Nifty flat (±0.2%) → range-bound day likely; favour mean-reversion and options theta plays
-  Use any GIFT Nifty news/signal found in T5 sources to confirm or contradict the macro picture.
+FACTOR 6 · MACRO RISK FILTER (macro signal_type)
+  Risk-off (DXY up, crude spike, US yields high): penalise rate-sensitive (IT, NBFCs) ×0.7
+  Risk-on (global rally, FII inflows): boost export IT, metals, pharma ×1.2
+  Crude rising: boost energy/OMC; penalise aviation, paints
 
-FACTOR 6 · GLOBAL MACRO FILTER (T6 signals)
-  If global risk-off (DXY up, crude spike, US yields spiking): penalise rate-sensitive (IT, NBFCs) by 0.7×
-  If risk-on (global rally, FII inflows): boost export IT, metals, pharma by 1.2×
-  If crude oil rising: boost energy/OMC but penalise aviation/paint cos.
-  Apply this as a sector-level multiplier to all individual scores.
+FACTOR 7 · INTRADAY TIMING
+  ${dayOfWeek === 'Monday' ? 'MONDAY: gap-up plays, weekend catalysts, short covering.' : ''}
+  ${dayOfWeek === 'Friday' ? 'FRIDAY: avoid illiquid mid/smallcap; favour large-cap defensive — weekend risk.' : ''}
+  ${dayOfWeek === 'Thursday' ? 'THURSDAY EXPIRY: max pain targeting; options OI drives intraday pinning.' : ''}
+  confidence≥4 → large/midcap only · confidence≤2 → smallcap acceptable
 
-FACTOR 7 · INTRADAY TIMING FIT
-  ${dayOfWeek === 'Monday' ? 'MONDAY: favour gap-up plays, weekend news catalysts, short covering candidates.' : ''}
-  ${dayOfWeek === 'Friday' ? 'FRIDAY: avoid illiquid mid/smallcaps, favour large-cap defensive — weekend risk.' : ''}
-  Prefer high-liquidity large/midcap for confidence≥4; smallcap only for confidence≤2.
-  Expiry week (Thu): boost stocks with high options OI as max pain targets.
+NEGATIVE EVENTS HANDLING:
+  Stocks with negative_events signals should appear as "bearish" picks (short/avoid candidates).
+  They are valid picks if the signal is strong and fresh — mark sentiment: "bearish", confidence reflects short conviction.
 
-FINAL SCORE = (CredibilityWeight × SignalStrength × RecencyDecay × ConsensusMultiplier × MacroFilter × TimingFit)
-
-REASONING TYPES TO APPLY FOR EACH PICK:
-  a) Fundamental: earnings quality, revenue growth, promoter holding
-  b) Technical: price action, volume, moving averages, breakout levels
-  c) Sentiment: expert conviction, social consensus, news momentum
-  d) Quantitative: OI data, PCR, FII/DII flows, delivery percentage
-  e) Macro: sector tailwinds, currency impact, global peer moves
-  f) Contrarian: oversold quality stocks, negative news overreaction
+FINAL SCORE = SignalTypeWeight × Reliability × SignalStrength × RecencyDecay × ConsensusMultiplier × MacroFilter × TimingFit
 
 Return ONLY valid JSON — no markdown, no text outside the JSON object:
 
@@ -276,13 +372,13 @@ Return ONLY valid JSON — no markdown, no text outside the JSON object:
       "sentiment": "bullish",
       "confidence": 5,
       "score": 42.5,
-      "reasoning_types": ["Fundamental", "Sentiment", "Technical"],
+      "reasoning_types": ["Institutional Flow", "Derivatives"],
       "reason": "One crisp sentence with the primary signal",
-      "detailed_reasoning": "2-3 sentence breakdown covering signal source, factor scores, and why intraday upside is likely",
-      "key_risk": "One sentence: what could invalidate this pick today",
-      "mentioned_by": ["Basant Maheshwari", "Deepak Shenoy"],
-      "signal_types": ["Earnings Beat", "FII Buying"],
-      "intraday_note": "Watch for breakout above 2950; stop-loss at 2890"
+      "detailed_reasoning": "2-3 sentences: signal source, factor scores, why intraday move is likely",
+      "key_risk": "One sentence: what invalidates this pick today",
+      "mentioned_by": ["FII DII Net Flow", "Stock OI Buildup"],
+      "signal_types": ["institutional_flow", "derivatives"],
+      "intraday_note": "Watch breakout above 2950; stop-loss at 2890"
     }
   ],
   "market_sentiment": "bullish",
@@ -295,10 +391,12 @@ Return ONLY valid JSON — no markdown, no text outside the JSON object:
 
 Rules:
 - Return exactly 10 picks sorted by score descending (rank 1=highest score)
-- confidence: 1–5 integer · score: float (raw algorithm output)
+- sentiment: "bullish" | "bearish" | "neutral"
+- confidence: 1–5 integer · score: float
 - macro_risk: "low" | "medium" | "high"
+- Bearish picks (negative_events) are valid — they are short/avoid candidates
 - Only NSE/BSE listed Indian stocks
-- If fewer than 10 are explicitly signalled, infer additional from sector/macro themes — mark intraday_note as "Thematic — no explicit signal"`;
+- If fewer than 10 are explicitly signalled, infer from sector/macro themes — mark intraday_note: "Thematic — no explicit signal"`;
 
   const { result, provider } = await callLLM(prompt);
   return { ...result, _provider: provider };
@@ -332,12 +430,13 @@ async function fetchFresh() {
   if (articles.length === 0) throw new Error('No articles fetched');
 
   const analysis = await analyzeWithGroq(articles);
+  const signalTypes = ['smart_money','institutional_flow','derivatives','market_direction','macro','media','negative_events'];
   const result = {
     ...analysis,
-    article_count:   articles.length,
-    sources_fetched: [...new Set(articles.map(a => a.source))],
-    tier_breakdown:  Object.fromEntries(
-      [1,2,3,4,5,6].map(t => [`tier_${t}`, articles.filter(a => a.tier === t).length])
+    article_count:       articles.length,
+    sources_fetched:     [...new Set(articles.map(a => a.source))],
+    signal_breakdown:    Object.fromEntries(
+      signalTypes.map(t => [t, articles.filter(a => a.signal_type === t).length])
     ),
     powered_by:   analysis._provider || 'Groq (llama-3.3-70b)',
     generated_at: new Date().toISOString(),
