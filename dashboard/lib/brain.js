@@ -1,7 +1,7 @@
 // Market Brain — named exports consumed by api/intel.js
 import fs   from 'fs';
 import path from 'path';
-import { fetchCalibration, persistPicks, recordOutcomes, refreshSourceStats, buildMonitor } from './outcomes.js';
+import { fetchCalibration, persistPicks, recordOutcomes, refreshSourceStats, buildMonitor, resolveCalibration, vixBucket, timeBucket } from './outcomes.js';
 
 // ── Source registry ───────────────────────────────────────────────────────────
 // baseline_rate: expected article density for this signal_type (0–1).
@@ -294,13 +294,18 @@ const SIGNAL_TYPE_WEIGHTS = {
 };
 
 // ── Reliability blending hook ─────────────────────────────────────────────────
-// Currently returns the prior / 10. When outcome tracking exists (Supabase
-// win-rate table per source), replace outcomeRate + sampleSize to blend.
-// decayFactor converges toward outcome data as sampleSize grows — no arch change needed.
+// Blends prior reliability_score with observed win_rate from outcome calibration.
+// Prior floor of 20% is always retained — observed data can capture at most 80%
+// weight even at very high sample sizes, preventing overfitting to recent regimes.
+// Observed weight grows linearly: 5% at n=5 samples, 50% at n=50, 80% at n=100+.
+// resolveCalibration() picks the most specific segment available; if no segment
+// qualifies (too few samples or missing), outcomeRate stays null → pure prior.
 function blendedReliability(priorScore, outcomeRate = null, sampleSize = 0) {
-  if (outcomeRate === null || sampleSize < 10) return priorScore / 10;
-  const decay = Math.max(0.10, 1 - sampleSize / 100);
-  return (priorScore / 10) * decay + outcomeRate * (1 - decay);
+  const prior = priorScore / 10; // normalise 0–10 → 0–1
+  if (outcomeRate === null || sampleSize < 5) return prior;
+  const PRIOR_FLOOR    = 0.20;                           // always retain at least 20% prior
+  const observedWeight = Math.min(1 - PRIOR_FLOOR, sampleSize / 100); // max 0.80 at n≥100
+  return prior * (1 - observedWeight) + outcomeRate * observedWeight;
 }
 
 // ── Continuous exponential recency decay — defined by half-life per type ──────
@@ -705,6 +710,10 @@ function scoreAndRank(extractions, articles, marketContext, calibrationMap = new
   const regime    = deriveRegime(macroRisk, giftBias, vixState);
   const dow       = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
+  // Context buckets — shared across all articles in this cycle
+  const vixBkt  = vixBucket(vixState);
+  const timeBkt = timeBucket();
+
   const noveltyWeights = assignNoveltyWeights(articles);
 
   // Strict universe filter: drop extractions below confidence threshold
@@ -738,12 +747,15 @@ function scoreAndRank(extractions, articles, marketContext, calibrationMap = new
     matchedIdxs.forEach(articleIdx => {
       const m            = articles[articleIdx];
       const typeWeight   = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
-      // Pull observed outcome rate from calibration if available (source-level segment)
-      const calSrc  = calibrationMap.get(`source::${m.source}`);
+      // Hierarchical segment resolution: full context → partial → prior fallback
+      const calSeg = resolveCalibration(
+        calibrationMap, m.source, m.signal_type,
+        ext.event_type, regime, vixBkt, timeBkt,
+      );
       const reliability  = blendedReliability(
         m.reliability ?? 5,
-        calSrc?.win_rate   ?? null,
-        calSrc?.sample_size ?? 0,
+        calSeg?.win_rate   ?? null,
+        calSeg?.sample_size ?? 0,
       );
       const decay        = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
       const novelty      = noveltyWeights[articleIdx];
@@ -890,6 +902,10 @@ async function analyzeWithGroq(articles) {
   // Fetch outcome-based calibration (non-blocking: empty Map on failure = no-op)
   const calibrationMap = await fetchCalibration().catch(() => new Map());
 
+  // Derive context buckets here so monitor can report them
+  const vixBkt  = vixBucket(marketContext.vix_state || '');
+  const timeBkt = timeBucket();
+
   const picks         = scoreAndRank(extractions, articles, marketContext, calibrationMap);
   const monitorRaw    = picks._monitor ?? {};
   delete picks._monitor;
@@ -900,13 +916,15 @@ async function analyzeWithGroq(articles) {
   );
 
   const monitor = buildMonitor({
-    totalExtractions:  monitorRaw.totalExtractions  ?? extractions.length,
-    dropped:           monitorRaw.droppedLowConf    ?? 0,
+    totalExtractions:    monitorRaw.totalExtractions    ?? extractions.length,
+    dropped:             monitorRaw.droppedLowConf      ?? 0,
     evidenceGateDropped: monitorRaw.evidenceGateDropped ?? 0,
-    scoreFloorDropped: monitorRaw.scoreFloorDropped ?? 0,
-    emittedPicks:      picks.length,
+    scoreFloorDropped:   monitorRaw.scoreFloorDropped   ?? 0,
+    emittedPicks:        picks.length,
     articles,
     calibrationMap,
+    vixBkt,
+    timeBkt,
   });
 
   return {

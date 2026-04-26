@@ -138,6 +138,15 @@ export async function supabaseUpdate(table, id, patch) {
   return r.json();
 }
 
+export async function supabaseDelete(table, filter) {
+  configured();
+  const r = await fetch(`${BASE}/rest/v1/${table}?${filter}`, {
+    method:  'DELETE',
+    headers: headers(),
+  });
+  if (!r.ok) throw new Error(`Supabase delete ${table}: ${await r.text()}`);
+}
+
 // ── brain_cache ───────────────────────────────────────────────────────────────
 // Single-row cache: id=1 always upserted. Stores full brain result + timestamp.
 

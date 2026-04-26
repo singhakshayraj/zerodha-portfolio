@@ -66,6 +66,8 @@ create table if not exists brain_picks (
   mention_count    integer default 0,
   distinct_sources integer default 0,
   ltp_at_emit      numeric,
+  vix_bucket       text default 'normal',   -- low | normal | high
+  time_bucket      text default 'midday',   -- opening | midday | closing
   emitted_at       timestamptz default now(),
   windows_pending  jsonb default '["30min","1hr","eod"]'
 );
@@ -89,7 +91,9 @@ create table if not exists brain_outcomes (
   return_pct        numeric,
   direction_correct boolean,
   mae               numeric default 0,  -- max adverse excursion (approx)
-  source_ids        jsonb default '[]', -- contributing sources for rollup
+  vix_bucket        text default 'normal',   -- inherited from pick
+  time_bucket       text default 'midday',   -- inherited from pick
+  source_ids        jsonb default '[]',      -- contributing sources for rollup
   recorded_at       timestamptz default now()
 );
 create index if not exists brain_outcomes_pick_id     on brain_outcomes(pick_id);
@@ -101,11 +105,13 @@ create index if not exists brain_outcomes_window      on brain_outcomes(window);
 -- Upserted on segment_key. Powers blendedReliability() calibration.
 create table if not exists brain_source_stats (
   segment_key   text primary key,
-  segment_type  text,    -- 'source' | 'signal'
+  segment_type  text,    -- 'source' | 'source_vix' | 'source_time' | 'source_full' | 'signal'
   source_id     text,
   signal_type   text,
   event_type    text,
   regime        text,
+  vix_bucket    text,    -- low | normal | high | null (source-only segments)
+  time_bucket   text,    -- opening | midday | closing | null
   win_rate      numeric,
   avg_return    numeric,
   avg_drawdown  numeric,
@@ -121,3 +127,18 @@ alter table brain_cache          disable row level security;
 alter table brain_picks          disable row level security;
 alter table brain_outcomes       disable row level security;
 alter table brain_source_stats   disable row level security;
+
+-- ── Migrations — run if tables already exist ──────────────────────────────────
+-- Add context-bucket columns to existing deployed tables (idempotent — safe to re-run)
+alter table brain_picks         add column if not exists vix_bucket  text default 'normal';
+alter table brain_picks         add column if not exists time_bucket text default 'midday';
+alter table brain_outcomes      add column if not exists vix_bucket  text default 'normal';
+alter table brain_outcomes      add column if not exists time_bucket text default 'midday';
+alter table brain_source_stats  add column if not exists vix_bucket  text;
+alter table brain_source_stats  add column if not exists time_bucket text;
+
+-- Index for common calibration queries
+create index if not exists brain_source_stats_source_id  on brain_source_stats(source_id);
+create index if not exists brain_source_stats_updated_at on brain_source_stats(updated_at desc);
+create index if not exists brain_outcomes_vix_bucket     on brain_outcomes(vix_bucket);
+create index if not exists brain_outcomes_time_bucket    on brain_outcomes(time_bucket);
