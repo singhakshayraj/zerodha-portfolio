@@ -623,12 +623,6 @@ function consensusMultiplier(mentions) {
   return Math.min(4.0, sourceBase * typeDiversityBonus * crossBonus * diversityQuality);
 }
 
-// ── Baseline normalization — floored and capped ───────────────────────────────
-function baselineNorm(baselineRate) {
-  const floored = Math.max(baselineRate ?? 0.5, 0.15);
-  return Math.min(1 / floored, 2.5);
-}
-
 // ── LLM — extraction only ─────────────────────────────────────────────────────
 async function extractWithLLM(articles) {
   const key = process.env.GROQ_API_KEY || process.env.GOOGLE_API_KEY;

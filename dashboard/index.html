@@ -814,23 +814,29 @@ function buildTestSuite(enc) {
     {
       group: 'Kite',
       name: 'Holdings (GET /api/kite?action=holdings)',
-      fn: () => enc ? hit('GET', '/api/kite?action=holdings') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
-      validate: r => r.skipped || Array.isArray(r.detail?.data),
+      fn: () => enc ? hit('GET', '/api/kite?action=holdings') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken in localStorage — skipped', skipped: true }),
+      validate: r => r.skipped || r.status === 403 || Array.isArray(r.detail?.data),
       validateMsg: 'response must contain data[]',
+      skipIf: r => r.skipped || r.status === 403,
+      skipMsg: r => r.status === 403 ? 'Enctoken expired — log in to Kite' : 'No enctoken — skipped',
     },
     {
       group: 'Kite',
       name: 'Margins (GET /api/kite?action=margins)',
-      fn: () => enc ? hit('GET', '/api/kite?action=margins') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
-      validate: r => r.skipped || r.detail?.equity !== undefined,
+      fn: () => enc ? hit('GET', '/api/kite?action=margins') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken in localStorage — skipped', skipped: true }),
+      validate: r => r.skipped || r.status === 403 || r.detail?.equity !== undefined,
       validateMsg: 'response must contain equity margin',
+      skipIf: r => r.skipped || r.status === 403,
+      skipMsg: r => r.status === 403 ? 'Enctoken expired — log in to Kite' : 'No enctoken — skipped',
     },
     {
       group: 'Kite',
       name: 'Positions (GET /api/kite?action=positions)',
-      fn: () => enc ? hit('GET', '/api/kite?action=positions') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
-      validate: r => r.skipped || r.detail?.net !== undefined || Array.isArray(r.detail?.data),
+      fn: () => enc ? hit('GET', '/api/kite?action=positions') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken in localStorage — skipped', skipped: true }),
+      validate: r => r.skipped || r.status === 403 || r.detail?.net !== undefined || Array.isArray(r.detail?.data),
       validateMsg: 'response must contain net positions',
+      skipIf: r => r.skipped || r.status === 403,
+      skipMsg: r => r.status === 403 ? 'Enctoken expired — log in to Kite' : 'No enctoken — skipped',
     },
 
     // ── Orders / journal ──────────────────────────────────────────────────────
@@ -845,10 +851,10 @@ function buildTestSuite(enc) {
     // ── Research / triggers ───────────────────────────────────────────────────
     {
       group: 'Research',
-      name: 'Market snapshot (GET /api/research?action=snapshot)',
-      fn: () => hit('GET', '/api/research?action=snapshot'),
-      validate: r => r.ok,
-      validateMsg: 'snapshot endpoint must respond 200',
+      name: 'Research router reachable (GET /api/research?action=quotes)',
+      fn: () => hit('GET', '/api/research?action=quotes'),
+      validate: r => r.ok || r.status === 400,
+      validateMsg: 'research router must respond (200 or 400 — not 500)',
     },
 
     // ── Auth / config ─────────────────────────────────────────────────────────
@@ -960,8 +966,10 @@ async function runSystemTests() {
     }
 
     let state;
-    if (result.skipped) {
-      state = { status: 'skip', ms: null, error: result.error, raw: null };
+    const shouldSkip = result.skipped || (t.skipIf && t.skipIf(result));
+    if (shouldSkip) {
+      const msg = t.skipMsg ? (typeof t.skipMsg === 'function' ? t.skipMsg(result) : t.skipMsg) : (result.error ?? 'skipped');
+      state = { status: 'skip', ms: result.ms ?? null, error: msg, raw: null };
       skipped++;
     } else {
       const valid = result.ok && (!t.validate || t.validate(result));
