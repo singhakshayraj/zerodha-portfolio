@@ -11,6 +11,9 @@ import { getTradePlan }    from '../dashboard/lib/plan.js';
 import { analyzeStock }    from '../dashboard/lib/llm.js';
 import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
+import { runIntersection }    from '../dashboard/lib/intersect.js';
+import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
+import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -89,7 +92,105 @@ export default async function handler(req, res) {
       return res.status(200).json({ stats, segment_count: map.size });
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats' });
+    // ── Intersection Engine ──────────────────────────────────────────────────
+    // POST /api/intel?action=intersect
+    // Body: {
+    //   triggers: TriggerEvent[],   — Step 2 output (required)
+    //   picks:    BrainPick[],      — Step 1 picks (optional; falls back to Supabase cache)
+    // }
+    // Returns top actionable opportunities where Step 1 intelligence and Step 2
+    // real-time movement intersect and agree.
+    if (action === 'intersect') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+
+      const { triggers, picks: bodyPicks } = req.body ?? {};
+      if (!Array.isArray(triggers) || triggers.length === 0) {
+        return res.status(400).json({ error: 'triggers[] required — pass Step 2 trigger events in body' });
+      }
+
+      // Use caller-supplied picks, or pull from Supabase brain cache
+      let brainPicks = bodyPicks;
+      if (!Array.isArray(brainPicks) || brainPicks.length === 0) {
+        try {
+          const cached = await getBrainCache();
+          brainPicks = cached?.data?.picks ?? [];
+        } catch {
+          brainPicks = [];
+        }
+      }
+
+      if (!brainPicks.length) {
+        return res.status(503).json({
+          error: 'No brain picks available. Run GET /api/intel?action=brain first to populate cache.',
+        });
+      }
+
+      const result = runIntersection(brainPicks, triggers);
+      return res.status(200).json(result);
+    }
+
+    // ── Trade Plan Engine (Step 4) ───────────────────────────────────────────
+    // POST /api/intel?action=trade_plan
+    // Body: { opportunities: Opportunity[] }  ← Step 3 intersect output
+    // Returns fully defined trade plans with entry, SL, targets, sizing, and
+    // logs each plan to the Supabase trades journal automatically.
+    if (action === 'trade_plan') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { opportunities } = req.body ?? {};
+      if (!Array.isArray(opportunities) || opportunities.length === 0) {
+        return res.status(400).json({ error: 'opportunities[] required — pass Step 3 intersect output in body' });
+      }
+      const result = await generateTradePlans(opportunities);
+      return res.status(200).json(result);
+    }
+
+    // ── Allocator — run one allocation cycle ────────────────────────────────
+    // POST /api/intel?action=allocate
+    // Body: { opportunities[], capital, maxRiskPct, targetRMultiple, maxTrades,
+    //         minEV?, minScore?, regime?, date? }
+    if (action === 'allocate') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { opportunities, capital, maxRiskPct, targetRMultiple, maxTrades } = req.body ?? {};
+      if (!Array.isArray(opportunities) || !capital || !maxRiskPct || !targetRMultiple || !maxTrades) {
+        return res.status(400).json({ error: 'opportunities[], capital, maxRiskPct, targetRMultiple, maxTrades required' });
+      }
+      const result = await allocate(req.body);
+      return res.status(200).json(result);
+    }
+
+    // ── Allocator — close a trade and recycle capital ────────────────────────
+    // POST /api/intel?action=allocate_update
+    // Body: { tradeId, exitPrice, exitReason, date? }
+    if (action === 'allocate_update') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { tradeId, exitPrice, exitReason } = req.body ?? {};
+      if (!tradeId || exitPrice == null || !exitReason) {
+        return res.status(400).json({ error: 'tradeId, exitPrice, exitReason required' });
+      }
+      const result = await closeTradeAlloc(req.body);
+      return res.status(200).json(result);
+    }
+
+    // ── Allocator — read current session ─────────────────────────────────────
+    // GET /api/intel?action=allocate_session[&date=YYYY-MM-DD]
+    if (action === 'allocate_session') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const date = url.searchParams.get('date') || undefined;
+      const session = await getSession(date);
+      if (!session) return res.status(404).json({ error: 'no session found for date' });
+      return res.status(200).json(session);
+    }
+
+    // ── Allocator — reset session ─────────────────────────────────────────────
+    // POST /api/intel?action=allocate_reset[&date=YYYY-MM-DD]
+    if (action === 'allocate_reset') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const date = url.searchParams.get('date') || undefined;
+      const result = await resetSession(date);
+      return res.status(200).json(result);
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

@@ -308,6 +308,9 @@ function buildPlan({ ltp, open, high, low, sector, confidence, score, vix, nifty
   };
 }
 
+// ── Shared infrastructure (consumed by Step 4 tradeplan.js) ──────────────────
+export { getHistory, getMarketSnapshot, getPortfolioContext, sectorBeta };
+
 // ── Public API ────────────────────────────────────────────────────────────────
 export async function getTradePlan({ symbol, exchange = 'NSE', sector = '',
                                      confidence = 70, score = 70,
