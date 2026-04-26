@@ -7,6 +7,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { UNIVERSE, runTriggerCycle } from '../dashboard/lib/trigger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
@@ -158,7 +159,50 @@ export default async function handler(req, res) {
       return res.status(upstream.status).json(data);
     }
 
-    res.status(400).json({ error: 'action must be quotes | symbol | alpha' });
+    // ── Trigger Engine ──────────────────────────────────────────────────────────
+    // GET /api/research?action=triggers&vix=normal
+    // Fetches live OHLCV for the NIFTY 50 universe, runs one trigger cycle,
+    // returns structured movement events — no scores, no brain context.
+    if (action === 'triggers') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const vixState = url.searchParams.get('vix') || 'unknown';
+
+      // Ensure NSE session cookie is fresh (reuses existing session cache)
+      const cookie = await getNSESession();
+      const hdrs   = { ...NSE_HDR, Cookie: cookie };
+
+      // Batch-fetch all UNIVERSE quotes in parallel
+      const quoteData = {};
+      await Promise.allSettled(UNIVERSE.map(async symbol => {
+        try {
+          const r = await fetch(
+            `https://www.nseindia.com/api/quote-equity?symbol=${encodeURIComponent(symbol)}`,
+            { headers: hdrs },
+          );
+          if (!r.ok) return;
+          const json = await r.json();
+          const p = json.priceInfo;
+          if (!p) return;
+          quoteData[symbol] = {
+            last_price: p.lastPrice,
+            change_pct: p.pChange,
+            net_change:  p.change,
+            volume:      json.marketDeptOrderBook?.tradeInfo?.totalTradedVolume || 0,
+            ohlc: {
+              open:  p.open,
+              high:  p.intraDayHighLow?.max,
+              low:   p.intraDayHighLow?.min,
+              close: p.previousClose,
+            },
+          };
+        } catch { /* data gap for this symbol — trigger.js will skip it */ }
+      }));
+
+      const result = await runTriggerCycle(quoteData, vixState, cookie);
+      return res.status(200).json(result);
+    }
+
+    res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
