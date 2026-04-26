@@ -356,6 +356,26 @@
 
 </div>
 
+<!-- ── System Health ──────────────────────────────────────────────────────── -->
+<div class="section" style="margin-top:36px;" id="healthSection">
+  <h2 style="display:flex;align-items:center;justify-content:space-between;">
+    System Health
+    <button id="runTestsBtn" onclick="runSystemTests()" style="font-size:12px;padding:6px 16px;background:#2d3748;border:1px solid #4a5568;color:#e2e8f0;border-radius:7px;cursor:pointer;font-weight:600;letter-spacing:0.03em;">▶ Run Tests</button>
+  </h2>
+
+  <!-- Summary bar (hidden until tests run) -->
+  <div id="healthSummary" style="display:none;margin-bottom:16px;padding:12px 18px;background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;display:none;align-items:center;gap:24px;flex-wrap:wrap;">
+    <span id="hSum-pass" style="font-size:13px;font-weight:700;color:#68d391;"></span>
+    <span id="hSum-fail" style="font-size:13px;font-weight:700;color:#fc8181;"></span>
+    <span id="hSum-skip" style="font-size:13px;font-weight:700;color:#718096;"></span>
+    <span id="hSum-time" style="font-size:12px;color:#718096;margin-left:auto;"></span>
+    <button onclick="copyHealthReport()" style="font-size:11px;padding:4px 10px;background:#2d3748;border:1px solid #4a5568;color:#a0aec0;border-radius:5px;cursor:pointer;">Copy Debug JSON</button>
+  </div>
+
+  <!-- Test rows -->
+  <div id="healthRows" style="display:flex;flex-direction:column;gap:6px;"></div>
+</div>
+
 <footer id="footerNote">
   Auto-generated daily via Claude + Zerodha Kite MCP · Data from Kite Connect API
 </footer>
@@ -675,6 +695,320 @@ async function saveSnapshot({ totalInvested, currentValue, totalPnl, totalPnlPct
       })),
     })
   });
+}
+
+// ── System Health Test Runner ─────────────────────────────────────────────────
+const BASE = 'https://zerodha-portfolio-three.vercel.app';
+
+// Mock data used for write-path tests (deterministic, never hits real orders)
+const MOCK_BRAIN_PICKS = [{
+  symbol: 'RELIANCE', score: 7.8, directional_bias: 'bullish',
+  regime: 'trending', event_type: 'institutional_flow',
+  signal_types: ['institutional_flow'], ltp_at_emit: 2850,
+}];
+const MOCK_TRIGGERS = [{
+  symbol: 'RELIANCE', triggers: ['breakout_high', 'volume'],
+  primary_trigger: 'breakout_high', strength: 'strong',
+  signal_intensity: 3, trend_context: 'uptrend',
+  price: { ltp: 2870, change_from_open_pct: 1.2, vwap: 2845, above_vwap: true },
+  volume: { current: 2100000, volume_ratio: 2.4 },
+  breakout: { or_high: 2855, or_low: 2820 },
+  triggered_at: new Date().toISOString(),
+}];
+const MOCK_OPPORTUNITY = [{
+  symbol: 'RELIANCE', exchange: 'NSE', direction: 'long',
+  setup_type: 'breakout + institutional_flow', confidence: 'high', final_score: 0.82,
+  brain: { score: 7.8, directional_bias: 'bullish', regime: 'trending',
+           event_type: 'institutional_flow', signal_types: ['institutional_flow'], ltp_at_emit: 2850 },
+  trigger: { primary: 'breakout_high', all_triggers: ['breakout_high','volume'],
+             strength: 'strong', signal_intensity: 3, trend_context: 'uptrend',
+             triggered_at: new Date().toISOString(), age_min: 2 },
+  price: { ltp: 2870, change_from_open_pct: 1.2, vwap: 2845, above_vwap: true, or_high: 2855, or_low: 2820 },
+  volume: { current: 2100000, volume_ratio: 2.4 },
+  plan: { entry: 2875, sl: 2820, t1: 2960, t2: 3010 },
+}];
+
+// Test suite definition
+// Each test: { name, group, fn } where fn() → { ok, status, ms, detail, error, raw }
+function buildTestSuite(enc) {
+  const h = enc ? { 'Content-Type':'application/json', 'X-Kite-Enctoken': enc }
+                : { 'Content-Type':'application/json' };
+
+  async function hit(method, path, body) {
+    const t0 = Date.now();
+    let status, raw, detail, error;
+    try {
+      const res = await fetch(BASE + path, {
+        method,
+        headers: h,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      status = res.status;
+      const text = await res.text();
+      try { raw = JSON.parse(text); } catch { raw = text; }
+      detail = typeof raw === 'object' ? raw : { body: raw };
+      if (!res.ok) error = detail?.error ?? `HTTP ${status}`;
+    } catch (e) {
+      status = 0; error = e.message; raw = null; detail = {};
+    }
+    return { ok: status >= 200 && status < 300, status, ms: Date.now() - t0, detail, error, raw };
+  }
+
+  return [
+    // ── Intelligence pipeline ─────────────────────────────────────────────────
+    {
+      group: 'Intelligence',
+      name: 'Brain cache (GET /api/intel?action=brain)',
+      fn: () => hit('GET', '/api/intel?action=brain'),
+      validate: r => r.detail?.picks || r.detail?.cached !== undefined,
+      validateMsg: 'response must contain picks or cached flag',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Calibration stats (GET /api/intel?action=calibration_stats)',
+      fn: () => hit('GET', '/api/intel?action=calibration_stats'),
+      validate: r => 'segment_count' in (r.detail ?? {}),
+      validateMsg: 'response must contain segment_count',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Intersect engine (POST /api/intel?action=intersect)',
+      fn: () => hit('POST', '/api/intel?action=intersect', { triggers: MOCK_TRIGGERS, picks: MOCK_BRAIN_PICKS }),
+      validate: r => Array.isArray(r.detail?.opportunities),
+      validateMsg: 'response must contain opportunities[]',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Trade plan engine (POST /api/intel?action=trade_plan)',
+      fn: () => hit('POST', '/api/intel?action=trade_plan', { opportunities: MOCK_OPPORTUNITY }),
+      validate: r => Array.isArray(r.detail?.plans),
+      validateMsg: 'response must contain plans[]',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Allocate cycle (POST /api/intel?action=allocate)',
+      fn: () => hit('POST', '/api/intel?action=allocate', {
+        opportunities: MOCK_OPPORTUNITY,
+        capital: 10000, maxRiskPct: 10, targetRMultiple: 2,
+        maxTrades: 5, minEV: 0.05, minScore: 0.50,
+      }),
+      validate: r => r.detail?.session !== undefined,
+      validateMsg: 'response must contain session object',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Allocator session read (GET /api/intel?action=allocate_session)',
+      fn: () => hit('GET', '/api/intel?action=allocate_session'),
+      validate: r => r.ok || r.status === 404,
+      validateMsg: 'should return session or 404',
+    },
+    {
+      group: 'Intelligence',
+      name: 'Record outcome (POST /api/intel?action=record_outcome)',
+      fn: () => hit('POST', '/api/intel?action=record_outcome', { ltpMap: { RELIANCE: 2870 } }),
+      validate: r => r.detail?.ok === true,
+      validateMsg: 'response must contain ok: true',
+    },
+
+    // ── Kite / portfolio ──────────────────────────────────────────────────────
+    {
+      group: 'Kite',
+      name: 'Holdings (GET /api/kite?action=holdings)',
+      fn: () => enc ? hit('GET', '/api/kite?action=holdings') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
+      validate: r => r.skipped || Array.isArray(r.detail?.data),
+      validateMsg: 'response must contain data[]',
+    },
+    {
+      group: 'Kite',
+      name: 'Margins (GET /api/kite?action=margins)',
+      fn: () => enc ? hit('GET', '/api/kite?action=margins') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
+      validate: r => r.skipped || r.detail?.equity !== undefined,
+      validateMsg: 'response must contain equity margin',
+    },
+    {
+      group: 'Kite',
+      name: 'Positions (GET /api/kite?action=positions)',
+      fn: () => enc ? hit('GET', '/api/kite?action=positions') : Promise.resolve({ ok: false, status: 0, ms: 0, error: 'No enctoken — skipped', skipped: true }),
+      validate: r => r.skipped || r.detail?.net !== undefined || Array.isArray(r.detail?.data),
+      validateMsg: 'response must contain net positions',
+    },
+
+    // ── Orders / journal ──────────────────────────────────────────────────────
+    {
+      group: 'Journal',
+      name: 'Trade journal list (GET /api/orders?action=journal)',
+      fn: () => hit('GET', '/api/orders?action=journal'),
+      validate: r => r.ok,
+      validateMsg: 'journal endpoint must respond 200',
+    },
+
+    // ── Research / triggers ───────────────────────────────────────────────────
+    {
+      group: 'Research',
+      name: 'Market snapshot (GET /api/research?action=snapshot)',
+      fn: () => hit('GET', '/api/research?action=snapshot'),
+      validate: r => r.ok,
+      validateMsg: 'snapshot endpoint must respond 200',
+    },
+
+    // ── Auth / config ─────────────────────────────────────────────────────────
+    {
+      group: 'Auth',
+      name: 'Login page reachable',
+      fn: async () => {
+        const t0 = Date.now();
+        try {
+          const res = await fetch(BASE + '/login');
+          return { ok: res.status < 400, status: res.status, ms: Date.now()-t0, detail:{}, error: res.status >= 400 ? `HTTP ${res.status}` : null };
+        } catch(e) { return { ok:false, status:0, ms: Date.now()-t0, error:e.message, detail:{} }; }
+      },
+      validate: r => r.ok,
+      validateMsg: 'login page must be reachable',
+    },
+    {
+      group: 'Auth',
+      name: 'Dashboard reachable',
+      fn: async () => {
+        const t0 = Date.now();
+        try {
+          const res = await fetch(BASE + '/');
+          return { ok: res.status < 400, status: res.status, ms: Date.now()-t0, detail:{}, error: res.status >= 400 ? `HTTP ${res.status}` : null };
+        } catch(e) { return { ok:false, status:0, ms: Date.now()-t0, error:e.message, detail:{} }; }
+      },
+      validate: r => r.ok,
+      validateMsg: 'dashboard must be reachable',
+    },
+  ];
+}
+
+// Render a single test row (in-progress)
+function renderTestRow(idx, name, group, state) {
+  const container = document.getElementById('healthRows');
+  let row = document.getElementById(`hrow-${idx}`);
+  if (!row) {
+    row = document.createElement('div');
+    row.id = `hrow-${idx}`;
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 16px;background:#1a1f2e;border:1px solid #2d3748;border-radius:8px;cursor:pointer;transition:border-color 0.15s;';
+    row.onclick = () => toggleDetail(idx);
+    container.appendChild(row);
+  }
+
+  const icons = { pending:'⏳', running:'⟳', pass:'✓', fail:'✗', skip:'—' };
+  const colors = { pending:'#718096', running:'#63b3ed', pass:'#68d391', fail:'#fc8181', skip:'#718096' };
+  const icon  = icons[state.status]  ?? '?';
+  const color = colors[state.status] ?? '#718096';
+
+  row.innerHTML = `
+    <span style="font-size:15px;width:18px;text-align:center;color:${color};font-weight:700;">${icon}</span>
+    <span style="font-size:11px;color:#4a5568;min-width:90px;">${group}</span>
+    <span style="font-size:13px;color:#e2e8f0;flex:1;">${name}</span>
+    ${state.ms != null ? `<span style="font-size:11px;color:#718096;">${state.ms}ms</span>` : ''}
+    ${state.status === 'fail' ? `<span style="font-size:11px;color:#fc8181;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(state.error||'').replace(/"/g,'&quot;')}">${state.error ?? ''}</span>` : ''}
+  `;
+  row.style.borderColor = state.status === 'fail' ? '#9b2c2c' : state.status === 'pass' ? '#276749' : '#2d3748';
+
+  // Detail panel (expanded on click)
+  let detail = document.getElementById(`hdetail-${idx}`);
+  if (!detail) {
+    detail = document.createElement('div');
+    detail.id = `hdetail-${idx}`;
+    detail.style.cssText = 'display:none;margin-top:-4px;padding:12px 16px;background:#111827;border:1px solid #2d3748;border-top:none;border-radius:0 0 8px 8px;font-size:11px;color:#a0aec0;font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow-y:auto;';
+    row.after(detail);
+  }
+  if (state.raw != null) {
+    detail.textContent = JSON.stringify(state.raw, null, 2);
+  } else if (state.error) {
+    detail.textContent = state.error;
+  }
+}
+
+function toggleDetail(idx) {
+  const d = document.getElementById(`hdetail-${idx}`);
+  if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+// Global results store for "Copy Debug JSON"
+let _healthResults = [];
+
+async function runSystemTests() {
+  const btn = document.getElementById('runTestsBtn');
+  btn.disabled = true;
+  btn.textContent = '⟳ Running…';
+
+  document.getElementById('healthRows').innerHTML = '';
+  document.getElementById('healthSummary').style.display = 'none';
+  _healthResults = [];
+
+  const enc = localStorage.getItem('kite_enctoken') || '';
+  const suite = buildTestSuite(enc);
+  const sessionStart = Date.now();
+
+  // Render all rows as pending
+  suite.forEach((t, i) => renderTestRow(i, t.name, t.group, { status: 'pending' }));
+
+  let passed = 0, failed = 0, skipped = 0;
+
+  for (let i = 0; i < suite.length; i++) {
+    const t = suite[i];
+    renderTestRow(i, t.name, t.group, { status: 'running' });
+
+    let result;
+    try {
+      result = await t.fn();
+    } catch(e) {
+      result = { ok: false, status: 0, ms: 0, error: e.message, detail: {}, raw: null };
+    }
+
+    let state;
+    if (result.skipped) {
+      state = { status: 'skip', ms: null, error: result.error, raw: null };
+      skipped++;
+    } else {
+      const valid = result.ok && (!t.validate || t.validate(result));
+      state = {
+        status: valid ? 'pass' : 'fail',
+        ms: result.ms,
+        error: valid ? null : (result.error ?? t.validateMsg ?? 'Validation failed'),
+        raw: result.raw,
+      };
+      if (valid) passed++; else failed++;
+    }
+
+    renderTestRow(i, t.name, t.group, state);
+    _healthResults.push({ name: t.name, group: t.group, ...state, httpStatus: result.status });
+  }
+
+  const totalMs = Date.now() - sessionStart;
+
+  // Summary bar
+  const summary = document.getElementById('healthSummary');
+  summary.style.display = 'flex';
+  document.getElementById('hSum-pass').textContent = `✓ ${passed} passed`;
+  document.getElementById('hSum-fail').textContent = `✗ ${failed} failed`;
+  document.getElementById('hSum-skip').textContent = `— ${skipped} skipped`;
+  document.getElementById('hSum-time').textContent = `Completed in ${(totalMs/1000).toFixed(1)}s · ${new Date().toLocaleTimeString('en-IN')}`;
+
+  btn.disabled = false;
+  btn.textContent = '↻ Re-run Tests';
+
+  // Scroll into view
+  document.getElementById('healthSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyHealthReport() {
+  const report = {
+    generated_at: new Date().toISOString(),
+    environment:  BASE,
+    summary: {
+      passed:  _healthResults.filter(r => r.status === 'pass').length,
+      failed:  _healthResults.filter(r => r.status === 'fail').length,
+      skipped: _healthResults.filter(r => r.status === 'skip').length,
+    },
+    results: _healthResults,
+  };
+  navigator.clipboard.writeText(JSON.stringify(report, null, 2))
+    .then(() => { const b = document.querySelector('[onclick="copyHealthReport()"]'); b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy Debug JSON',2000); })
+    .catch(() => alert(JSON.stringify(report, null, 2)));
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
