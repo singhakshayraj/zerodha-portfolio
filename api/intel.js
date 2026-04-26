@@ -10,6 +10,7 @@ import { getBrainResult }  from '../dashboard/lib/brain.js';
 import { getTradePlan }    from '../dashboard/lib/plan.js';
 import { analyzeStock }    from '../dashboard/lib/llm.js';
 import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
+import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -65,7 +66,30 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze' });
+    // ── Record outcomes (called by cron or dashboard with live LTP map) ────────
+    // POST /api/intel?action=record_outcome
+    // Body: { ltpMap: { SYMBOL: ltp } }  — current prices for pending picks
+    if (action === 'record_outcome') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { ltpMap = {} } = req.body ?? {};
+      await recordOutcomes(async symbols => {
+        // Use client-supplied ltpMap; only resolve symbols we have prices for
+        return Object.fromEntries(symbols.filter(s => ltpMap[s]).map(s => [s, ltpMap[s]]));
+      });
+      await refreshSourceStats();
+      return res.status(200).json({ ok: true });
+    }
+
+    // ── Calibration stats (read current source performance stats) ───────────
+    // GET /api/intel?action=calibration_stats
+    if (action === 'calibration_stats') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const map = await fetchCalibration();
+      const stats = Object.fromEntries(map);
+      return res.status(200).json({ stats, segment_count: map.size });
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

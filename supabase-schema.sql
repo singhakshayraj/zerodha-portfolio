@@ -50,8 +50,74 @@ create table if not exists brain_cache (
   updated_at timestamptz default now()
 );
 
+-- ── brain_picks ───────────────────────────────────────────────────────────────
+-- One row per emitted pick per brain cycle. windows_pending tracks which
+-- evaluation windows haven't been recorded yet.
+create table if not exists brain_picks (
+  id               uuid primary key default gen_random_uuid(),
+  symbol           text not null,
+  exchange         text default 'NSE',
+  regime           text,
+  directional_bias text,
+  score            numeric,
+  event_type       text,
+  signal_types     jsonb default '[]',
+  score_factors    jsonb default '{}',
+  mention_count    integer default 0,
+  distinct_sources integer default 0,
+  ltp_at_emit      numeric,
+  emitted_at       timestamptz default now(),
+  windows_pending  jsonb default '["30min","1hr","eod"]'
+);
+create index if not exists brain_picks_emitted_at on brain_picks(emitted_at desc);
+create index if not exists brain_picks_windows   on brain_picks using gin(windows_pending);
+
+-- ── brain_outcomes ────────────────────────────────────────────────────────────
+-- One row per (pick, evaluation_window). Realized return and direction accuracy.
+create table if not exists brain_outcomes (
+  id                uuid primary key default gen_random_uuid(),
+  pick_id           uuid references brain_picks(id) on delete cascade,
+  symbol            text not null,
+  regime            text,
+  directional_bias  text,
+  event_type        text,
+  signal_types      jsonb default '[]',
+  score_at_emit     numeric,
+  window            text not null,      -- '30min' | '1hr' | 'eod'
+  ltp_at_emit       numeric,
+  ltp_at_window     numeric,
+  return_pct        numeric,
+  direction_correct boolean,
+  mae               numeric default 0,  -- max adverse excursion (approx)
+  source_ids        jsonb default '[]', -- contributing sources for rollup
+  recorded_at       timestamptz default now()
+);
+create index if not exists brain_outcomes_pick_id     on brain_outcomes(pick_id);
+create index if not exists brain_outcomes_recorded_at on brain_outcomes(recorded_at desc);
+create index if not exists brain_outcomes_window      on brain_outcomes(window);
+
+-- ── brain_source_stats ────────────────────────────────────────────────────────
+-- Rolling performance stats per segment (source or signal_type×event_type×regime).
+-- Upserted on segment_key. Powers blendedReliability() calibration.
+create table if not exists brain_source_stats (
+  segment_key   text primary key,
+  segment_type  text,    -- 'source' | 'signal'
+  source_id     text,
+  signal_type   text,
+  event_type    text,
+  regime        text,
+  win_rate      numeric,
+  avg_return    numeric,
+  avg_drawdown  numeric,
+  sample_size   integer default 0,
+  updated_at    timestamptz default now()
+);
+
 -- Disable Row Level Security so the anon key can read/write
 -- (this is a private single-user app gated by password)
 alter table trades               disable row level security;
 alter table portfolio_snapshots  disable row level security;
 alter table brain_cache          disable row level security;
+alter table brain_picks          disable row level security;
+alter table brain_outcomes       disable row level security;
+alter table brain_source_stats   disable row level security;

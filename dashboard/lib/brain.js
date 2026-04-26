@@ -1,6 +1,7 @@
 // Market Brain — named exports consumed by api/intel.js
 import fs   from 'fs';
 import path from 'path';
+import { fetchCalibration, persistPicks, recordOutcomes, refreshSourceStats, buildMonitor } from './outcomes.js';
 
 // ── Source registry ───────────────────────────────────────────────────────────
 // baseline_rate: expected article density for this signal_type (0–1).
@@ -302,27 +303,36 @@ function blendedReliability(priorScore, outcomeRate = null, sampleSize = 0) {
   return (priorScore / 10) * decay + outcomeRate * (1 - decay);
 }
 
-// ── Signal-type-aware recency decay ──────────────────────────────────────────
-// Fast-moving signals (derivatives, market_direction) decay within hours.
-// High-conviction signals (smart_money) persist for days.
-const RECENCY_DECAY_BY_TYPE = {
-  derivatives:        h => h <  4 ? 1.00 : h <  8 ? 0.80 : h < 12 ? 0.50 : h < 24 ? 0.20 : 0.05,
-  market_direction:   h => h <  4 ? 1.00 : h <  8 ? 0.85 : h < 12 ? 0.65 : h < 24 ? 0.30 : 0.10,
-  smart_money:        h => h < 24 ? 1.00 : h < 48 ? 0.85 : h < 72 ? 0.65 : h < 96 ? 0.45 : 0.25,
-  institutional_flow: h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
-  negative_events:    h => h < 12 ? 1.00 : h < 24 ? 0.80 : h < 48 ? 0.55 : h < 72 ? 0.35 : 0.15,
-  media:              h => h < 12 ? 1.00 : h < 24 ? 0.75 : h < 48 ? 0.50 : h < 72 ? 0.30 : 0.15,
-  macro:              _h => 1.0,
+// ── Continuous exponential recency decay — defined by half-life per type ──────
+// f(h) = max(FLOOR, 0.5 ^ (h / half_life))
+// Smooth and tunable: at h=0 → 1.0, at h=half_life → 0.5, at h=2×half_life → 0.25.
+// max_age_hours in SOURCES provides the hard cutoff; decay provides the gradient.
+// Fast signals (derivatives=4h) lose ~90% weight by 12h; smart_money (36h) retains
+// 65% at 24h. Decay floor of 0.05 prevents complete exclusion before max_age_hours.
+const RECENCY_HALF_LIFE = {
+  derivatives:        4,   // loses half weight every 4 hours
+  market_direction:   6,
+  institutional_flow: 18,
+  negative_events:    18,
+  media:              12,
+  smart_money:        36,  // retains half weight for 36 hours
+  macro:              Infinity, // macro is always current context
 };
 
 function recencyDecay(signalType, hoursAgo) {
-  const fn = RECENCY_DECAY_BY_TYPE[signalType] ?? (h => h < 24 ? 0.8 : 0.4);
-  return fn(hoursAgo ?? 24);
+  const halfLife = RECENCY_HALF_LIFE[signalType] ?? 16;
+  if (!isFinite(halfLife)) return 1.0;
+  return Math.max(0.05, Math.pow(0.5, Math.max(hoursAgo ?? 0, 0) / halfLife));
 }
 
-// Per-article contribution hard cap — prevents a single viral article from
-// overwhelming the aggregate even after all per-article multipliers are applied.
-const PER_ARTICLE_CAP = 2.5;
+// ── Score constants ───────────────────────────────────────────────────────────
+const PER_ARTICLE_CAP  = 2.5;  // per-article contribution cap before aggregation
+const FINAL_SCORE_CAP  = 8.0;  // post-aggregation cap — guards unforeseen interactions
+const SCORE_FLOOR      = 0.50; // picks below this are dropped, not ranked
+// Events strong enough that a single mention counts as primary evidence
+const HIGH_STRENGTH_EVENTS = new Set([
+  'earnings_beat','earnings_miss','block_deal','sebi_action',
+]);
 
 // Baseline normalization — floored at 0.15 and output capped at 2.5×.
 // Floor prevents rare signals from exploding into unbounded values.
@@ -387,29 +397,35 @@ function jaccard(setA, setB) {
 }
 
 function assignNoveltyWeights(articles) {
-  const weights = new Array(articles.length).fill(1.0);
-  const tgs     = articles.map(a => trigrams(a.text));
+  // Sort by hoursAgo ascending (newest first) so fast-signal novelty resets
+  // work correctly: articles beyond the type's window start a fresh cluster
+  // with full novelty weight rather than being grafted onto a stale one.
+  const order   = articles.map((_, i) => i).sort((a, b) => (articles[a].hoursAgo ?? 0) - (articles[b].hoursAgo ?? 0));
+  const weights  = new Array(articles.length).fill(1.0);
+  const tgs      = articles.map(a => trigrams(a.text));
   const NOVELTY_DECAY = [1.0, 0.6, 0.3, 0.15];
   const assigned = new Set();
 
-  for (let i = 0; i < articles.length; i++) {
+  for (const i of order) {
     if (assigned.has(i)) continue;
     const windowHours = NOVELTY_WINDOW_BY_TYPE[articles[i].signal_type] ?? 24;
-    const cluster = [i];
+    const seedHours   = articles[i].hoursAgo ?? 0;
+    const cluster     = [i];
 
-    for (let j = i + 1; j < articles.length; j++) {
-      if (assigned.has(j)) continue;
+    for (const j of order) {
+      if (j === i || assigned.has(j)) continue;
       const sameType     = articles[j].signal_type === articles[i].signal_type;
-      const withinWindow = Math.abs((articles[j].hoursAgo ?? 0) - (articles[i].hoursAgo ?? 0)) <= windowHours;
+      // Use absolute offset from seed — articles outside the window start fresh
+      const withinWindow = Math.abs((articles[j].hoursAgo ?? 0) - seedHours) <= windowHours;
       const similar      = jaccard(tgs[i], tgs[j]) > 0.45;
       if (sameType && withinWindow && similar) cluster.push(j);
     }
 
     const seedFamily = outletFamily(articles[cluster[0]]);
     cluster.forEach((idx, rank) => {
-      const baseNovelty  = NOVELTY_DECAY[Math.min(rank, NOVELTY_DECAY.length - 1)];
-      const sameFamily   = rank > 0 && outletFamily(articles[idx]) === seedFamily;
-      weights[idx] = baseNovelty * (sameFamily ? 0.5 : 1.0);
+      const baseNovelty = NOVELTY_DECAY[Math.min(rank, NOVELTY_DECAY.length - 1)];
+      const sameFamily  = rank > 0 && outletFamily(articles[idx]) === seedFamily;
+      weights[idx]      = baseNovelty * (sameFamily ? 0.5 : 1.0);
       assigned.add(idx);
     });
   }
@@ -556,7 +572,8 @@ function applyRegimeCap(score, directionalBias, regime) {
   return score;
 }
 
-// ── Directional bias — event-type-first, mismatch penalty ────────────────────
+// ── Directional bias — strict precedence: event_type → sentiment → neutral ────
+// direction_conflict logged for audit and future learning when layers disagree.
 function deriveDirectionalBias(sentiment, eventType) {
   const eventDir = BEARISH_EVENTS.has(eventType) ? 'short'
                  : BULLISH_EVENTS.has(eventType)  ? 'long'
@@ -564,8 +581,11 @@ function deriveDirectionalBias(sentiment, eventType) {
   const sentDir  = sentiment === 'bearish' ? 'short'
                  : sentiment === 'bullish'  ? 'long'
                  : 'neutral';
-  if (eventDir) return { bias: eventDir, mismatch: eventDir !== sentDir && sentDir !== 'neutral' };
-  return { bias: sentDir, mismatch: false };
+  if (eventDir) {
+    const conflict = sentDir !== 'neutral' && eventDir !== sentDir;
+    return { bias: eventDir, mismatch: conflict, direction_conflict: conflict };
+  }
+  return { bias: sentDir, mismatch: false, direction_conflict: false };
 }
 
 // ── Consensus — (outlet-family, signal_type) deduplicated, log-capped ─────────
@@ -582,6 +602,8 @@ function consensusMultiplier(mentions) {
 
   const typeDiversityBonus = Math.min(1.4, 1.0 + (distTypes - 1) * 0.25);
 
+  // Cross-type bonus: only the single highest qualifying combo is applied —
+  // no stacking, so multiple co-occurring combos don't compound unboundedly.
   const types = [...new Set(deduped.map(m => m.signal_type))];
   const crossBonus = types.includes('smart_money')        && types.includes('derivatives')        ? 1.40
                    : types.includes('institutional_flow') && types.includes('derivatives')        ? 1.25
@@ -676,7 +698,7 @@ Rules:
 }
 
 // ── Deterministic scorer ───────────────────────────────────────────────────────
-function scoreAndRank(extractions, articles, marketContext) {
+function scoreAndRank(extractions, articles, marketContext, calibrationMap = new Map()) {
   const macroRisk = marketContext.macro_risk      || 'low';
   const giftBias  = marketContext.gift_nifty_bias || 'unknown';
   const vixState  = marketContext.vix_state       || 'unknown';
@@ -686,12 +708,17 @@ function scoreAndRank(extractions, articles, marketContext) {
   const noveltyWeights = assignNoveltyWeights(articles);
 
   // Strict universe filter: drop extractions below confidence threshold
+  let droppedLowConf = 0;
   const candidates = extractions
     .map(ext => ({ ...ext, ...normaliseSymbol(ext.symbol) }))
-    .filter(ext => ext.confidence >= CONFIDENCE_DROP_THRESHOLD);
+    .filter(ext => {
+      if (ext.confidence >= CONFIDENCE_DROP_THRESHOLD) return true;
+      droppedLowConf++;
+      return false;
+    });
 
   const scored = candidates.map(ext => {
-    const { bias: directionalBias, mismatch } = deriveDirectionalBias(ext.sentiment, ext.event_type);
+    const { bias: directionalBias, mismatch, direction_conflict } = deriveDirectionalBias(ext.sentiment, ext.event_type);
     const co = (ext.company || '').toLowerCase();
 
     // Match articles to this stock (macro excluded — never per-stock)
@@ -711,7 +738,13 @@ function scoreAndRank(extractions, articles, marketContext) {
     matchedIdxs.forEach(articleIdx => {
       const m            = articles[articleIdx];
       const typeWeight   = SIGNAL_TYPE_WEIGHTS[m.signal_type] ?? 1.0;
-      const reliability  = blendedReliability(m.reliability ?? 5);
+      // Pull observed outcome rate from calibration if available (source-level segment)
+      const calSrc  = calibrationMap.get(`source::${m.source}`);
+      const reliability  = blendedReliability(
+        m.reliability ?? 5,
+        calSrc?.win_rate   ?? null,
+        calSrc?.sample_size ?? 0,
+      );
       const decay        = recencyDecay(m.signal_type, m.hoursAgo ?? 24);
       const novelty      = noveltyWeights[articleIdx];
       const baseline     = baselineNorm(m.baseline_rate);
@@ -753,6 +786,8 @@ function scoreAndRank(extractions, articles, marketContext) {
 
     let score = totalScore * mismatchPenalty * eventMult * consensus * ext.confidence * sectorMod * timingMod;
     score = applyRegimeCap(score, directionalBias, regime);
+    // Post-aggregation cap: guards against unforeseen multiplier interactions
+    score = Math.min(Math.abs(score), FINAL_SCORE_CAP) * Math.sign(score || 1);
 
     return {
       ...ext,
@@ -768,8 +803,9 @@ function scoreAndRank(extractions, articles, marketContext) {
         consensus:              +consensus.toFixed(3),
         sym_confidence:         ext.confidence,
         mismatch_penalty:       mismatchPenalty,
-        sector_mod:             sectorMod,
+        sector_mod:             sectorMod,   // applied once, not compounded
         timing_mod:             timingMod,
+        direction_conflict,
         regime,
         regime_cap_applied:     regime !== 'neutral',
         event_strength_version: EVENT_STRENGTH_VERSION,
@@ -785,8 +821,31 @@ function scoreAndRank(extractions, articles, marketContext) {
     if (!existing || Math.abs(p.score) > Math.abs(existing.score)) bySymbol.set(p.symbol, p);
   }
 
-  return [...bySymbol.values()]
+  // Evidence gate: require ≥2 distinct outlet families OR high-strength event + ≥1 secondary
+  function passesEvidenceGate(p) {
+    const families = new Set(p.score_factors.article_contributions.map(a => outletFamily(a.source)));
+    if (families.size >= 2) return true;
+    if (HIGH_STRENGTH_EVENTS.has(p.score_factors.event_type) && p.mention_count >= 2) return true;
+    return false;
+  }
+
+  const deduped = [...bySymbol.values()];
+  let evidenceGateDropped = 0, scoreFloorDropped = 0;
+  const afterEvidenceGate = deduped.filter(p => { if (passesEvidenceGate(p)) return true; evidenceGateDropped++; return false; });
+  const afterScoreFloor   = afterEvidenceGate.filter(p => { if (Math.abs(p.score) >= SCORE_FLOOR) return true; scoreFloorDropped++; return false; });
+
+  const ranked = afterScoreFloor
     .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+    .slice(0, 10);
+
+  // Attach monitoring counters to ranked list for orchestrator to consume
+  ranked._monitor = {
+    droppedLowConf, evidenceGateDropped, scoreFloorDropped,
+    totalExtractions: extractions.length,
+    emittedPicks: ranked.length,
+  };
+
+  return ranked
     .slice(0, 10)
     .map((p, i) => ({
       rank:               i + 1,
@@ -819,12 +878,36 @@ async function analyzeWithGroq(articles) {
 
   const extractions   = extracted.extractions   || [];
   const marketContext = extracted.market_context || {};
-  const picks         = scoreAndRank(extractions, articles, marketContext);
+
+  // Data quality guard: if too many symbols dropped or event_types missing, return null → caller falls back to cache
+  if (extractions.length > 0) {
+    const normalized    = extractions.map(e => normaliseSymbol(e.symbol));
+    const dropRate      = normalized.filter(n => n.confidence < CONFIDENCE_DROP_THRESHOLD).length / extractions.length;
+    const missingEvents = extractions.filter(e => !e.event_type || e.event_type === 'general_mention').length / extractions.length;
+    if (dropRate > 0.70 || missingEvents > 0.85) return null;
+  }
+
+  // Fetch outcome-based calibration (non-blocking: empty Map on failure = no-op)
+  const calibrationMap = await fetchCalibration().catch(() => new Map());
+
+  const picks         = scoreAndRank(extractions, articles, marketContext, calibrationMap);
+  const monitorRaw    = picks._monitor ?? {};
+  delete picks._monitor;
   const regime        = picks[0]?.regime || deriveRegime(
     marketContext.macro_risk || 'low',
     marketContext.gift_nifty_bias || 'unknown',
     marketContext.vix_state || 'unknown',
   );
+
+  const monitor = buildMonitor({
+    totalExtractions:  monitorRaw.totalExtractions  ?? extractions.length,
+    dropped:           monitorRaw.droppedLowConf    ?? 0,
+    evidenceGateDropped: monitorRaw.evidenceGateDropped ?? 0,
+    scoreFloorDropped: monitorRaw.scoreFloorDropped ?? 0,
+    emittedPicks:      picks.length,
+    articles,
+    calibrationMap,
+  });
 
   return {
     picks,
@@ -836,7 +919,8 @@ async function analyzeWithGroq(articles) {
     top_sectors:      marketContext.top_sectors      || [],
     avoid_sectors:    marketContext.avoid_sectors    || [],
     summary:          marketContext.summary          || '',
-    algo_note:        `v${EVENT_STRENGTH_VERSION} | (typeWeight[0.8–1.2] × reliability × recencyDecay[type-aware] × novelty[window+outlet] × baselineNorm[floored,capped]) × eventStrength[regime-aware,bounded] × consensus[dedup,log-cap,≤4.0] × symConfidence × sectorMod[±20%] × timing[±6%] → regimeCap. LLM extracts only.`,
+    algo_note:        `v${EVENT_STRENGTH_VERSION} | (typeWeight[0.8–1.2] × blendedReliability[calibrated] × recencyDecay[type-aware] × novelty[window+outlet] × baselineNorm[floored,capped]) × eventStrength[regime-aware,bounded] × consensus[dedup,log-cap,≤4.0] × symConfidence × sectorMod[±20%] × timing[±6%] → regimeCap → FINAL_SCORE_CAP. LLM extracts only.`,
+    _monitor:         monitor,
     _provider:        provider,
   };
 }
@@ -869,6 +953,13 @@ async function fetchFresh() {
   if (articles.length === 0) throw new Error('No articles fetched');
 
   const analysis = await analyzeWithGroq(articles);
+  // Data quality guard returned null — serve stale cache rather than empty picks
+  if (analysis === null) {
+    const stale = readCache();
+    if (stale) return { ...stale, cached: true, stale_note: 'Low-quality extraction cycle; serving last good cache.' };
+    throw new Error('Data quality guard triggered and no cache available');
+  }
+
   const signalTypes = ['smart_money','institutional_flow','derivatives','market_direction','macro','media','negative_events'];
   const result = {
     ...analysis,
@@ -877,11 +968,23 @@ async function fetchFresh() {
     signal_breakdown:    Object.fromEntries(
       signalTypes.map(t => [t, articles.filter(a => a.signal_type === t).length])
     ),
+    monitor:      analysis._monitor,
     powered_by:   analysis._provider || 'Groq (llama-3.3-70b)',
     generated_at: new Date().toISOString(),
   };
   delete result._provider;
+  delete result._monitor;
   writeCache(result);
+
+  // Non-blocking: persist picks for outcome tracking, then check elapsed windows
+  persistPicks(result.picks).catch(() => {});
+  recordOutcomes(async symbols => {
+    // LTP lookup via Kite NSE quotes — best-effort, no enctoken available here
+    // intel.js ?action=record_outcome can pass enctoken-backed prices
+    return {};
+  }).catch(() => {});
+  refreshSourceStats().catch(() => {});
+
   return result;
 }
 

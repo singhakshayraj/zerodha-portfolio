@@ -1,0 +1,117 @@
+/* app/src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design Tokens ── */
+:root,
+[data-theme="dark"] {
+  --bg: #0B0F14;
+  --card: #121821;
+  --card-2: #0F141A;
+  --border: #1F2933;
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #6B7280;
+  --green: #00E676;
+  --red: #FF5252;
+  --yellow: #FFEA00;
+  --blue: #2979FF;
+}
+
+[data-theme="light"] {
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --card-2: #F1F5F9;
+  --border: #E5E7EB;
+  --text-primary: #0B0F14;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --green: #16A34A;
+  --red: #DC2626;
+  --yellow: #CA8A04;
+  --blue: #2563EB;
+}
+
+/* ── Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Table ── */
+tr:hover td {
+  background: var(--card-2);
+}
+
+/* ── Signal utilities ── */
+.signal-green {
+  color: var(--green);
+}
+.signal-red {
+  color: var(--red);
+}
+.signal-yellow {
+  color: var(--yellow);
+}
+
+/* ── Animations ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.slide-in-right {
+  animation: slideInRight 0.22s ease-out forwards;
+}
+
+/* ── Row tints for scanner ── */
+.row-bull-tint td {
+  background: rgba(0, 230, 118, 0.04);
+}
+.row-bear-tint td {
+  background: rgba(255, 82, 82, 0.04);
+}
+[data-theme="light"] .row-bull-tint td {
+  background: rgba(22, 163, 74, 0.06);
+}
+[data-theme="light"] .row-bear-tint td {
+  background: rgba(220, 38, 38, 0.06);
+}

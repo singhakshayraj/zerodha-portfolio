@@ -98,6 +98,46 @@ export async function listSnapshots(limit = 90) {
   return r.json();
 }
 
+// ── Generic helpers (used by outcomes.js) ────────────────────────────────────
+
+export async function supabaseInsert(table, rows, { upsert = false, conflictKey = null } = {}) {
+  configured();
+  const prefer = upsert && conflictKey
+    ? `resolution=merge-duplicates,return=representation`
+    : 'return=representation';
+  const url = upsert && conflictKey
+    ? `${BASE}/rest/v1/${table}?on_conflict=${conflictKey}`
+    : `${BASE}/rest/v1/${table}`;
+  const r = await fetch(url, {
+    method:  'POST',
+    headers: headers({ Prefer: prefer }),
+    body:    JSON.stringify(Array.isArray(rows) ? rows : [rows]),
+  });
+  if (!r.ok) throw new Error(`Supabase insert ${table}: ${await r.text()}`);
+  return r.json();
+}
+
+export async function supabaseSelect(table, { filter = '', order = '', limit = 100 } = {}) {
+  configured();
+  let url = `${BASE}/rest/v1/${table}?limit=${limit}`;
+  if (filter) url += `&${filter}`;
+  if (order)  url += `&order=${order}`;
+  const r = await fetch(url, { headers: headers() });
+  if (!r.ok) throw new Error(`Supabase select ${table}: ${await r.text()}`);
+  return r.json();
+}
+
+export async function supabaseUpdate(table, id, patch) {
+  configured();
+  const r = await fetch(`${BASE}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    method:  'PATCH',
+    headers: headers({ Prefer: 'return=representation' }),
+    body:    JSON.stringify(patch),
+  });
+  if (!r.ok) throw new Error(`Supabase update ${table}: ${await r.text()}`);
+  return r.json();
+}
+
 // ── brain_cache ───────────────────────────────────────────────────────────────
 // Single-row cache: id=1 always upserted. Stores full brain result + timestamp.
 
