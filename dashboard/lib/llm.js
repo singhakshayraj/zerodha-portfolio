@@ -60,7 +60,7 @@ async function analyzeWithOpenAI(company) {
 async function analyzeWithGemini(company) {
   const apiKey = config.llm.googleApiKey;
   if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
-  const model = config.llm.geminiModel || 'gemini-1.5-flash';
+  const model = config.llm.geminiModel || 'gemini-2.0-flash';
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {

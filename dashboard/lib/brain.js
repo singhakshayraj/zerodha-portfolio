@@ -239,7 +239,7 @@ async function callGroq(prompt) {
 async function callGemini(prompt) {
   const key = process.env.GOOGLE_API_KEY;
   if (!key) throw new Error('GOOGLE_API_KEY not set');
-  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
@@ -265,7 +265,7 @@ async function callLLM(prompt) {
     const isRateLimit = err.status === 429 || err.status === 413 || err.message?.includes('429') || err.message?.includes('413') || err.message?.toLowerCase().includes('rate') || err.message?.toLowerCase().includes('too large');
     if (isRateLimit && process.env.GOOGLE_API_KEY) {
       const result = await callGemini(prompt);
-      return { result, provider: `Gemini (${process.env.GEMINI_MODEL || 'gemini-1.5-flash'})` };
+      return { result, provider: `Gemini (${process.env.GEMINI_MODEL || 'gemini-2.0-flash'})` };
     }
     throw err;
   }
