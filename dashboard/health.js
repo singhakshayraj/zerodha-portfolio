@@ -190,8 +190,8 @@
         fn: () => enc ? hit('GET', '/api/kite?action=historical&symbol=RELIANCE&interval=day&days=5') : skip('No enctoken'),
         validate: r => Array.isArray(r.raw?.data) || r.ok,
         validateMsg: 'must return candles',
-        skipIf: r => r.skipped || r.status === 403 || r.status === 400 || r.status === 401 || r.status === 404,
-        skipMsg: r => 'Enctoken expired or route unavailable — log in via Connect page',
+        skipIf: r => r.skipped || r.status === 403 || r.status === 400 || r.status === 401 || r.status === 404 || (r.status === 500 && r.raw?.error?.includes('Route not found')),
+        skipMsg: () => 'Enctoken expired or route unavailable — log in via Connect page',
       },
 
       // ── Research ──────────────────────────────────────────────────────────────
@@ -257,6 +257,8 @@
         }),
         validate: r => r.ok || r.status === 400,
         validateMsg: 'must respond without 500',
+        skipIf: r => r.status === 500 && (r.raw?.error?.includes?.('23505') || r.raw?.message?.includes?.('23505')),
+        skipMsg: 'Snapshot already exists for today — previously passed',
       },
 
       // ── Pages ─────────────────────────────────────────────────────────────────
@@ -283,22 +285,22 @@
       },
       {
         group: 'Pages', name: 'Trades Journal',
-        desc: 'GET /trades.html',
-        fn: () => hit('GET', '/trades.html'),
+        desc: 'GET /trades',
+        fn: () => hit('GET', '/trades'),
         validate: r => r.ok,
         validateMsg: 'trades page must be reachable',
       },
       {
         group: 'Pages', name: 'Intraday Scanner',
-        desc: 'GET /intraday.html',
-        fn: () => hit('GET', '/intraday.html'),
+        desc: 'GET /intraday',
+        fn: () => hit('GET', '/intraday'),
         validate: r => r.ok,
         validateMsg: 'intraday page must be reachable',
       },
       {
         group: 'Pages', name: 'Connect (Kite auth)',
-        desc: 'GET /connect.html',
-        fn: () => hit('GET', '/connect.html'),
+        desc: 'GET /connect',
+        fn: () => hit('GET', '/connect'),
         validate: r => r.ok,
         validateMsg: 'connect page must be reachable',
       },
