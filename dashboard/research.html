@@ -242,6 +242,43 @@
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { background: var(--green); }
     .toast.error { background: var(--red); }
+
+    /* INTELLIGENCE FEED */
+    .pick-row { display:flex; align-items:center; gap:10px; padding:9px 16px; border-bottom:1px solid #1e2535; transition:background .15s; cursor:default; }
+    .pick-row:last-child { border-bottom:none; }
+    .pick-row:hover { background:#1e2535; }
+    .pick-sym { font-size:13px; font-weight:700; color:#e2e8f0; min-width:80px; }
+    .pick-bias { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; text-transform:uppercase; flex-shrink:0; }
+    .pick-bias.long  { background:rgba(104,211,145,.12); color:#68d391; border:1px solid rgba(104,211,145,.25); }
+    .pick-bias.short { background:rgba(252,129,129,.12); color:#fc8181; border:1px solid rgba(252,129,129,.25); }
+    .pick-bias.neutral { background:rgba(160,174,192,.1); color:#a0aec0; border:1px solid rgba(160,174,192,.2); }
+    .pick-score { font-size:12px; font-weight:700; min-width:36px; text-align:right; }
+    .pick-reason { font-size:11px; color:#718096; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pick-event { font-size:10px; color:#4a5568; flex-shrink:0; }
+
+    .signal-row { padding:10px 16px; border-bottom:1px solid #1e2535; }
+    .signal-row:last-child { border-bottom:none; }
+    .signal-row:hover { background:#1e2535; }
+    .signal-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .signal-sym { font-size:13px; font-weight:700; color:#e2e8f0; }
+    .signal-dir { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; }
+    .signal-dir.long  { background:rgba(104,211,145,.12); color:#68d391; }
+    .signal-dir.short { background:rgba(252,129,129,.12); color:#fc8181; }
+    .signal-conf { font-size:10px; color:#718096; margin-left:auto; }
+    .signal-levels { display:flex; gap:14px; font-size:11px; flex-wrap:wrap; }
+    .level-item { display:flex; flex-direction:column; gap:1px; }
+    .level-lbl { color:#4a5568; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+    .level-val { color:#e2e8f0; font-weight:600; }
+    .level-val.entry  { color:#63b3ed; }
+    .level-val.target { color:#68d391; }
+    .level-val.sl     { color:#fc8181; }
+    .level-rr { font-size:11px; font-weight:700; color:#a0aec0; margin-left:auto; align-self:flex-end; }
+    .signal-setup { font-size:10px; color:#4a5568; margin-top:4px; }
+    .intel-loading { display:flex; align-items:center; gap:8px; padding:20px 16px; color:#4a5568; font-size:12px; }
+    .intel-spinner { width:14px; height:14px; border:2px solid #2d3748; border-top-color:#63b3ed; border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .intel-error { padding:16px; font-size:12px; color:#fc8181; }
+    @media (max-width:640px) { #intelGrid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -316,6 +353,70 @@
   <div id="dynamicSection" style="display:none; margin-bottom:32px;">
     <div class="section-title">Live Analysis</div>
     <div id="dynamicGrid" class="stock-grid"></div>
+  </div>
+
+  <!-- ── INTELLIGENCE FEED ──────────────────────────────────────────────── -->
+  <div id="intelSection" style="margin-bottom:32px;">
+
+    <!-- Header row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="section-title" style="margin-bottom:0;">Live Intelligence</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="intelAge" style="font-size:11px;color:#4a5568;"></span>
+        <button id="intelRunBtn" onclick="runIntelPipeline()" style="padding:6px 16px;background:#2d3748;border:1px solid #4a5568;color:#e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">▶ Run Scan</button>
+      </div>
+    </div>
+
+    <!-- Market Context strip -->
+    <div id="intelContext" style="display:none;background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:14px 20px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Market Mood</div>
+        <div id="ctxMood" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Regime</div>
+        <div id="ctxRegime" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Gift Nifty</div>
+        <div id="ctxGift" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">VIX State</div>
+        <div id="ctxVix" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+      </div>
+      <div style="flex:2;min-width:240px;">
+        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Summary</div>
+        <div id="ctxSummary" style="font-size:12px;color:#a0aec0;line-height:1.5;">—</div>
+      </div>
+    </div>
+
+    <!-- Two-column layout: Brain Picks + Trade Signals -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="intelGrid">
+
+      <!-- Brain Picks -->
+      <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.07em;">Brain Picks</span>
+          <span id="brainPickCount" style="font-size:11px;color:#4a5568;"></span>
+        </div>
+        <div id="brainPicksList" style="padding:12px 0;min-height:80px;">
+          <div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">Hit Run Scan to fetch latest signals.</div>
+        </div>
+      </div>
+
+      <!-- Trade Signals -->
+      <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.07em;">Trade Signals</span>
+          <span id="signalCount" style="font-size:11px;color:#4a5568;"></span>
+        </div>
+        <div id="tradeSignalsList" style="padding:12px 0;min-height:80px;">
+          <div id="tradeSignalsEmpty" style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">Signals populate after scan.</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- SUMMARY -->
@@ -1331,6 +1432,178 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4000);
   }
+
+  // ── INTELLIGENCE PIPELINE ─────────────────────────────────────────────────────
+  const BASE = 'https://zerodha-portfolio-three.vercel.app';
+
+  function enc() { return localStorage.getItem('kite_enctoken') || ''; }
+
+  async function apiFetch(path, method = 'GET', body = null) {
+    const hdrs = { 'Content-Type': 'application/json' };
+    if (enc()) hdrs['X-Kite-Enctoken'] = enc();
+    const res = await fetch(BASE + path, { method, headers: hdrs, body: body ? JSON.stringify(body) : undefined });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    return json;
+  }
+
+  function setLoading(containerId, msg) {
+    document.getElementById(containerId).innerHTML =
+      `<div class="intel-loading"><div class="intel-spinner"></div>${msg}</div>`;
+  }
+  function setError(containerId, msg) {
+    document.getElementById(containerId).innerHTML =
+      `<div class="intel-error">✗ ${msg}</div>`;
+  }
+
+  function scoreColor(s) {
+    if (s >= 7.5) return '#68d391';
+    if (s >= 5)   return '#63b3ed';
+    return '#fc8181';
+  }
+
+  function renderBrainPicks(picks) {
+    const el = document.getElementById('brainPicksList');
+    document.getElementById('brainPickCount').textContent = picks.length ? `${picks.length} signal${picks.length !== 1 ? 's' : ''}` : '';
+    if (!picks.length) {
+      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No picks above threshold — market may be quiet.</div>';
+      return;
+    }
+    el.innerHTML = picks.slice(0, 10).map(p => {
+      const bias = (p.directional_bias || 'neutral').replace('long','long').replace('short','short');
+      return `<div class="pick-row">
+        <span class="pick-sym">${p.symbol}</span>
+        <span class="pick-bias ${bias === 'long' ? 'long' : bias === 'short' ? 'short' : 'neutral'}">${bias}</span>
+        <span class="pick-score" style="color:${scoreColor(p.score)}">${(p.score||0).toFixed(1)}</span>
+        <span class="pick-event">${(p.event_type||'').replace(/_/g,' ')}</span>
+        <span class="pick-reason" title="${p.reason||''}">${p.reason||''}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTradeSignals(plans) {
+    const el = document.getElementById('tradeSignalsList');
+    document.getElementById('signalCount').textContent = plans.length ? `${plans.length} setup${plans.length !== 1 ? 's' : ''}` : '';
+    document.getElementById('tradeSignalsEmpty').style.display = 'none';
+    if (!plans.length) {
+      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No setups qualified this cycle.</div>';
+      return;
+    }
+    el.innerHTML = plans.slice(0, 8).map(p => {
+      const dir = (p.direction || p.side || '').toLowerCase().includes('long') || p.side === 'BUY' ? 'long' : 'short';
+      const rr  = p.rr ? `${p.rr.toFixed(1)}R` : '—';
+      return `<div class="signal-row">
+        <div class="signal-header">
+          <span class="signal-sym">${p.symbol}</span>
+          <span class="signal-dir ${dir}">${dir.toUpperCase()}</span>
+          <span class="signal-conf">${p.confidence || ''} · score ${p.signal_score || Math.round((p.score||0)*100)}</span>
+        </div>
+        <div class="signal-levels">
+          <div class="level-item"><span class="level-lbl">Entry</span><span class="level-val entry">₹${(p.entry||0).toFixed(0)}</span></div>
+          <div class="level-item"><span class="level-lbl">Target</span><span class="level-val target">₹${(p.t1||p.target||0).toFixed(0)}</span></div>
+          <div class="level-item"><span class="level-lbl">SL</span><span class="level-val sl">₹${(p.sl||0).toFixed(0)}</span></div>
+          <div class="level-item"><span class="level-lbl">Qty</span><span class="level-val">${p.qty||'—'}</span></div>
+          <div class="level-item"><span class="level-lbl">Capital</span><span class="level-val">₹${((p.capital||0)/1000).toFixed(0)}k</span></div>
+          <span class="level-rr">${rr}</span>
+        </div>
+        <div class="signal-setup">${(p.setup_type||'').replace(/_/g,' ')} · ${p.trigger_primary||''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderContext(brain) {
+    const ctx = document.getElementById('intelContext');
+    ctx.style.display = 'flex';
+    const mood = brain.market_sentiment || '—';
+    const moodColor = mood === 'bullish' ? '#68d391' : mood === 'bearish' ? '#fc8181' : '#a0aec0';
+    document.getElementById('ctxMood').textContent    = mood;
+    document.getElementById('ctxMood').style.color    = moodColor;
+    document.getElementById('ctxRegime').textContent  = brain.regime || '—';
+    document.getElementById('ctxGift').textContent    = brain.gift_nifty_bias || '—';
+    document.getElementById('ctxVix').textContent     = brain.vix_state || '—';
+    document.getElementById('ctxSummary').textContent = brain.summary || '—';
+    const age = brain.cache_age_min;
+    document.getElementById('intelAge').textContent = age != null ? `${age}m old` : '';
+  }
+
+  async function runIntelPipeline() {
+    const btn = document.getElementById('intelRunBtn');
+    btn.disabled = true;
+    btn.textContent = '⟳ Scanning…';
+
+    setLoading('brainPicksList', 'Fetching market intelligence…');
+    setLoading('tradeSignalsList', 'Waiting for brain…');
+
+    let brainData, picks = [];
+    try {
+      brainData = await apiFetch('/api/intel?action=brain');
+      picks = brainData.picks || [];
+      renderContext(brainData);
+      renderBrainPicks(picks);
+    } catch (e) {
+      setError('brainPicksList', e.message);
+      btn.disabled = false; btn.textContent = '▶ Run Scan';
+      return;
+    }
+
+    if (!picks.length) {
+      setError('tradeSignalsList', 'No brain picks — nothing to intersect');
+      btn.disabled = false; btn.textContent = '▶ Run Scan';
+      return;
+    }
+
+    // Step 2: get triggers
+    let triggers = [];
+    try {
+      setLoading('tradeSignalsList', 'Fetching live triggers…');
+      const trigData = await apiFetch('/api/research?action=triggers');
+      triggers = trigData.triggers || [];
+    } catch { /* triggers optional — intersect can work without */ }
+
+    // Step 3: intersect brain × triggers
+    let opportunities = [];
+    try {
+      setLoading('tradeSignalsList', 'Running intersection…');
+      const ix = await apiFetch('/api/intel?action=intersect', 'POST', { picks, triggers });
+      opportunities = ix.opportunities || [];
+    } catch (e) {
+      setError('tradeSignalsList', 'Intersect failed: ' + e.message);
+      btn.disabled = false; btn.textContent = '▶ Run Scan';
+      return;
+    }
+
+    if (!opportunities.length) {
+      document.getElementById('tradeSignalsList').innerHTML =
+        '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No qualifying setups found — brain picks did not match live triggers.</div>';
+      document.getElementById('signalCount').textContent = '0 setups';
+      btn.disabled = false; btn.textContent = '▶ Run Scan';
+      return;
+    }
+
+    // Step 4: trade plans
+    try {
+      setLoading('tradeSignalsList', `Building plans for ${opportunities.length} opportunities…`);
+      const tp = await apiFetch('/api/intel?action=trade_plan', 'POST', { opportunities });
+      renderTradeSignals(tp.plans || []);
+    } catch (e) {
+      setError('tradeSignalsList', 'Trade plan failed: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh';
+  }
+
+  // Auto-load brain on page open (cached, no LLM cost)
+  (async function autoLoadBrain() {
+    try {
+      const brain = await apiFetch('/api/intel?action=brain');
+      if (brain.picks?.length) {
+        renderContext(brain);
+        renderBrainPicks(brain.picks);
+        document.getElementById('intelRunBtn').textContent = '↻ Refresh';
+      }
+    } catch { /* silent — user can hit Run Scan */ }
+  })();
 
   // ── FILTERS ───────────────────────────────────────────────────
   function setFilter(type, btn) {
