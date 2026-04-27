@@ -4,78 +4,78 @@ import path from 'path';
 import { fetchCalibration, persistPicks, recordOutcomes, refreshSourceStats, buildMonitor, resolveCalibration, vixBucket, timeBucket } from './outcomes.js';
 
 // ── Source registry ───────────────────────────────────────────────────────────
+// Direct RSS feeds from Indian financial publishers — reliable from cloud IPs.
 // baseline_rate: expected article density for this signal_type (0–1).
 //   High = naturally voluminous (media), low = rare and precious (smart_money).
-//   Used to normalize scores so high-volume types don't dominate by sheer count.
 const SOURCES = [
-  // ── Smart Money ───────────────────────────────────────────────────────────
+  // ── Market Direction — broad market news ─────────────────────────────────
   {
-    label: 'Vijay Kedia', tier: 1,
-    q: '"Vijay Kedia" stock buy accumulate NSE portfolio 2024 2025',
-    signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.15,
+    label: 'ET Markets', tier: 1,
+    url: 'https://economictimes.indiatimes.com/markets/rss.cms',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.60,
   },
   {
-    label: 'Basant Maheshwari', tier: 1,
-    q: '"Basant Maheshwari" equity picks NSE accumulate strong buy',
-    signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.15,
+    label: 'ET Stocks', tier: 1,
+    url: 'https://economictimes.indiatimes.com/markets/stocks/rss.cms',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.60,
   },
   {
-    label: 'Deepak Shenoy', tier: 1,
-    q: '"Deepak Shenoy" OR "Capital Mind" stock buy NSE analysis 2025',
-    signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.20,
+    label: 'Business Standard Markets', tier: 1,
+    url: 'https://www.business-standard.com/rss/markets-106.rss',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.55,
   },
   {
-    label: 'Mitesh Engineer', tier: 1,
-    q: '"Mitesh Engineer" OR "@Mitesh_Engr" stock buy target NSE intraday',
-    signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.15,
+    label: 'Moneycontrol Top News', tier: 2,
+    url: 'https://www.moneycontrol.com/rss/MCtopnews.xml',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.65,
   },
   {
-    label: 'Porinju Veliyath', tier: 1,
-    q: '"Porinju Veliyath" stock portfolio NSE smallcap multibagger',
-    signal_type: 'smart_money', sentiment_bias: 'bullish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 96, baseline_rate: 0.15,
+    label: 'Mint Markets', tier: 2,
+    url: 'https://www.livemint.com/rss/markets',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.55,
+  },
+  {
+    label: 'Financial Express Markets', tier: 2,
+    url: 'https://www.financialexpress.com/market/feed/',
+    signal_type: 'market_direction', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.55,
   },
 
-  // ── Institutional Flow ────────────────────────────────────────────────────
+  // ── Institutional Flow — FII/DII, block deals, analyst calls ─────────────
   {
-    label: 'FII DII Net Flow', tier: 5,
-    q: 'FII DII net buying selling India NSE BSE crore today 2025',
+    label: 'ET FII DII', tier: 2,
+    url: 'https://economictimes.indiatimes.com/markets/stocks/fii-dii/rss.cms',
     signal_type: 'institutional_flow', sentiment_bias: 'neutral',
     reliability_score: 9, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.40,
   },
   {
-    label: 'Block Deals', tier: 5,
-    q: 'NSE BSE block deal bulk deal FII institutional buy sell today India',
+    label: 'BS FII Data', tier: 2,
+    url: 'https://www.business-standard.com/rss/finance-109.rss',
     signal_type: 'institutional_flow', sentiment_bias: 'neutral',
     reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.35,
   },
   {
-    label: 'Goldman India', tier: 6,
-    q: '"Goldman Sachs" India stock upgrade target raise NSE sector 2025',
-    signal_type: 'institutional_flow', sentiment_bias: 'bullish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.25,
-  },
-  {
-    label: 'JPMorgan India', tier: 6,
-    q: '"JPMorgan" India stock overweight upgrade price target 2025',
-    signal_type: 'institutional_flow', sentiment_bias: 'bullish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 72, baseline_rate: 0.25,
+    label: 'MC FII Activity', tier: 2,
+    url: 'https://www.moneycontrol.com/rss/fiis.xml',
+    signal_type: 'institutional_flow', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.35,
   },
 
   // ── Derivatives ───────────────────────────────────────────────────────────
   {
-    label: 'Nifty Options OI', tier: 4,
-    q: 'Nifty options OI buildup call put PCR unusual activity today NSE',
+    label: 'ET Derivatives', tier: 3,
+    url: 'https://economictimes.indiatimes.com/markets/derivatives/rss.cms',
     signal_type: 'derivatives', sentiment_bias: 'neutral',
     reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.45,
   },
   {
-    label: 'BankNifty Flow', tier: 4,
-    q: 'BankNifty options OI max pain support resistance expiry today',
+    label: 'MC F&O', tier: 3,
+    url: 'https://www.moneycontrol.com/rss/fo.xml',
     signal_type: 'derivatives', sentiment_bias: 'neutral',
     reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.40,
   },
@@ -99,70 +99,61 @@ const SOURCES = [
     signal_type: 'market_direction', sentiment_bias: 'neutral',
     reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 12, baseline_rate: 0.35,
   },
+  // ── Earnings / Results ───────────────────────────────────────────────────
   {
-    label: 'NSE Breakouts', tier: 3,
-    q: 'NSE stock 52-week high breakout volume surge momentum rally today India',
-    signal_type: 'market_direction', sentiment_bias: 'bullish',
-    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.55,
-  },
-
-  // ── Macro ─────────────────────────────────────────────────────────────────
-  {
-    label: 'RBI Policy', tier: 5,
-    q: 'RBI repo rate policy decision India inflation banking stock impact 2025',
-    signal_type: 'macro', sentiment_bias: 'neutral',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.30,
-  },
-  {
-    label: 'Global Macro Risk', tier: 6,
-    q: 'US Fed DXY dollar crude oil treasury yield India NSE impact today',
-    signal_type: 'macro', sentiment_bias: 'neutral',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.45,
-  },
-
-  // ── Media ─────────────────────────────────────────────────────────────────
-  {
-    label: 'Earnings Beats', tier: 5,
-    q: 'India quarterly results earnings beat profit above estimate NSE stock today',
-    signal_type: 'media', sentiment_bias: 'bullish',
+    label: 'ET Earnings', tier: 2,
+    url: 'https://economictimes.indiatimes.com/markets/earnings/rss.cms',
+    signal_type: 'media', sentiment_bias: 'neutral',
     reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.70,
   },
   {
-    label: 'Analyst Upgrades', tier: 2,
-    q: 'India NSE stock analyst upgrade buy strong buy target raised ICICI Morgan Motilal 2025',
-    signal_type: 'media', sentiment_bias: 'bullish',
-    reliability_score: 6, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.65,
+    label: 'MC Results', tier: 2,
+    url: 'https://www.moneycontrol.com/rss/results.xml',
+    signal_type: 'media', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.70,
+  },
+  {
+    label: 'BS Results', tier: 2,
+    url: 'https://www.business-standard.com/rss/results-announcements-110.rss',
+    signal_type: 'media', sentiment_bias: 'neutral',
+    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.65,
   },
 
-  // ── Negative Events ───────────────────────────────────────────────────────
+  // ── Macro / Economy ──────────────────────────────────────────────────────
   {
-    label: 'Earnings Misses', tier: 5,
-    q: 'India quarterly results earnings miss profit below estimate NSE stock today',
-    signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.55,
+    label: 'ET Economy', tier: 3,
+    url: 'https://economictimes.indiatimes.com/news/economy/rss.cms',
+    signal_type: 'macro', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.40,
   },
   {
-    label: 'Analyst Downgrades', tier: 2,
-    q: 'India NSE stock analyst downgrade sell reduce underperform target cut 2025',
-    signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.50,
+    label: 'MC Economy', tier: 3,
+    url: 'https://www.moneycontrol.com/rss/economy.xml',
+    signal_type: 'macro', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 48, baseline_rate: 0.40,
+  },
+
+  // ── Negative Events ──────────────────────────────────────────────────────
+  {
+    label: 'ET Expert Views', tier: 2,
+    url: 'https://economictimes.indiatimes.com/markets/expert-views/rss.cms',
+    signal_type: 'negative_events', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.50,
   },
   {
-    label: 'Regulatory Risk', tier: 5,
-    q: 'India NSE stock SEBI penalty fraud promoter pledge warning circuit today',
-    signal_type: 'negative_events', sentiment_bias: 'bearish',
-    reliability_score: 8, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.30,
+    label: 'BS Companies', tier: 2,
+    url: 'https://www.business-standard.com/rss/companies-101.rss',
+    signal_type: 'negative_events', sentiment_bias: 'neutral',
+    reliability_score: 7, dynamic_weight: 1.0, max_age_hours: 24, baseline_rate: 0.45,
   },
 ];
 
-const NEWS_BASE = 'https://news.google.com/rss/search';
-
-// ── Fetch Google News RSS ─────────────────────────────────────────────────────
-async function fetchNewsItems(source, maxItems = 4) {
-  const url = `${NEWS_BASE}?q=${encodeURIComponent(source.q)}&hl=en-IN&gl=IN&ceid=IN:en`;
+// ── Fetch RSS feed ────────────────────────────────────────────────────────────
+async function fetchNewsItems(source, maxItems = 6) {
+  const url = source.url;
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0' },
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return [];
@@ -188,22 +179,24 @@ async function fetchNewsItems(source, maxItems = 4) {
         .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
         .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim();
 
-      const title = clean(titleRaw);
-      const desc  = clean(descRaw);
-      const text  = desc.length > title.length ? `${title}. ${desc}` : title;
+      const title  = clean(titleRaw);
+      const desc   = clean(descRaw);
+      // For direct RSS feeds desc often repeats title; prefer whichever is longer and distinct
+      const text   = desc.length > title.length + 20 ? `${title}. ${desc}` : title;
+      const outlet = clean(outletRaw) || source.label;
 
-      // Cap text at 220 chars to keep total prompt under Groq's 12k TPM limit
-      const trimmed = text.length > 220 ? text.slice(0, 217) + '…' : text;
+      // Cap text at 260 chars — direct RSS articles are longer than Google News snippets
+      const trimmed = text.length > 260 ? text.slice(0, 257) + '…' : text;
       if (trimmed.length > 40) items.push({
-        source:      source.label,
-        tier:        source.tier,
-        signal_type: source.signal_type,
+        source:         source.label,
+        tier:           source.tier,
+        signal_type:    source.signal_type,
         sentiment_bias: source.sentiment_bias,
-        reliability: source.reliability_score,
-        outlet:      clean(outletRaw),
-        text:        trimmed,
-        daysAgo:     Math.round((Date.now() - ts) / 86400000),
-        hoursAgo:    Math.round((Date.now() - ts) / 3600000),
+        reliability:    source.reliability_score,
+        outlet,
+        text:           trimmed,
+        daysAgo:        Math.round((Date.now() - ts) / 86400000),
+        hoursAgo:       Math.round((Date.now() - ts) / 3600000),
       });
     }
     return items;
@@ -631,15 +624,20 @@ async function extractWithLLM(articles) {
   const today     = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const dayOfWeek = new Date().toLocaleDateString('en-IN', { weekday: 'long' });
 
-  const block = articles.map(a =>
-    `[${a.signal_type}·R${a.reliability}·${a.hoursAgo}h·${a.sentiment_bias}·${a.source}]: ${a.text}`
+  // Cap at 60 articles to stay comfortably within Groq's 6k-token context window.
+  // Newest articles (lowest hoursAgo) are prioritised; excess tail is trimmed.
+  const sorted  = [...articles].sort((a, b) => (a.hoursAgo ?? 0) - (b.hoursAgo ?? 0));
+  const capped  = sorted.slice(0, 60);
+
+  const block = capped.map(a =>
+    `[${a.signal_type}·R${a.reliability}·${a.hoursAgo}h·${a.source}]: ${a.text}`
   ).join('\n');
 
   const prompt = `You are an intelligence extraction engine for an Indian equity trading system. Today is ${today} (${dayOfWeek}).
 
 Your ONLY job is to READ the news feed and EXTRACT structured data. Do NOT score, rank, or decide which stocks to buy or sell. A separate deterministic engine handles scoring. Extract accurately — do not hallucinate stocks not present in the feed.
 
-INTELLIGENCE FEED (${articles.length} signals):
+INTELLIGENCE FEED (${capped.length} signals):
 ${block}
 
 Return ONLY valid JSON:
@@ -960,9 +958,9 @@ function writeCache(data) {
 }
 
 async function fetchFresh() {
-  const results  = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 3)));
+  const results  = await Promise.allSettled(SOURCES.map(s => fetchNewsItems(s, 6)));
   const articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-  if (articles.length === 0) throw new Error('No articles fetched');
+  if (articles.length === 0) throw new Error('No articles fetched from any RSS source');
 
   const analysis = await analyzeWithGroq(articles);
   // Data quality guard returned null — serve stale cache rather than empty picks
@@ -977,6 +975,7 @@ async function fetchFresh() {
     ...analysis,
     article_count:       articles.length,
     sources_fetched:     [...new Set(articles.map(a => a.source))],
+    feeds_attempted:     SOURCES.length,
     signal_breakdown:    Object.fromEntries(
       signalTypes.map(t => [t, articles.filter(a => a.signal_type === t).length])
     ),
