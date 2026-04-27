@@ -64,6 +64,7 @@
     .step.active  { background: rgba(99,179,237,0.08); border-color: rgba(99,179,237,0.3); color: #63b3ed; }
     .step.done    { background: rgba(104,211,145,0.08); border-color: rgba(104,211,145,0.25); color: #68d391; }
     .step.error   { background: rgba(252,129,129,0.08); border-color: rgba(252,129,129,0.25); color: #fc8181; }
+    .step.skip    { opacity: 0.35; }
     .step-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .step.active .step-dot { animation: blink 1s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
@@ -106,6 +107,15 @@
     .ctx-item .c-label { font-size: 10px; color: #4a5568; text-transform: uppercase; letter-spacing: .05em; }
     .ctx-item .c-val   { font-size: 13px; font-weight: 700; margin-top: 2px; }
     .ctx-summary { font-size: 12px; color: #718096; line-height: 1.6; margin-top: 4px; }
+
+    /* MODE TOGGLE */
+    .mode-toggle { display: flex; gap: 0; border: 1px solid #2d3748; border-radius: 8px; overflow: hidden; }
+    .mode-btn { padding: 8px 18px; font-size: 12px; font-weight: 600; color: #718096; background: #0f1117; border: none; cursor: pointer; transition: all .15s; border-right: 1px solid #2d3748; }
+    .mode-btn:last-child { border-right: none; }
+    .mode-btn.active { background: #1a1f2e; color: #e2e8f0; }
+    .mode-btn.live.active  { color: #68d391; }
+    .mode-btn.pre.active   { color: #f6ad55; }
+    .premarket-banner { display: none; background: rgba(246,173,85,0.08); border: 1px solid rgba(246,173,85,0.25); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f6ad55; margin-bottom: 16px; line-height: 1.5; }
 
     /* TABS */
     .tabs { display: flex; gap: 0; border-bottom: 1px solid #2d3748; margin-bottom: 20px; }
@@ -196,6 +206,15 @@
       <div class="derived-item"><div class="d-label">Hard Stop</div><div class="d-value" id="dHardStop">—</div></div>
     </div>
 
+    <div style="display:flex;align-items:center;gap:14px;margin-top:20px;padding-top:18px;border-top:1px solid #2d3748;flex-wrap:wrap;">
+      <span style="font-size:11px;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Mode</span>
+      <div class="mode-toggle">
+        <button class="mode-btn live active" id="modeLiveBtn" onclick="setMode('live')">🟢 Live Market</button>
+        <button class="mode-btn pre"         id="modePreBtn"  onclick="setMode('pre')">🟡 Pre-market / Research</button>
+      </div>
+      <span style="font-size:11px;color:#4a5568;" id="modeHint">Requires market open · uses live price triggers</span>
+    </div>
+
     <div class="run-row">
       <button class="btn-run" id="runBtn" onclick="buildPlan()">▶ Build Plan</button>
       <button class="btn-reset" onclick="resetAll()">Reset</button>
@@ -216,6 +235,11 @@
 
   <!-- OUTPUT -->
   <div id="outputSection" style="display:none;">
+
+    <!-- Pre-market banner -->
+    <div class="premarket-banner" id="premarketBanner">
+      ⚠ Pre-market / Research mode — live triggers skipped. Plans are built directly from brain signals using last traded prices. Treat as research, not execution-ready setups. Prices will differ when market opens.
+    </div>
 
     <!-- Market context -->
     <div class="card" id="ctxCard">
@@ -300,6 +324,31 @@
 
 <script>
   const BASE = 'https://zerodha-portfolio-three.vercel.app';
+
+  // ── Market hours detection ───────────────────────────────────────────────────
+  function isMarketOpen() {
+    const now = new Date();
+    const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const day = ist.getDay(); // 0=Sun, 6=Sat
+    if (day === 0 || day === 6) return false;
+    const h = ist.getHours(), m = ist.getMinutes();
+    const mins = h * 60 + m;
+    return mins >= 9 * 60 + 15 && mins <= 15 * 60 + 30;
+  }
+
+  let _mode = isMarketOpen() ? 'live' : 'pre';
+
+  function setMode(m) {
+    _mode = m;
+    document.getElementById('modeLiveBtn').classList.toggle('active', m === 'live');
+    document.getElementById('modePreBtn').classList.toggle('active',  m === 'pre');
+    document.getElementById('modeHint').textContent = m === 'live'
+      ? 'Requires market open · uses live price triggers'
+      : 'Works anytime · uses brain signals + last traded prices';
+  }
+
+  // Auto-select mode on load
+  setMode(_mode);
 
   // ── Derived metrics ──────────────────────────────────────────────────────────
   function updateDerived() {
@@ -501,10 +550,19 @@
     runBtn.textContent = '⟳ Building…';
     setStatus('');
 
-    document.getElementById('pipelineWrap').style.display = 'block';
+    const isPreMarket = _mode === 'pre';
+
+    document.getElementById('pipelineWrap').style.display  = 'block';
     document.getElementById('outputSection').style.display = 'block';
     document.getElementById('sessionStats').style.display  = 'none';
+    document.getElementById('premarketBanner').style.display = isPreMarket ? 'block' : 'none';
     allStepsPending();
+
+    // Grey out trigger+intersect steps in pre-market mode
+    if (isPreMarket) {
+      stepSet('triggers',  'skip');
+      stepSet('intersect', 'skip');
+    }
 
     let picks = [], triggers = [], opportunities = [];
 
@@ -526,38 +584,70 @@
 
     renderPicks(picks);
 
-    // ── Step 2: Triggers ───────────────────────────────────────────────────────
-    stepSet('triggers', 'active');
-    setStatus('Fetching live triggers…');
-    try {
-      const td = await api('/api/research?action=triggers');
-      triggers = td.triggers || [];
-      stepSet('triggers', 'done');
-    } catch {
-      stepSet('triggers', 'done'); // triggers optional
-    }
-
-    // ── Step 3: Intersect ──────────────────────────────────────────────────────
-    stepSet('intersect', 'active');
-    setStatus('Intersecting brain × triggers…');
-    try {
-      const ix = await api('/api/intel?action=intersect', 'POST', { picks, triggers });
-      opportunities = ix.opportunities || [];
-      stepSet('intersect', 'done');
-    } catch (e) {
-      stepSet('intersect', 'error');
-      setStatus('Intersect failed: ' + e.message);
-      runBtn.disabled = false; runBtn.textContent = '▶ Build Plan';
-      return;
-    }
-
-    if (!opportunities.length) {
-      setStatus(`No qualifying setups from ${picks.length} brain picks + ${triggers.length} triggers. Market may be quiet.`);
-      renderTradesTable([]);
-      renderSkipped([]);
-      stepSet('plans', ''); stepSet('allocate', '');
+    if (!picks.length) {
+      setStatus('No brain signals above threshold — market intelligence is empty.');
+      renderTradesTable([]); renderSkipped([]);
       runBtn.disabled = false; runBtn.textContent = '↻ Retry';
       return;
+    }
+
+    if (isPreMarket) {
+      // Pre-market: skip triggers + intersect, promote brain picks directly to opportunities
+      opportunities = picks.map(p => ({
+        symbol:      p.symbol,
+        exchange:    p.exchange || 'NSE',
+        direction:   p.directional_bias === 'bullish' || p.directional_bias === 'long' ? 'long' : p.directional_bias === 'bearish' || p.directional_bias === 'short' ? 'short' : 'long',
+        confidence:  p.score >= 7.5 ? 'high' : p.score >= 5 ? 'medium' : 'low',
+        final_score: Math.min(1, (p.score || 5) / 10),
+        setup_type:  (p.event_type || 'general_mention').replace(/_/g, ' '),
+        brain:       p,
+        trigger:     { primary: 'pre_market', all_triggers: ['pre_market'], strength: 'medium',
+                       signal_intensity: 2, trend_context: p.directional_bias === 'bullish' ? 'uptrend' : 'neutral',
+                       triggered_at: new Date().toISOString(), age_min: 0 },
+        price:       { ltp: p.ltp_at_emit || 0, vwap: p.ltp_at_emit || 0, above_vwap: true,
+                       or_high: (p.ltp_at_emit || 0) * 1.005, or_low: (p.ltp_at_emit || 0) * 0.995,
+                       change_from_open_pct: 0 },
+        volume:      { current: 500000, volume_ratio: 1.5 },
+      })).filter(o => o.price.ltp > 0);
+
+      if (!opportunities.length) {
+        setStatus('Brain picks have no LTP data — cannot build plans without a price reference. Connect Kite or wait for market open.');
+        renderTradesTable([]); renderSkipped([]);
+        runBtn.disabled = false; runBtn.textContent = '↻ Retry';
+        return;
+      }
+    } else {
+      // Live mode: Step 2 + Step 3
+      stepSet('triggers', 'active');
+      setStatus('Fetching live triggers…');
+      try {
+        const td = await api('/api/research?action=triggers');
+        triggers = td.triggers || [];
+        stepSet('triggers', 'done');
+      } catch {
+        stepSet('triggers', 'done');
+      }
+
+      stepSet('intersect', 'active');
+      setStatus('Intersecting brain × triggers…');
+      try {
+        const ix = await api('/api/intel?action=intersect', 'POST', { picks, triggers });
+        opportunities = ix.opportunities || [];
+        stepSet('intersect', 'done');
+      } catch (e) {
+        stepSet('intersect', 'error');
+        setStatus('Intersect failed: ' + e.message);
+        runBtn.disabled = false; runBtn.textContent = '▶ Build Plan';
+        return;
+      }
+
+      if (!opportunities.length) {
+        setStatus(`No qualifying setups from ${picks.length} brain picks + ${triggers.length} triggers. Try Pre-market mode to plan from brain signals alone.`);
+        renderTradesTable([]); renderSkipped([]);
+        stepSet('plans', ''); stepSet('allocate', '');
+        runBtn.disabled = false; runBtn.textContent = '↻ Retry';
+        return;
+      }
     }
 
     // ── Step 4: Trade Plans ────────────────────────────────────────────────────
