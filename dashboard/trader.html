@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <script>if(!localStorage.getItem('pf_auth')){location.replace('/login?next='+encodeURIComponent(location.pathname));}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trader Desk — Portfolio Intelligence</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    /* NAV */
+    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
+    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
+    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 16px; } }
+
+    /* PAGE */
+    .page { max-width: 1100px; margin: 0 auto; padding: 36px 40px 60px; }
+    @media (max-width: 640px) { .page { padding: 20px 16px 40px; } }
+
+    /* HEADER */
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+    .page-header p  { font-size: 13px; color: #718096; margin-top: 5px; line-height: 1.6; }
+
+    /* CARDS */
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; }
+    .card-title { font-size: 11px; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 20px; }
+
+    /* INPUTS */
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    @media (max-width: 640px) { .param-grid { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 11px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select {
+      padding: 11px 14px; background: #0f1117; border: 1.5px solid #2d3748;
+      border-radius: 8px; font-size: 14px; color: #e2e8f0; outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus { border-color: #63b3ed; }
+    .field .hint { font-size: 11px; color: #4a5568; }
+
+    /* DERIVED STRIP */
+    .derived-strip { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid #2d3748; }
+    .derived-item .d-label { font-size: 10px; color: #4a5568; text-transform: uppercase; letter-spacing: .05em; }
+    .derived-item .d-value { font-size: 16px; font-weight: 700; color: #a0aec0; margin-top: 2px; }
+
+    /* RUN BUTTON */
+    .run-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+    .btn-run { padding: 12px 32px; background: #63b3ed; color: #0f1117; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; letter-spacing: 0.02em; }
+    .btn-run:hover { opacity: 0.85; }
+    .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-reset { padding: 12px 20px; background: none; border: 1px solid #2d3748; border-radius: 8px; font-size: 13px; color: #718096; cursor: pointer; transition: all 0.15s; }
+    .btn-reset:hover { border-color: #4a5568; color: #a0aec0; }
+
+    /* PIPELINE STEPS */
+    .pipeline { display: flex; gap: 0; margin-bottom: 20px; flex-wrap: wrap; }
+    .step { display: flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 11px; font-weight: 600; border: 1px solid #2d3748; border-right: none; background: #1a1f2e; color: #4a5568; transition: all 0.2s; }
+    .step:first-child { border-radius: 8px 0 0 8px; }
+    .step:last-child  { border-radius: 0 8px 8px 0; border-right: 1px solid #2d3748; }
+    .step.active  { background: rgba(99,179,237,0.08); border-color: rgba(99,179,237,0.3); color: #63b3ed; }
+    .step.done    { background: rgba(104,211,145,0.08); border-color: rgba(104,211,145,0.25); color: #68d391; }
+    .step.error   { background: rgba(252,129,129,0.08); border-color: rgba(252,129,129,0.25); color: #fc8181; }
+    .step-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .step.active .step-dot { animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* SESSION SUMMARY */
+    .session-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px; }
+    @media (max-width: 640px) { .session-grid { grid-template-columns: repeat(2,1fr); } }
+    .stat-card { background: #111827; border: 1px solid #2d3748; border-radius: 10px; padding: 14px 16px; }
+    .stat-label { font-size: 10px; color: #4a5568; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-value { font-size: 20px; font-weight: 700; margin-top: 6px; }
+    .stat-sub   { font-size: 11px; color: #4a5568; margin-top: 3px; }
+
+    /* TRADES TABLE */
+    .trades-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 9px 12px; color: #718096; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3748; white-space: nowrap; }
+    td { padding: 11px 12px; border-bottom: 1px solid #1e2535; white-space: nowrap; }
+    tr:hover td { background: #1e2535; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .tag-long  { background: rgba(104,211,145,.12); color: #68d391; border: 1px solid rgba(104,211,145,.25); }
+    .tag-short { background: rgba(252,129,129,.12); color: #fc8181; border: 1px solid rgba(252,129,129,.25); }
+    .tag-high  { background: rgba(99,179,237,.12);  color: #63b3ed; border: 1px solid rgba(99,179,237,.25); }
+    .c-entry  { color: #63b3ed; font-weight: 600; }
+    .c-target { color: #68d391; font-weight: 600; }
+    .c-sl     { color: #fc8181; font-weight: 600; }
+    .c-rr     { color: #a0aec0; font-weight: 700; }
+
+    /* SKIPPED TABLE */
+    .skipped-list { display: flex; flex-direction: column; gap: 6px; }
+    .skip-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #111827; border-radius: 6px; font-size: 12px; }
+    .skip-sym { font-weight: 700; min-width: 80px; }
+    .skip-reason { color: #718096; flex: 1; }
+
+    /* EMPTY / ERROR STATES */
+    .state-box { padding: 40px 20px; text-align: center; color: #4a5568; font-size: 13px; }
+    .state-box .ico { font-size: 32px; margin-bottom: 10px; }
+
+    /* MARKET CONTEXT STRIP */
+    .ctx-strip { display: flex; gap: 24px; flex-wrap: wrap; padding: 14px 0; border-bottom: 1px solid #2d3748; margin-bottom: 16px; }
+    .ctx-item .c-label { font-size: 10px; color: #4a5568; text-transform: uppercase; letter-spacing: .05em; }
+    .ctx-item .c-val   { font-size: 13px; font-weight: 700; margin-top: 2px; }
+    .ctx-summary { font-size: 12px; color: #718096; line-height: 1.6; margin-top: 4px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid #2d3748; margin-bottom: 20px; }
+    .tab { padding: 10px 18px; font-size: 12px; font-weight: 600; color: #718096; cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+    .tab:hover { color: #a0aec0; }
+    .tab.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/trader" class="active">Trader Desk</a>
+    <a href="/intraday">Intraday</a>
+    <a href="/research.html">Research Desk</a>
+    <a href="/connect">Connect Kite</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>Trader Desk</h1>
+    <p>Enter your session parameters. The system fetches today's market signals, finds qualifying setups, and sizes every trade to hit your target within your loss limit.</p>
+  </div>
+
+  <!-- SESSION PARAMETERS -->
+  <div class="card">
+    <div class="card-title">Session Parameters</div>
+    <div class="param-grid">
+      <div class="field">
+        <label>Capital to Deploy (₹)</label>
+        <input type="number" id="inCapital" value="50000" min="5000" step="1000" oninput="updateDerived()"/>
+        <span class="hint">How much you're willing to put into trades today</span>
+      </div>
+      <div class="field">
+        <label>Target Profit (₹)</label>
+        <input type="number" id="inTarget" value="3000" min="100" step="100" oninput="updateDerived()"/>
+        <span class="hint">Realistic gain you're aiming for this session</span>
+      </div>
+      <div class="field">
+        <label>Max Loss (₹)</label>
+        <input type="number" id="inMaxLoss" value="1500" min="100" step="100" oninput="updateDerived()"/>
+        <span class="hint">Hard stop — session closes if losses hit this</span>
+      </div>
+    </div>
+
+    <!-- Advanced row -->
+    <div class="param-grid" style="margin-top:16px;">
+      <div class="field">
+        <label>Max Trades</label>
+        <select id="inMaxTrades">
+          <option value="3">3 trades</option>
+          <option value="5" selected>5 trades</option>
+          <option value="7">7 trades</option>
+          <option value="10">10 trades</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Min Signal Score</label>
+        <select id="inMinScore">
+          <option value="0.55">0.55 — Relaxed</option>
+          <option value="0.65" selected>0.65 — Standard</option>
+          <option value="0.75">0.75 — Strict</option>
+          <option value="0.82">0.82 — High confidence only</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Min EV Gate</label>
+        <select id="inMinEV">
+          <option value="0.02">0.02 — Any positive EV</option>
+          <option value="0.05" selected>0.05 — Standard</option>
+          <option value="0.10">0.10 — High EV only</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Derived metrics -->
+    <div class="derived-strip">
+      <div class="derived-item"><div class="d-label">Risk Budget</div><div class="d-value" id="dRiskBudget">—</div></div>
+      <div class="derived-item"><div class="d-label">Max Risk %</div><div class="d-value" id="dMaxRisk">—</div></div>
+      <div class="derived-item"><div class="d-label">Target R-Multiple</div><div class="d-value" id="dRTarget">—</div></div>
+      <div class="derived-item"><div class="d-label">Implied R:R</div><div class="d-value" id="dRR">—</div></div>
+      <div class="derived-item"><div class="d-label">Hard Stop</div><div class="d-value" id="dHardStop">—</div></div>
+    </div>
+
+    <div class="run-row">
+      <button class="btn-run" id="runBtn" onclick="buildPlan()">▶ Build Plan</button>
+      <button class="btn-reset" onclick="resetAll()">Reset</button>
+      <span id="runStatus" style="font-size:12px;color:#4a5568;"></span>
+    </div>
+  </div>
+
+  <!-- PIPELINE TRACKER -->
+  <div id="pipelineWrap" style="display:none;">
+    <div class="pipeline">
+      <div class="step" id="step-brain"><span class="step-dot"></span>Brain</div>
+      <div class="step" id="step-triggers"><span class="step-dot"></span>Triggers</div>
+      <div class="step" id="step-intersect"><span class="step-dot"></span>Intersect</div>
+      <div class="step" id="step-plans"><span class="step-dot"></span>Trade Plans</div>
+      <div class="step" id="step-allocate"><span class="step-dot"></span>Allocate</div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div id="outputSection" style="display:none;">
+
+    <!-- Market context -->
+    <div class="card" id="ctxCard">
+      <div class="card-title">Market Context</div>
+      <div class="ctx-strip">
+        <div class="ctx-item"><div class="c-label">Sentiment</div><div class="c-val" id="outMood">—</div></div>
+        <div class="ctx-item"><div class="c-label">Regime</div><div class="c-val" id="outRegime">—</div></div>
+        <div class="ctx-item"><div class="c-label">Gift Nifty</div><div class="c-val" id="outGift">—</div></div>
+        <div class="ctx-item"><div class="c-label">VIX</div><div class="c-val" id="outVix">—</div></div>
+        <div class="ctx-item"><div class="c-label">Brain Picks</div><div class="c-val" id="outPickCount">—</div></div>
+        <div class="ctx-item"><div class="c-label">Powered By</div><div class="c-val" id="outPoweredBy" style="font-size:11px;color:#718096;">—</div></div>
+      </div>
+      <div class="ctx-summary" id="outSummary"></div>
+    </div>
+
+    <!-- Session stats -->
+    <div class="session-grid" id="sessionStats" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-label">Trades</div>
+        <div class="stat-value" id="sTrades" style="color:#e2e8f0;">—</div>
+        <div class="stat-sub" id="sTradesSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Capital Deployed</div>
+        <div class="stat-value" id="sDeployed" style="color:#63b3ed;">—</div>
+        <div class="stat-sub" id="sDeployedSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Risk Used</div>
+        <div class="stat-value" id="sRisk" style="color:#fc8181;">—</div>
+        <div class="stat-sub" id="sRiskSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expected P&L</div>
+        <div class="stat-value" id="sExpected" style="color:#68d391;">—</div>
+        <div class="stat-sub" id="sExpectedSub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Session Mode</div>
+        <div class="stat-value" id="sMode" style="color:#a0aec0;font-size:14px;">—</div>
+        <div class="stat-sub" id="sModeSub"></div>
+      </div>
+    </div>
+
+    <!-- Tabs: Trades / Skipped / Brain Picks -->
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('trades', this)">Trades</div>
+        <div class="tab" onclick="switchTab('skipped', this)">Skipped</div>
+        <div class="tab" onclick="switchTab('picks', this)">Brain Picks</div>
+      </div>
+
+      <!-- Trades tab -->
+      <div class="tab-panel active" id="tab-trades">
+        <div id="tradesContent">
+          <div class="state-box"><div class="ico">📋</div>Run Build Plan to see trades.</div>
+        </div>
+      </div>
+
+      <!-- Skipped tab -->
+      <div class="tab-panel" id="tab-skipped">
+        <div id="skippedContent">
+          <div class="state-box"><div class="ico">—</div>Nothing skipped yet.</div>
+        </div>
+      </div>
+
+      <!-- Brain Picks tab -->
+      <div class="tab-panel" id="tab-picks">
+        <div id="picksContent">
+          <div class="state-box"><div class="ico">🧠</div>Brain picks appear here after a scan.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div id="health-panel"></div>
+<script src="/health.js"></script>
+<script>HealthPanel.init('health-panel');</script>
+
+<script>
+  const BASE = 'https://zerodha-portfolio-three.vercel.app';
+
+  // ── Derived metrics ──────────────────────────────────────────────────────────
+  function updateDerived() {
+    const capital  = +document.getElementById('inCapital').value  || 0;
+    const target   = +document.getElementById('inTarget').value   || 0;
+    const maxLoss  = +document.getElementById('inMaxLoss').value  || 0;
+
+    const maxRiskPct  = capital > 0 ? ((maxLoss / capital) * 100).toFixed(1) : '—';
+    const rTarget     = maxLoss > 0 ? (target / maxLoss).toFixed(2) : '—';
+    const hardStop    = (maxLoss * 0.5).toFixed(0);  // hard stop = 50% of stated max loss
+    const impliedRR   = maxLoss > 0 ? (target / maxLoss).toFixed(1) + ':1' : '—';
+
+    document.getElementById('dRiskBudget').textContent = maxLoss  ? '₹' + maxLoss.toLocaleString('en-IN') : '—';
+    document.getElementById('dMaxRisk').textContent    = maxRiskPct + (maxRiskPct !== '—' ? '%' : '');
+    document.getElementById('dRTarget').textContent    = rTarget;
+    document.getElementById('dRR').textContent         = impliedRR;
+    document.getElementById('dHardStop').textContent   = hardStop ? '₹' + (+hardStop).toLocaleString('en-IN') : '—';
+  }
+  updateDerived();
+
+  // ── API helper ───────────────────────────────────────────────────────────────
+  function enc() { return localStorage.getItem('kite_enctoken') || ''; }
+
+  async function api(path, method = 'GET', body = null) {
+    const hdrs = { 'Content-Type': 'application/json' };
+    if (enc()) hdrs['X-Kite-Enctoken'] = enc();
+    const res = await fetch(BASE + path, {
+      method, headers: hdrs,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    return json;
+  }
+
+  // ── Pipeline step UI ─────────────────────────────────────────────────────────
+  function stepSet(id, state) {
+    const el = document.getElementById('step-' + id);
+    if (!el) return;
+    el.className = 'step ' + state;
+  }
+  function allStepsPending() {
+    ['brain','triggers','intersect','plans','allocate'].forEach(s => stepSet(s, ''));
+  }
+
+  // ── Status line ──────────────────────────────────────────────────────────────
+  function setStatus(msg) {
+    document.getElementById('runStatus').textContent = msg;
+  }
+
+  // ── Render helpers ───────────────────────────────────────────────────────────
+  function fmt(n) { return (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+  function p2(n)  { return (n || 0).toFixed(2); }
+
+  function renderContext(brain) {
+    const mood = brain.market_sentiment || '—';
+    const moodColor = mood === 'bullish' ? '#68d391' : mood === 'bearish' ? '#fc8181' : '#a0aec0';
+    document.getElementById('outMood').textContent      = mood;
+    document.getElementById('outMood').style.color      = moodColor;
+    document.getElementById('outRegime').textContent    = brain.regime || '—';
+    document.getElementById('outGift').textContent      = brain.gift_nifty_bias || '—';
+    document.getElementById('outVix').textContent       = brain.vix_state || '—';
+    document.getElementById('outPickCount').textContent = (brain.picks?.length || 0) + ' signals';
+    document.getElementById('outPoweredBy').textContent = brain.powered_by || '—';
+    document.getElementById('outSummary').textContent   = brain.summary || '';
+  }
+
+  function renderSession(session, newTrades, skipped) {
+    const el = document.getElementById('sessionStats');
+    el.style.display = 'grid';
+
+    document.getElementById('sTrades').textContent     = newTrades.length;
+    document.getElementById('sTradesSub').textContent  = `${session.tradeCount || 0} total session`;
+    document.getElementById('sDeployed').textContent   = '₹' + fmt(session.capitalDeployed);
+    document.getElementById('sDeployedSub').textContent = `₹${fmt(session.capitalFree)} free`;
+    document.getElementById('sRisk').textContent       = '₹' + fmt(session.riskUsed);
+    document.getElementById('sRiskSub').textContent    = `of ₹${fmt(session.riskBudget)} budget`;
+    document.getElementById('sExpected').textContent   = '₹' + fmt(session.expectedPnl);
+    document.getElementById('sExpectedSub').textContent = `target ₹${fmt(session.rTarget)}`;
+    document.getElementById('sMode').textContent       = session.mode || '—';
+    document.getElementById('sModeSub').textContent    = session.status || '';
+  }
+
+  function renderTradesTable(trades) {
+    const el = document.getElementById('tradesContent');
+    if (!trades.length) {
+      el.innerHTML = '<div class="state-box"><div class="ico">📋</div>No trades allocated this cycle — signals may not have cleared the filters.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="trades-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th><th>Dir</th><th>Confidence</th>
+              <th>Entry</th><th>Target</th><th>SL</th>
+              <th>Qty</th><th>Capital</th><th>Risk ₹</th><th>R:R</th><th>Setup</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${trades.map(t => {
+              const dir = (t.side === 'BUY' || t.direction === 'long') ? 'long' : 'short';
+              const rr  = t.rr ? t.rr.toFixed(1) + 'R' : '—';
+              const conf= t.confidence || '';
+              return `<tr>
+                <td style="font-weight:700;">${t.symbol}</td>
+                <td><span class="tag tag-${dir}">${dir.toUpperCase()}</span></td>
+                <td><span class="tag tag-high">${conf}</span></td>
+                <td class="c-entry">₹${fmt(t.entry)}</td>
+                <td class="c-target">₹${fmt(t.t1 || t.target)}</td>
+                <td class="c-sl">₹${fmt(t.sl)}</td>
+                <td>${t.qty || '—'}</td>
+                <td>₹${fmt(t.capital)}</td>
+                <td style="color:#fc8181;">₹${fmt(t.risk_rs)}</td>
+                <td class="c-rr">${rr}</td>
+                <td style="color:#4a5568;font-size:11px;">${(t.setup_type||'').replace(/_/g,' ')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderSkipped(skipped) {
+    const el = document.getElementById('skippedContent');
+    if (!skipped.length) {
+      el.innerHTML = '<div class="state-box"><div class="ico">✓</div>All qualified opportunities were allocated.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="skipped-list">' +
+      skipped.map(s => `<div class="skip-row">
+        <span class="skip-sym">${s.symbol || s.id || '—'}</span>
+        <span class="skip-reason">${s.reason || s.skip_reason || '—'}</span>
+      </div>`).join('') +
+      '</div>';
+  }
+
+  function renderPicks(picks) {
+    const el = document.getElementById('picksContent');
+    if (!picks.length) {
+      el.innerHTML = '<div class="state-box"><div class="ico">🧠</div>No picks above threshold this cycle.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="trades-wrap">
+        <table>
+          <thead>
+            <tr><th>Rank</th><th>Symbol</th><th>Bias</th><th>Score</th><th>Event</th><th>Sector</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            ${picks.map((p, i) => {
+              const bias = p.directional_bias || 'neutral';
+              const biasCls = bias === 'long' || bias === 'bullish' ? 'long' : bias === 'short' || bias === 'bearish' ? 'short' : '';
+              const scoreColor = p.score >= 7 ? '#68d391' : p.score >= 5 ? '#63b3ed' : '#a0aec0';
+              return `<tr>
+                <td style="color:#4a5568;">${i+1}</td>
+                <td style="font-weight:700;">${p.symbol}</td>
+                <td>${biasCls ? `<span class="tag tag-${biasCls}">${bias.toUpperCase()}</span>` : bias}</td>
+                <td style="font-weight:700;color:${scoreColor}">${(p.score||0).toFixed(2)}</td>
+                <td style="color:#718096;font-size:11px;">${(p.event_type||'').replace(/_/g,' ')}</td>
+                <td style="color:#4a5568;font-size:11px;">${p.sector||'—'}</td>
+                <td style="color:#718096;font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.reason||''}">${p.reason||'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  // ── Main pipeline ────────────────────────────────────────────────────────────
+  async function buildPlan() {
+    const capital  = +document.getElementById('inCapital').value;
+    const target   = +document.getElementById('inTarget').value;
+    const maxLoss  = +document.getElementById('inMaxLoss').value;
+    const maxTrades= +document.getElementById('inMaxTrades').value;
+    const minScore = +document.getElementById('inMinScore').value;
+    const minEV    = +document.getElementById('inMinEV').value;
+
+    if (!capital || !target || !maxLoss) {
+      setStatus('Fill in all three parameters.'); return;
+    }
+    if (target > capital) {
+      setStatus('Target profit cannot exceed capital.'); return;
+    }
+
+    const maxRiskPct   = (maxLoss / capital) * 100;
+    const targetRMultiple = maxLoss > 0 ? target / maxLoss : 2;
+
+    const runBtn = document.getElementById('runBtn');
+    runBtn.disabled = true;
+    runBtn.textContent = '⟳ Building…';
+    setStatus('');
+
+    document.getElementById('pipelineWrap').style.display = 'block';
+    document.getElementById('outputSection').style.display = 'block';
+    document.getElementById('sessionStats').style.display  = 'none';
+    allStepsPending();
+
+    let picks = [], triggers = [], opportunities = [];
+
+    // ── Step 1: Brain ──────────────────────────────────────────────────────────
+    stepSet('brain', 'active');
+    setStatus('Fetching market intelligence…');
+    let brain;
+    try {
+      brain = await api('/api/intel?action=brain');
+      picks = brain.picks || [];
+      renderContext(brain);
+      stepSet('brain', 'done');
+    } catch (e) {
+      stepSet('brain', 'error');
+      setStatus('Brain failed: ' + e.message);
+      runBtn.disabled = false; runBtn.textContent = '▶ Build Plan';
+      return;
+    }
+
+    renderPicks(picks);
+
+    // ── Step 2: Triggers ───────────────────────────────────────────────────────
+    stepSet('triggers', 'active');
+    setStatus('Fetching live triggers…');
+    try {
+      const td = await api('/api/research?action=triggers');
+      triggers = td.triggers || [];
+      stepSet('triggers', 'done');
+    } catch {
+      stepSet('triggers', 'done'); // triggers optional
+    }
+
+    // ── Step 3: Intersect ──────────────────────────────────────────────────────
+    stepSet('intersect', 'active');
+    setStatus('Intersecting brain × triggers…');
+    try {
+      const ix = await api('/api/intel?action=intersect', 'POST', { picks, triggers });
+      opportunities = ix.opportunities || [];
+      stepSet('intersect', 'done');
+    } catch (e) {
+      stepSet('intersect', 'error');
+      setStatus('Intersect failed: ' + e.message);
+      runBtn.disabled = false; runBtn.textContent = '▶ Build Plan';
+      return;
+    }
+
+    if (!opportunities.length) {
+      setStatus(`No qualifying setups from ${picks.length} brain picks + ${triggers.length} triggers. Market may be quiet.`);
+      renderTradesTable([]);
+      renderSkipped([]);
+      stepSet('plans', ''); stepSet('allocate', '');
+      runBtn.disabled = false; runBtn.textContent = '↻ Retry';
+      return;
+    }
+
+    // ── Step 4: Trade Plans ────────────────────────────────────────────────────
+    stepSet('plans', 'active');
+    setStatus(`Building trade plans for ${opportunities.length} opportunity${opportunities.length !== 1 ? 'ies' : 'y'}…`);
+    let plans = [];
+    try {
+      const tp = await api('/api/intel?action=trade_plan', 'POST', { opportunities });
+      plans = tp.plans || [];
+      stepSet('plans', 'done');
+    } catch (e) {
+      stepSet('plans', 'error');
+      setStatus('Trade plan failed: ' + e.message);
+      runBtn.disabled = false; runBtn.textContent = '▶ Build Plan';
+      return;
+    }
+
+    // ── Step 5: Allocate ───────────────────────────────────────────────────────
+    stepSet('allocate', 'active');
+    setStatus('Allocating capital…');
+    try {
+      const alloc = await api('/api/intel?action=allocate', 'POST', {
+        opportunities: plans.map(p => ({
+          symbol:       p.symbol,
+          exchange:     p.exchange || 'NSE',
+          direction:    p.direction || (p.side === 'BUY' ? 'long' : 'short'),
+          confidence:   p.confidence || 'medium',
+          final_score:  p.score || (p.signal_score / 100) || 0.7,
+          plan:         { entry: p.entry, sl: p.sl, t1: p.t1 || p.target, t2: p.t2 },
+          setup_type:   p.setup_type || '',
+          event_type:   p.event_type || 'general_mention',
+          brain:        { score: p.brain_score || 6, directional_bias: p.directional_bias || 'bullish',
+                          regime: p.regime || 'neutral', event_type: p.event_type || 'general_mention',
+                          signal_types: p.signal_types || [], ltp_at_emit: p.entry },
+          trigger:      { primary: p.trigger_primary || '', all_triggers: p.trigger_all || [],
+                          strength: p.trigger_strength || 'moderate', signal_intensity: p.signal_intensity || 2,
+                          trend_context: p.trend_context || 'neutral', triggered_at: new Date().toISOString(), age_min: 1 },
+          price:        { ltp: p.entry, vwap: p.entry, above_vwap: true,
+                          or_high: p.entry * 1.005, or_low: p.entry * 0.995,
+                          change_from_open_pct: 0.5 },
+          volume:       { current: 500000, volume_ratio: 1.5 },
+        })),
+        capital:         capital,
+        maxRiskPct:      maxRiskPct,
+        targetRMultiple: targetRMultiple,
+        maxTrades:       maxTrades,
+        minEV:           minEV,
+        minScore:        minScore,
+      });
+
+      const session   = alloc.session   || {};
+      const newTrades = alloc.newTrades  || [];
+      const skipped   = alloc.skipped   || [];
+
+      renderSession(session, newTrades, skipped);
+      // Merge plan detail (entry/sl/target/qty) from the trade plans into allocated trades
+      const enriched = newTrades.map(t => {
+        const p = plans.find(p => p.symbol === t.symbol) || {};
+        return { ...p, ...t, capital: t.capitalAllocated || p.capital, risk_rs: t.riskRs || p.risk_rs };
+      });
+      renderTradesTable(enriched);
+      renderSkipped(skipped);
+      stepSet('allocate', 'done');
+      setStatus(`Done — ${newTrades.length} trade${newTrades.length !== 1 ? 's' : ''} allocated.`);
+    } catch (e) {
+      stepSet('allocate', 'error');
+      // Fallback: show trade plans directly if allocator fails
+      renderTradesTable(plans);
+      renderSkipped([]);
+      setStatus('Allocator error — showing raw plans: ' + e.message);
+    }
+
+    runBtn.disabled = false;
+    runBtn.textContent = '↻ Rebuild';
+  }
+
+  function resetAll() {
+    document.getElementById('pipelineWrap').style.display  = 'none';
+    document.getElementById('outputSection').style.display = 'none';
+    document.getElementById('runBtn').disabled   = false;
+    document.getElementById('runBtn').textContent = '▶ Build Plan';
+    setStatus('');
+    allStepsPending();
+  }
+</script>
+
+</body>
+</html>
