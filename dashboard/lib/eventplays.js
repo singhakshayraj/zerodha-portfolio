@@ -6,14 +6,26 @@
 
 export const UPCOMING_EVENTS = [
   {
-    id: 'election_exit_poll_2026',
-    type: 'election_exit_poll',
-    name: 'General Election 2026 — Exit Poll Day',
-    date: '2026-04-30',
-    description: 'Exit polls released after last phase of polling. Market reacts to projected winner before official results.',
-    note: 'Exit polls expected after 6:30 PM IST. Futures & SGX typically move first.',
-    scenarios: ['nda_strong', 'nda_weak', 'hung_parliament'],
-    default_scenario: 'nda_strong'
+    id: 'assembly_elections_2026_exit_poll',
+    type: 'assembly_election_exit_poll',
+    name: '2026 Assembly Elections — Exit Poll Day',
+    subtitle: 'West Bengal · Tamil Nadu · Kerala · Assam · Puducherry',
+    date: '2026-04-29',
+    description: '5-state assembly elections. Last phase (West Bengal Phase 2) ends today. Exit poll embargo lifts 6:30 PM IST.',
+    note: 'Exit polls after 6:30 PM IST today. Results May 4. WB outcome is key market driver — BJP vs TMC determines NDA momentum narrative.',
+    scenarios: ['bjp_wave', 'split_verdict', 'opposition_sweep'],
+    default_scenario: 'bjp_wave'
+  },
+  {
+    id: 'assembly_elections_2026_results',
+    type: 'assembly_election_result',
+    name: '2026 Assembly Elections — Result Day',
+    subtitle: 'West Bengal · Tamil Nadu · Kerala · Assam · Puducherry',
+    date: '2026-05-04',
+    description: 'Counting day for all 5 states. Market opens at 9:15 AM with early trends already visible.',
+    note: 'WB trends typically start 8-9 AM. Market gaps up/down at open based on overnight exit poll reaction.',
+    scenarios: ['bjp_wave', 'split_verdict', 'opposition_sweep'],
+    default_scenario: 'bjp_wave'
   }
 ];
 
@@ -60,10 +72,164 @@ export const HISTORICAL_EVENTS = [
     notes: 'NDA fell short. Sharp PSU/infra reversal of exit-poll gains. Recovered +8% over next 3 days.',
     sector_moves: { 'Railways': -22, 'Defense': -20, 'PSU Banking': -15, 'Infrastructure': -12, 'Power': -10 },
     recovery_3d: +8.0
+  },
+
+  // ── 2026 State Assembly Elections ─────────────────────────────────────────
+  {
+    year: 2021, type: 'assembly_election_result', outcome: 'TMC landslide in West Bengal (BJP routed)',
+    nifty_change: -0.4,
+    notes: 'BJP failed to capture WB despite massive campaign. Nifty mildly negative. PSU/infra themes sold off intraday on NDA setback narrative.',
+    sector_moves: { 'PSU Banking': -3, 'Defense': -2, 'Infrastructure': -2, 'FMCG': +1, 'IT': +0.5 }
+  },
+  {
+    year: 2021, type: 'assembly_election_result', outcome: 'LDF retains Kerala; DMK wins Tamil Nadu; BJP retains Assam',
+    nifty_change: +0.6,
+    notes: 'Mixed bag: BJP retaining Assam offset TMC/LDF wins. Market traded flat with slight positive.',
+    sector_moves: { 'PSU Banking': +1, 'FMCG': +2, 'IT': +1, 'Infrastructure': -1 }
+  },
+  {
+    year: 2016, type: 'assembly_election_result', outcome: 'AIADMK retains Tamil Nadu; Left retains Kerala; BJP wins Assam',
+    nifty_change: +0.3,
+    notes: 'BJP winning Assam (first time) was a positive NDA signal. Nifty mildly positive.',
+    sector_moves: { 'PSU Banking': +2, 'Infrastructure': +1, 'FMCG': +1 }
+  },
+  {
+    year: 2011, type: 'assembly_election_result', outcome: 'TMC defeats Left in WB after 34 years; DMK loses TN',
+    nifty_change: +0.8,
+    notes: 'Change wave in WB seen as reform-positive. TMC replacing Left seen as opening for private investment.',
+    sector_moves: { 'Infrastructure': +3, 'Banking': +2, 'Power': +2 }
   }
 ];
 
 export const SCENARIO_PLAYS = {
+  // ── 2026 State Assembly Election scenarios ─────────────────────────────────
+  bjp_wave: {
+    label: 'BJP Wave — Wins WB + Retains Assam',
+    bias: 'bullish',
+    market_tone: 'NDA momentum signal. WB BJP win = rare milestone. PSU/capex/defense rally on NDA dominance narrative.',
+    sectors: [
+      {
+        name: 'PSU Banking',
+        avg_move: 8, confidence: 'high',
+        rationale: 'BJP WB win = NDA political capital → PSU bank recapitalization continuity, credit growth push',
+        stocks: [
+          { symbol: 'SBIN',       name: 'State Bank of India',  avg_move: 8  },
+          { symbol: 'PNB',        name: 'Punjab National Bank', avg_move: 10 },
+          { symbol: 'BANKBARODA', name: 'Bank of Baroda',       avg_move: 9  },
+          { symbol: 'CANBK',      name: 'Canara Bank',          avg_move: 10 },
+          { symbol: 'UNIONBANK',  name: 'Union Bank of India',  avg_move: 11 }
+        ]
+      },
+      {
+        name: 'Defense & PSU Aerospace',
+        avg_move: 10, confidence: 'high',
+        rationale: 'BJP political dominance → defense capex acceleration, Make in India push',
+        stocks: [
+          { symbol: 'HAL',        name: 'Hindustan Aeronautics',    avg_move: 12 },
+          { symbol: 'BEL',        name: 'Bharat Electronics',        avg_move: 10 },
+          { symbol: 'BEML',       name: 'BEML Ltd',                  avg_move: 11 },
+          { symbol: 'COCHINSHIP', name: 'Cochin Shipyard',           avg_move: 14 },
+          { symbol: 'MAZDOCK',    name: 'Mazagon Dock',              avg_move: 13 }
+        ]
+      },
+      {
+        name: 'Infrastructure & Capex',
+        avg_move: 7, confidence: 'medium',
+        rationale: 'BJP WB win unlocks infra investment in eastern India corridor (industrial belt)',
+        stocks: [
+          { symbol: 'RVNL',    name: 'Rail Vikas Nigam',    avg_move: 10 },
+          { symbol: 'IRFC',    name: 'Indian Railway Finance',avg_move: 7 },
+          { symbol: 'NTPC',    name: 'NTPC',                 avg_move: 6  },
+          { symbol: 'NBCC',    name: 'NBCC India',           avg_move: 8  },
+          { symbol: 'LT',      name: 'Larsen & Toubro',      avg_move: 6  }
+        ]
+      }
+    ]
+  },
+
+  split_verdict: {
+    label: 'Split Verdict — TMC holds WB, BJP retains Assam',
+    bias: 'mixed',
+    market_tone: 'Status quo. No clear NDA momentum. Private sector holds up; PSU themes drift.',
+    sectors: [
+      {
+        name: 'Private Banking',
+        avg_move: 2, confidence: 'medium',
+        rationale: 'Split verdict = policy continuity, no strong political signal either way',
+        stocks: [
+          { symbol: 'HDFCBANK', name: 'HDFC Bank',  avg_move: 2 },
+          { symbol: 'ICICIBANK',name: 'ICICI Bank', avg_move: 3 },
+          { symbol: 'KOTAKBANK',name: 'Kotak Bank', avg_move: 2 },
+          { symbol: 'AXISBANK', name: 'Axis Bank',  avg_move: 3 }
+        ]
+      },
+      {
+        name: 'FMCG',
+        avg_move: 2, confidence: 'medium',
+        rationale: 'Consumption-driven state outcomes (TN/Kerala/WB) signal rural demand hold',
+        stocks: [
+          { symbol: 'HINDUNILVR', name: 'HUL',      avg_move: 2 },
+          { symbol: 'ITC',        name: 'ITC',       avg_move: 3 },
+          { symbol: 'NESTLEIND',  name: 'Nestle',    avg_move: 2 },
+          { symbol: 'BRITANNIA',  name: 'Britannia', avg_move: 2 }
+        ]
+      },
+      {
+        name: 'IT Services',
+        avg_move: 1, confidence: 'low',
+        rationale: 'Neutral to state elections; USD earners. Hold through political noise.',
+        stocks: [
+          { symbol: 'TCS',     name: 'TCS',      avg_move: 1 },
+          { symbol: 'INFY',    name: 'Infosys',  avg_move: 2 },
+          { symbol: 'WIPRO',   name: 'Wipro',    avg_move: 1 },
+          { symbol: 'HCLTECH', name: 'HCL Tech', avg_move: 2 }
+        ]
+      }
+    ]
+  },
+
+  opposition_sweep: {
+    label: 'Opposition Sweep — TMC WB, DMK TN, LDF Kerala',
+    bias: 'bearish',
+    market_tone: 'NDA political setback. PSU/capex themes sell off. Opposition momentum narrative weighs.',
+    sectors: [
+      {
+        name: 'FMCG',
+        avg_move: -1, confidence: 'medium',
+        rationale: 'Least affected by political outcome. Consumption demand state-policy agnostic.',
+        stocks: [
+          { symbol: 'HINDUNILVR', name: 'HUL',       avg_move: -1 },
+          { symbol: 'ITC',        name: 'ITC',        avg_move: -1 },
+          { symbol: 'NESTLEIND',  name: 'Nestle',     avg_move: 0  },
+          { symbol: 'BRITANNIA',  name: 'Britannia',  avg_move: -1 }
+        ]
+      },
+      {
+        name: 'IT Services',
+        avg_move: -1, confidence: 'low',
+        rationale: 'USD earners, domestic-policy insulated. Slight INR depreciation tailwind.',
+        stocks: [
+          { symbol: 'TCS',      name: 'TCS',       avg_move: -1 },
+          { symbol: 'INFY',     name: 'Infosys',   avg_move: -1 },
+          { symbol: 'WIPRO',    name: 'Wipro',     avg_move: -1 },
+          { symbol: 'HCLTECH',  name: 'HCL Tech',  avg_move: -1 }
+        ]
+      },
+      {
+        name: 'Pharma',
+        avg_move: -1, confidence: 'low',
+        rationale: 'Defensive. Export-heavy = INR hedge on political uncertainty.',
+        stocks: [
+          { symbol: 'SUNPHARMA', name: 'Sun Pharma',  avg_move: 0  },
+          { symbol: 'DRREDDY',   name: 'Dr Reddy\'s', avg_move: -1 },
+          { symbol: 'CIPLA',     name: 'Cipla',       avg_move: -1 },
+          { symbol: 'DIVISLAB',  name: 'Divi\'s Labs',avg_move: 0  }
+        ]
+      }
+    ]
+  },
+
+  // ── General Election scenarios (kept for future use) ──────────────────────
   nda_strong: {
     label: 'NDA Strong Win (300+ seats)',
     bias: 'bullish',

@@ -188,9 +188,9 @@
   </div>
 
   <div class="scenario-tabs" id="scenarioTabs">
-    <button class="scenario-tab active" data-scenario="nda_strong" onclick="switchScenario('nda_strong',this)">NDA Strong (300+)</button>
-    <button class="scenario-tab" data-scenario="nda_weak" onclick="switchScenario('nda_weak',this)">NDA Weak / Coalition</button>
-    <button class="scenario-tab" data-scenario="hung_parliament" onclick="switchScenario('hung_parliament',this)">Hung Parliament</button>
+    <button class="scenario-tab active" data-scenario="bjp_wave" onclick="switchScenario('bjp_wave',this)">BJP Wave — Wins WB</button>
+    <button class="scenario-tab" data-scenario="split_verdict" onclick="switchScenario('split_verdict',this)">Split Verdict</button>
+    <button class="scenario-tab" data-scenario="opposition_sweep" onclick="switchScenario('opposition_sweep',this)">Opposition Sweep</button>
   </div>
 
   <div class="market-tone" id="marketTone">—</div>
@@ -254,7 +254,7 @@
 
 <script>
   let cachedData = {};
-  let currentScenario = 'nda_strong';
+  let currentScenario = 'bjp_wave';
 
   async function loadEventPlays(scenario) {
     scenario = scenario || currentScenario;
@@ -286,8 +286,8 @@
       t.classList.remove('active', 'bearish', 'mixed');
     });
     el.classList.add('active');
-    if (scenario === 'hung_parliament') el.classList.add('bearish');
-    if (scenario === 'nda_weak') el.classList.add('mixed');
+    if (scenario === 'opposition_sweep') el.classList.add('bearish');
+    if (scenario === 'split_verdict') el.classList.add('mixed');
 
     if (cachedData[scenario]) {
       renderAll(cachedData[scenario], scenario);
@@ -308,7 +308,18 @@
   function renderEventHeader(ev) {
     if (!ev) return;
     document.getElementById('eventName').textContent = ev.name;
-    document.getElementById('eventBadge').textContent = `⚡ ${ev.name.split('—')[1]?.trim() || ev.name}`;
+    if (ev.subtitle) {
+      let sub = document.getElementById('eventSubtitle');
+      if (!sub) {
+        sub = document.createElement('div');
+        sub.id = 'eventSubtitle';
+        sub.style.cssText = 'font-size:12px;color:#63b3ed;margin-bottom:8px;font-weight:500;';
+        document.getElementById('eventName').after(sub);
+      }
+      sub.textContent = ev.subtitle;
+    }
+    const badge = document.getElementById('eventBadge');
+    if (badge) badge.textContent = `⚡ ${ev.name.split('—')[1]?.trim() || ev.name}`;
 
     const meta = document.getElementById('eventMeta');
     const evDate = new Date(ev.date);
@@ -443,9 +454,9 @@
   }
 
   // Init
-  loadEventPlays('nda_strong');
+  loadEventPlays('bjp_wave');
   // Preload other scenarios in background after initial render
-  setTimeout(() => { loadEventPlays('nda_weak'); loadEventPlays('hung_parliament'); }, 2000);
+  setTimeout(() => { loadEventPlays('split_verdict'); loadEventPlays('opposition_sweep'); }, 2000);
 </script>
 </body>
 </html>
