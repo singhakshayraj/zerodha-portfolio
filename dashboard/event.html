@@ -14,12 +14,12 @@
     a:hover{text-decoration:underline}
 
     /* NAV */
-    .topnav { background: #0d111c; border-bottom: 1px solid #2d3748; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
-    .topnav-brand { font-size: 14px; font-weight: 700; color: #e2e8f0; text-decoration: none; letter-spacing: 0.02em; }
-    .topnav-links { display: flex; gap: 28px; }
-    .topnav-links a { font-size: 13px; color: #718096; text-decoration: none; transition: color 0.15s; }
-    .topnav-links a:hover, .topnav-links a.active { color: #e2e8f0; }
-    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 16px; } }
+    .topnav{background:#0d111c;border-bottom:1px solid #2d3748;padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:48px;position:sticky;top:0;z-index:100}
+    .topnav-brand{font-size:14px;font-weight:700;color:#e2e8f0;text-decoration:none;letter-spacing:.02em}
+    .topnav-links{display:flex;gap:28px}
+    .topnav-links a{font-size:13px;color:#718096;text-decoration:none;transition:color .15s}
+    .topnav-links a:hover,.topnav-links a.active{color:#e2e8f0}
+    @media(max-width:640px){.topnav{padding:0 16px}.topnav-links{gap:16px}}
 
     /* LAYOUT */
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
@@ -59,24 +59,29 @@
     .market-tone{font-size:12px;color:#64748b;margin-bottom:20px;padding:8px 12px;background:#0d1117;border-left:3px solid #2d3748;border-radius:0 4px 4px 0}
 
     /* TWO-COL LAYOUT */
-    .two-col{display:grid;grid-template-columns:280px 1fr;gap:16px;margin-bottom:20px}
+    .two-col{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-bottom:20px}
     @media(max-width:720px){.two-col{grid-template-columns:1fr}}
 
-    /* HISTORICAL TABLE */
-    .hist-table{width:100%;border-collapse:collapse;font-size:12px}
-    .hist-table th{color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:6px 8px;border-bottom:1px solid #1e2535;text-align:left;white-space:nowrap}
-    .hist-table td{padding:7px 8px;border-bottom:1px solid #141820;vertical-align:top}
+    /* HISTORICAL TABLES */
+    .hist-section{margin-bottom:14px}
+    .hist-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#4a5568;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #1e2535}
+    .hist-table{width:100%;border-collapse:collapse}
+    .hist-table th{color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:5px 7px;border-bottom:1px solid #1e2535;text-align:left;white-space:nowrap}
+    .hist-table td{padding:6px 7px;border-bottom:1px solid #0f1117;vertical-align:top;font-size:11px}
     .hist-table tr:last-child td{border-bottom:none}
     .hist-table .pct{font-weight:700;white-space:nowrap}
     .hist-table .pct.pos{color:#68d391}
     .hist-table .pct.neg{color:#fc8181}
-    .hist-table .type-badge{font-size:10px;padding:1px 5px;border-radius:3px;background:#1e2535;color:#94a3b8}
+    .hist-table .type-badge{font-size:9px;padding:1px 4px;border-radius:3px;background:#1e2535;color:#94a3b8;white-space:nowrap}
     .hist-table .type-badge.exit_poll{background:#1a2a3a;color:#63b3ed}
+    .hist-table .outcome-cell{color:#94a3b8;max-width:130px;line-height:1.3}
+    .hist-table .top-sector{font-size:9px;color:#64748b;margin-top:2px}
 
-    /* SECTOR GRID */
+    /* SECTOR GRID — 3 col, wraps for 4-5 */
     .sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-    @media(max-width:840px){.sector-grid{grid-template-columns:1fr}}
-    .sector-card{background:#141820;border:1px solid #1e2535;border-radius:8px;padding:14px}
+    @media(max-width:900px){.sector-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:540px){.sector-grid{grid-template-columns:1fr}}
+    .sector-card{background:#141820;border:1px solid #1e2535;border-radius:8px;padding:14px;cursor:default}
     .sector-card.high{border-color:#2d4a3e}
     .sector-card.medium{border-color:#3a3520}
     .sector-card.low{border-color:#2d2d2d}
@@ -89,25 +94,24 @@
     .conf-medium{background:#2d3520;color:#d4a017}
     .conf-low{background:#2d2d2d;color:#718096}
     .sector-rationale{font-size:11px;color:#718096;margin-bottom:10px;line-height:1.4}
-    .sector-stocks{display:flex;flex-direction:column;gap:4px}
-    .sector-stock{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 6px;border-radius:4px;background:#0d1117}
+    .sector-stocks{display:flex;flex-direction:column;gap:3px}
+    .sector-stock{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 6px;border-radius:4px;background:#0d1117;cursor:pointer;transition:background .12s}
+    .sector-stock:hover{background:#1a2535}
     .sector-stock .sym{font-weight:600;color:#e2e8f0}
     .sector-stock .sym.brain{color:#63b3ed}
     .sector-stock .move{font-weight:600;font-size:11px}
     .sector-stock .move.pos{color:#68d391}
     .sector-stock .move.neg{color:#fc8181}
     .brain-badge{font-size:9px;font-weight:600;background:#0d1f30;color:#63b3ed;border:1px solid #1a3a5a;padding:1px 4px;border-radius:3px;margin-left:4px}
-
-    /* HISTORICAL TABLE — compact */
-    .hist-table td{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
-    .hist-table td.notes-cell{white-space:normal;max-width:200px;line-height:1.3}
+    .why-hint{font-size:9px;color:#4a5568;margin-left:4px}
 
     /* PICKS TABLE */
     .picks-table{width:100%;border-collapse:collapse}
     .picks-table th{color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:8px 10px;border-bottom:1px solid #1e2535;text-align:left;white-space:nowrap}
     .picks-table td{padding:9px 10px;border-bottom:1px solid #141820;vertical-align:middle}
     .picks-table tr:last-child td{border-bottom:none}
-    .picks-table tr:hover td{background:#0d1117}
+    .picks-table tr.pick-row{cursor:pointer}
+    .picks-table tr.pick-row:hover td{background:#0d1117}
     .rank-num{font-size:12px;color:#4a5568;font-weight:600;width:24px}
     .sym-cell{font-weight:700;font-size:13px;color:#f7fafc}
     .sym-cell small{display:block;font-size:10px;font-weight:400;color:#64748b;margin-top:1px}
@@ -135,11 +139,17 @@
     .llm-cell .llm-reason{color:#718096;font-size:10px}
     .llm-cell.analyzing{color:#4a5568;font-style:italic;animation:pulse 1.5s infinite}
     .brain-score-val{color:#63b3ed;font-weight:600}
-    .weight-bar{display:flex;gap:3px;margin-top:3px}
-    .weight-seg{height:3px;border-radius:2px}
-    .ws-hist{background:#4a5568}
-    .ws-llm{background:#9f7aea}
-    .ws-brain{background:#63b3ed}
+
+    /* RATIONALE ROW */
+    .rationale-row td{padding:0!important;overflow:hidden;transition:max-height .2s ease}
+    .rationale-content{padding:8px 12px 10px 36px;background:#0a0e18;border-bottom:1px solid #1e2535;font-size:12px;color:#94a3b8;line-height:1.5}
+    .rationale-content .why-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4a5568;margin-bottom:3px}
+    .rationale-content .why-text{color:#a0aec0}
+
+    /* STOCK RATIONALE TOOLTIP (sector cards) */
+    .stock-tooltip{position:fixed;z-index:200;background:#1a2035;border:1px solid #2d3748;border-radius:6px;padding:10px 14px;max-width:280px;font-size:12px;color:#94a3b8;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.5);pointer-events:none;display:none}
+    .stock-tooltip .tt-sym{font-weight:700;font-size:13px;color:#f7fafc;margin-bottom:4px}
+    .stock-tooltip .tt-why{color:#a0aec0}
 
     /* CONTROLS */
     .controls{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
@@ -217,27 +227,49 @@
 
   <!-- Two-col: Historical + Sector Cards -->
   <div class="two-col">
-    <!-- Historical Precedents -->
+    <!-- Historical Precedents — split into two sections -->
     <div class="card">
       <div class="card-title">Historical Precedents</div>
-      <table class="hist-table" id="histTable">
-        <thead>
-          <tr>
-            <th>Year</th>
-            <th>Type</th>
-            <th>Nifty</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody id="histBody">
-          <tr><td colspan="4" class="loading-row">Loading…</td></tr>
-        </tbody>
-      </table>
+
+      <!-- General Elections section -->
+      <div class="hist-section">
+        <div class="hist-section-title">General Elections (National)</div>
+        <table class="hist-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Type</th>
+              <th>Nifty</th>
+              <th>Top Sectors / Note</th>
+            </tr>
+          </thead>
+          <tbody id="histGeneralBody">
+            <tr><td colspan="4" style="color:#4a5568;font-size:11px;padding:8px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- State Assembly Elections section -->
+      <div class="hist-section" style="margin-top:12px">
+        <div class="hist-section-title">State Assembly Elections</div>
+        <table class="hist-table">
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Nifty</th>
+              <th>Outcome / Note</th>
+            </tr>
+          </thead>
+          <tbody id="histStateBody">
+            <tr><td colspan="3" style="color:#4a5568;font-size:11px;padding:8px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Sector Cards -->
     <div>
-      <div class="section-label">Top 3 Sectors — <span id="sectorScenarioLabel"></span></div>
+      <div class="section-label">Top Sectors — <span id="sectorScenarioLabel"></span></div>
       <div class="sector-grid" id="sectorGrid">
         <div class="loading-row" style="grid-column:1/-1">Loading sectors…</div>
       </div>
@@ -246,7 +278,9 @@
 
   <!-- Top 10 Picks -->
   <div class="card">
-    <div class="card-title">Top 10 Stock Picks — <span id="picksScenarioLabel"></span></div>
+    <div class="card-title">Top 10 Stock Picks — <span id="picksScenarioLabel"></span>
+      <span style="color:#4a5568;font-weight:400;font-size:10px;margin-left:6px">Click row for selection rationale</span>
+    </div>
     <div style="overflow-x:auto">
       <table class="picks-table">
         <thead>
@@ -262,7 +296,7 @@
           </tr>
         </thead>
         <tbody id="picksBody">
-          <tr><td colspan="7" class="loading-row">Loading picks…</td></tr>
+          <tr><td colspan="8" class="loading-row">Loading picks…</td></tr>
         </tbody>
       </table>
     </div>
@@ -273,9 +307,54 @@
   </div>
 </main>
 
+<!-- Sector stock tooltip -->
+<div class="stock-tooltip" id="stockTooltip">
+  <div class="tt-sym" id="ttSym"></div>
+  <div class="tt-why" id="ttWhy"></div>
+</div>
+
 <script>
   let cachedData = {};
   let currentScenario = 'bjp_wave';
+  const tooltip = document.getElementById('stockTooltip');
+
+  // ── Tooltip for sector card stocks ──────────────────────────────────────────
+  function showTooltip(e, sym, name, rationale) {
+    document.getElementById('ttSym').textContent = `${sym} — ${name}`;
+    document.getElementById('ttWhy').textContent = rationale || 'No rationale available.';
+    tooltip.style.display = 'block';
+    positionTooltip(e);
+  }
+  function positionTooltip(e) {
+    const x = e.clientX + 14;
+    const y = e.clientY - 10;
+    const ttW = 280;
+    const vw = window.innerWidth;
+    tooltip.style.left = (x + ttW > vw ? x - ttW - 28 : x) + 'px';
+    tooltip.style.top = Math.min(y, window.innerHeight - 120) + 'px';
+  }
+  document.addEventListener('mousemove', e => {
+    if (tooltip.style.display === 'block') positionTooltip(e);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.sector-stock')) tooltip.style.display = 'none';
+  });
+
+  // ── Toggle rationale row in picks table ────────────────────────────────────
+  function toggleRationale(sym, rationale) {
+    const existingRow = document.getElementById(`rat-row-${sym}`);
+    if (existingRow) { existingRow.remove(); return; }
+    const pickRow = document.getElementById(`row-${sym}`);
+    if (!pickRow) return;
+    const tr = document.createElement('tr');
+    tr.id = `rat-row-${sym}`;
+    tr.className = 'rationale-row';
+    tr.innerHTML = `<td colspan="8"><div class="rationale-content">
+      <div class="why-label">Why selected</div>
+      <div class="why-text">${rationale || 'Selection based on historical event swing data and sector alignment.'}</div>
+    </div></td>`;
+    pickRow.after(tr);
+  }
 
   async function loadEventPlays(scenario) {
     scenario = scenario || currentScenario;
@@ -294,7 +373,7 @@
       status.textContent = `Updated ${new Date().toLocaleTimeString('en-IN')}`;
     } catch (e) {
       status.textContent = `Error: ${e.message}`;
-      document.getElementById('picksBody').innerHTML = `<tr><td colspan="7" class="error-row">Failed to load: ${e.message}</td></tr>`;
+      document.getElementById('picksBody').innerHTML = `<tr><td colspan="8" class="error-row">Failed to load: ${e.message}</td></tr>`;
     } finally {
       btn.classList.remove('loading');
       btn.textContent = '↻ Refresh';
@@ -303,9 +382,7 @@
 
   function switchScenario(scenario, el) {
     currentScenario = scenario;
-    document.querySelectorAll('.scenario-tab').forEach(t => {
-      t.classList.remove('active', 'bearish', 'mixed');
-    });
+    document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active','bearish','mixed'));
     el.classList.add('active');
     if (scenario === 'opposition_sweep') el.classList.add('bearish');
     if (scenario === 'split_verdict') el.classList.add('mixed');
@@ -320,11 +397,10 @@
   function renderAll(data, scenario) {
     renderEventHeader(data.active_event);
     renderBrainStrip(data.brain_context, data.meta);
-    renderHistorical(data.historical_events);
-    renderSectors(data.top3Sectors, data.scenario_label);
-    renderPicks(data.top10, data.scenario_label);
+    renderHistorical(data.historical_general, data.historical_state);
+    renderSectors(data.topSectors || data.top3Sectors, data.scenario_label);
+    renderPicks(data.top10, data.scenario_label, data.topSectors || data.top3Sectors);
     renderMarketTone(data.market_tone, data.bias);
-    // Trigger async LLM enrichment after initial render
     if (scenario === currentScenario) enrichWithLLM(data, scenario);
   }
 
@@ -341,15 +417,11 @@
       }
       sub.textContent = ev.subtitle;
     }
-    const badge = document.getElementById('eventBadge');
-    if (badge) badge.textContent = `⚡ ${ev.name.split('—')[1]?.trim() || ev.name}`;
-
     const meta = document.getElementById('eventMeta');
     const evDate = new Date(ev.date);
     const today = new Date();
     const diff = Math.round((evDate - today) / 86400000);
     const diffLabel = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : diff < 0 ? `${Math.abs(diff)}d ago` : `In ${diff} days`;
-
     meta.innerHTML = `
       <span class="event-chip highlight">📅 ${ev.date} — ${diffLabel}</span>
       <span class="event-chip">${ev.description}</span>
@@ -364,17 +436,12 @@
       el.textContent = val;
       el.className = `brain-tag ${cls || 'default'}`;
     };
-
-    if (!ctx) {
-      set('bSentiment', 'Brain unavailable', 'default');
-      return;
-    }
+    if (!ctx) { set('bSentiment','Brain unavailable','default'); return; }
     const s = ctx.sentiment || '';
     set('bSentiment', s || 'unknown', s === 'bullish' ? 'bullish' : s === 'bearish' ? 'bearish' : 'neutral');
     set('bRegime', ctx.regime || '—', 'default');
     set('bVix', `VIX: ${ctx.vix_state || '—'}`, 'default');
     set('bGift', `GIFT Nifty: ${ctx.gift_nifty_bias || '—'}`, ctx.gift_nifty_bias === 'bullish' ? 'bullish' : ctx.gift_nifty_bias === 'bearish' ? 'bearish' : 'neutral');
-
     if (meta && meta.brain_aligned > 0) {
       const al = document.getElementById('bAligned');
       al.style.display = '';
@@ -389,29 +456,64 @@
     el.style.borderLeftColor = bias === 'bullish' ? '#68d391' : bias === 'bearish' ? '#fc8181' : '#fbd38d';
   }
 
-  function renderHistorical(events) {
-    if (!events) return;
-    const tbody = document.getElementById('histBody');
-    tbody.innerHTML = events.map(e => {
-      const pctClass = e.nifty_change >= 0 ? 'pos' : 'neg';
-      const sign = e.nifty_change >= 0 ? '+' : '';
-      const typeClass = e.type === 'exit_poll' || e.type === 'assembly_election_exit_poll' ? 'exit_poll' : '';
-      const typeLabel = e.type.includes('exit_poll') ? 'Exit Poll' : 'Result';
-      const topSectors = e.sector_moves
-        ? Object.entries(e.sector_moves).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,2)
-            .map(([s,v]) => `${s.replace(' & PSU Aerospace','').replace(' & Capex','')}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
-        : '';
-      return `<tr>
-        <td><strong>${e.year}</strong></td>
-        <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
-        <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
-        <td class="notes-cell" style="color:#718096">
-          ${topSectors ? `<span style="color:#94a3b8;font-size:10px">${topSectors}</span><br>` : ''}
-          <span style="font-size:10px">${e.notes.length > 70 ? e.notes.slice(0,70)+'…' : e.notes}</span>
-          ${e.recovery_3d ? `<br><span style="color:#68d391;font-size:9px">+${e.recovery_3d}% 3d recovery</span>` : ''}
-        </td>
-      </tr>`;
-    }).join('');
+  function renderHistorical(generalEvents, stateEvents) {
+    // General elections table
+    const genBody = document.getElementById('histGeneralBody');
+    if (generalEvents && generalEvents.length) {
+      genBody.innerHTML = [...generalEvents].reverse().map(e => {
+        const pctClass = e.nifty_change >= 0 ? 'pos' : 'neg';
+        const sign = e.nifty_change >= 0 ? '+' : '';
+        const typeClass = e.type === 'exit_poll' ? 'exit_poll' : '';
+        const typeLabel = e.type === 'exit_poll' ? 'Exit Poll' : 'Result';
+        const topSectors = e.sector_moves
+          ? Object.entries(e.sector_moves).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,2)
+              .map(([s,v]) => `${s}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
+          : '';
+        return `<tr>
+          <td><strong style="color:#e2e8f0">${e.year}</strong></td>
+          <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
+          <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
+          <td class="outcome-cell">
+            ${topSectors ? `<div class="top-sector">${topSectors}</div>` : ''}
+            <div style="color:#64748b;font-size:10px;margin-top:1px">${e.notes.length > 55 ? e.notes.slice(0,55)+'…' : e.notes}</div>
+            ${e.recovery_3d ? `<div style="color:#68d391;font-size:9px">+${e.recovery_3d}% 3d recovery</div>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // State elections table
+    const stateBody = document.getElementById('histStateBody');
+    if (stateEvents && stateEvents.length) {
+      stateBody.innerHTML = [...stateEvents].reverse().map(e => {
+        const pctClass = e.nifty_change >= 0 ? 'pos' : 'neg';
+        const sign = e.nifty_change >= 0 ? '+' : '';
+        const topSectors = e.sector_moves
+          ? Object.entries(e.sector_moves).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,2)
+              .map(([s,v]) => `${s}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
+          : '';
+        return `<tr>
+          <td><strong style="color:#e2e8f0">${e.year}</strong></td>
+          <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
+          <td class="outcome-cell">
+            <div style="color:#94a3b8;font-size:11px">${e.outcome.length > 50 ? e.outcome.slice(0,50)+'…' : e.outcome}</div>
+            ${topSectors ? `<div class="top-sector" style="margin-top:2px">${topSectors}</div>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // Build rationale lookup from sectors data
+  function buildRationaleMap(sectors) {
+    const map = {};
+    if (!sectors) return map;
+    sectors.forEach(s => {
+      s.stocks.forEach(st => {
+        if (st.rationale) map[st.symbol] = { rationale: st.rationale, name: st.name };
+      });
+    });
+    return map;
   }
 
   function renderSectors(sectors, label) {
@@ -425,12 +527,18 @@
       const confClass = `conf-${s.confidence}`;
       const cardClass = s.confidence;
 
-      const stockRows = s.stocks.slice(0, 6).map(st => {
+      const stockRows = s.stocks.slice(0, 7).map(st => {
         const isBrain = !!st.brain_pick;
         const stSign = st.avg_move >= 0 ? '+' : '';
         const stMoveClass = st.avg_move >= 0 ? 'pos' : 'neg';
-        return `<div class="sector-stock">
-          <span class="sym ${isBrain ? 'brain' : ''}">${st.symbol}${isBrain ? '<span class="brain-badge">⚡</span>' : ''}</span>
+        const rationaleEscaped = (st.rationale || '').replace(/'/g, "\\'");
+        const nameEscaped = (st.name || '').replace(/'/g, "\\'");
+        return `<div class="sector-stock"
+          onmouseenter="showTooltip(event,'${st.symbol}','${nameEscaped}','${rationaleEscaped}')"
+          onmouseleave="tooltip.style.display='none'">
+          <span class="sym ${isBrain ? 'brain' : ''}">${st.symbol}${isBrain ? '<span class="brain-badge">⚡</span>' : ''}
+            <span class="why-hint">?</span>
+          </span>
           <span class="move ${stMoveClass}">${stSign}${st.avg_move}%</span>
         </div>`;
       }).join('');
@@ -441,12 +549,12 @@
         <span class="sector-confidence ${confClass}">${s.confidence} conviction</span>
         <div class="sector-rationale">${s.rationale}</div>
         <div class="sector-stocks">${stockRows}</div>
-        ${s.stocks.length > 6 ? `<div style="font-size:10px;color:#4a5568;margin-top:4px">+${s.stocks.length-6} more stocks</div>` : ''}
+        ${s.stocks.length > 7 ? `<div style="font-size:10px;color:#4a5568;margin-top:4px">+${s.stocks.length-7} more stocks</div>` : ''}
       </div>`;
     }).join('');
   }
 
-  // Composite score helpers (mirrors eventplays.js logic client-side)
+  // Composite score mirror of eventplays.js
   function compositeScore(avg_move, brainScore, llmScore) {
     const hist  = Math.min(Math.abs(avg_move) / 25, 1) * 10;
     const llm   = llmScore !== null ? Math.min(Math.max(llmScore, 0), 10) : hist;
@@ -454,40 +562,39 @@
     return Math.sign(avg_move || 1) * ((hist * 0.40) + (llm * 0.35) + (brain * 0.25));
   }
 
-  function renderPicks(picks, label) {
+  function renderPicks(picks, label, sectors) {
     document.getElementById('picksScenarioLabel').textContent = label || '';
     const tbody = document.getElementById('picksBody');
     if (!picks || !picks.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-row">No picks</td></tr>'; return; }
 
+    const rationaleMap = buildRationaleMap(sectors);
     const bias = cachedData[currentScenario]?.bias || 'bullish';
+
     tbody.innerHTML = picks.map((p, i) => {
       const dir = bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral';
-      const dirLabel = dir === 'long' ? '▲' : dir === 'short' ? '▼' : '→';
+      const dirLabel = dir === 'long' ? '▲ Long' : dir === 'short' ? '▼ Short' : '→';
       const dirClass = `dir-${dir}`;
       const sign = p.avg_move >= 0 ? '+' : '';
       const pctClass = p.avg_move >= 0 ? 'pos' : 'neg';
       const convClass = `conv-${p.conviction}`;
-
       const brainScore = p.brain_pick?.score || 0;
       const score = compositeScore(p.avg_move, brainScore, p.llm_score ?? null);
       const scoreAbs = Math.abs(score);
       const scoreCls = score < 0 ? 'neg' : scoreAbs >= 7 ? 'high' : scoreAbs >= 4 ? 'med' : 'low';
-      const scoreDisplay = score.toFixed(1);
+      const hasRationale = !!(rationaleMap[p.symbol] || p.rationale);
+      const brainHtml = p.brain_pick ? `⚡<span class="brain-score-val">${p.brain_pick.score?.toFixed(1)}</span>` : '';
 
-      const llmHtml = `<td class="llm-cell analyzing" id="llm-${p.symbol}">analyzing…</td>`;
-      const brainHtml = p.brain_pick
-        ? `⚡<span class="brain-score-val">${p.brain_pick.score?.toFixed(1)}</span>`
-        : '';
-
-      return `<tr id="row-${p.symbol}">
-        <td class="rank-num">${i + 1}</td>
-        <td class="sym-cell">${p.symbol}${brainHtml ? ' '+brainHtml : ''}<small>${p.name || ''}</small></td>
+      return `<tr class="pick-row" id="row-${p.symbol}" onclick="toggleRationale('${p.symbol}', ${JSON.stringify(rationaleMap[p.symbol]?.rationale || p.rationale || '')})">
+        <td class="rank-num">${i+1}</td>
+        <td class="sym-cell">${p.symbol}${brainHtml ? ' '+brainHtml : ''}
+          <small>${p.name || ''}${hasRationale ? ' <span style="color:#4a5568;font-size:9px">▾ why</span>' : ''}</small>
+        </td>
         <td style="font-size:11px;color:#718096">${p.sector}</td>
         <td><span class="dir-badge ${dirClass}">${dirLabel}</span></td>
         <td class="hist-pct ${pctClass}">${sign}${p.avg_move}%</td>
-        <td class="score-cell ${scoreCls}" id="score-${p.symbol}">${scoreDisplay}</td>
+        <td class="score-cell ${scoreCls}" id="score-${p.symbol}">${score.toFixed(1)}</td>
         <td><span class="conv-badge ${convClass}">${p.conviction}</span></td>
-        ${llmHtml}
+        <td class="llm-cell analyzing" id="llm-${p.symbol}">analyzing…</td>
       </tr>`;
     }).join('');
   }
@@ -498,7 +605,6 @@
     const symbols = picks.map(p => p.symbol);
     const event_context = data.event_context || 'Indian state assembly elections 2026';
     const scenario_label = data.scenario_label || scenario;
-
     const llmStatus = document.getElementById('llmStatus');
     if (llmStatus) llmStatus.textContent = '⏳ analyzing…';
 
@@ -511,7 +617,6 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { scores } = await res.json();
 
-      const bias = data.bias || 'bullish';
       picks.forEach(p => {
         const s = scores[p.symbol];
         if (!s) return;
@@ -519,26 +624,18 @@
         const newScore = compositeScore(p.avg_move, brainScore, s.event_score);
         const scoreAbs = Math.abs(newScore);
         const scoreCls = newScore < 0 ? 'neg' : scoreAbs >= 7 ? 'high' : scoreAbs >= 4 ? 'med' : 'low';
-
-        // Update score cell
         const scoreEl = document.getElementById(`score-${p.symbol}`);
-        if (scoreEl) {
-          scoreEl.textContent = newScore.toFixed(1);
-          scoreEl.className = `score-cell ${scoreCls}`;
-        }
-
-        // Update LLM cell
+        if (scoreEl) { scoreEl.textContent = newScore.toFixed(1); scoreEl.className = `score-cell ${scoreCls}`; }
         const llmEl = document.getElementById(`llm-${p.symbol}`);
         if (llmEl) {
           llmEl.classList.remove('analyzing');
-          const verdictCls = s.verdict || 'HOLD';
-          llmEl.innerHTML = `<span class="llm-verdict ${verdictCls}">${verdictCls}</span><span class="llm-reason">${s.reason || ''}</span>`;
+          const v = s.verdict || 'HOLD';
+          llmEl.innerHTML = `<span class="llm-verdict ${v}">${v}</span><span class="llm-reason">${s.reason || ''}</span>`;
         }
       });
-
-      if (llmStatus) llmStatus.textContent = `✓ AI scored`;
+      if (llmStatus) llmStatus.textContent = '✓ AI scored';
     } catch (e) {
-      if (llmStatus) llmStatus.textContent = `⚠ AI unavailable`;
+      if (llmStatus) llmStatus.textContent = '⚠ AI unavailable';
       document.querySelectorAll('.llm-cell.analyzing').forEach(el => {
         el.classList.remove('analyzing');
         el.textContent = '—';
