@@ -14,7 +14,7 @@ import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboa
 import { runIntersection }    from '../dashboard/lib/intersect.js';
 import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
 import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
-import { getEventPlays, getActiveEvent } from '../dashboard/lib/eventplays.js';
+import { getEventPlays, getActiveEvent, buildQuantContext } from '../dashboard/lib/eventplays.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -235,16 +235,45 @@ export default async function handler(req, res) {
       return res.status(200).json({ scores, analyzed_at: new Date().toISOString() });
     }
 
-    // ── Live Event Scenario (LLM generates sectors+stocks+rationale from scratch) ──
+    // ── Live Event Scenario — quant pipeline + LLM synthesis ────────────────────
     // POST /api/intel?action=event_live_intel
-    // Body: { event_context, scenario_label }
+    // Body: { event_context, scenario_label, event_type? }
     if (action === 'event_live_intel') {
       if (req.method !== 'POST') { res.status(405).end(); return; }
-      const { event_context, scenario_label } = req.body ?? {};
+      const { event_context, scenario_label, event_type } = req.body ?? {};
       if (!event_context) return res.status(400).json({ error: 'event_context required' });
+
+      // Step 1: get brain cache for regime context
+      let brainContext = null;
+      try {
+        const cached = await getBrainCache();
+        if (cached) {
+          const ageMs = Date.now() - new Date(cached.updated_at).getTime();
+          if (ageMs < CACHE_TTL_MS) {
+            brainContext = {
+              vix_state:      cached.data?.vix_state,
+              sentiment:      cached.data?.market_sentiment,
+              regime:         cached.data?.regime,
+              gift_nifty_bias: cached.data?.gift_nifty_bias
+            };
+          }
+        }
+      } catch { /* no cache — use neutral regime */ }
+
+      // Step 2: build quantitative context (sector EVs, probabilities, regime adjustment)
+      const resolvedEventType = event_type || getActiveEvent()?.type || 'assembly_election_exit_poll';
+      const quantContext = buildQuantContext(resolvedEventType, brainContext);
+
+      // Step 3: LLM synthesis — takes structured quant context, adds narrative + stock picks
       const today = new Date().toISOString().slice(0, 10);
-      const result = await analyzeEventScenario(event_context, scenario_label || '', today);
-      return res.status(200).json({ ...result, generated_at: new Date().toISOString(), source: 'live_ai' });
+      const result = await analyzeEventScenario(event_context, scenario_label || '', quantContext, today);
+
+      return res.status(200).json({
+        ...result,
+        quant_context: quantContext,
+        generated_at: new Date().toISOString(),
+        source: 'quant_llm_pipeline'
+      });
     }
 
     res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel' });

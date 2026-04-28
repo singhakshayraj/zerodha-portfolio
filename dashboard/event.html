@@ -191,6 +191,29 @@
     .live-conv.high{background:#1a3a2a;color:#68d391}
     .live-conv.medium{background:#1e2535;color:#94a3b8}
     .live-conv.low{background:#2d2d2d;color:#718096}
+    /* QUANT CONTEXT PANEL */
+    .quant-panel{background:#0a0e18;border:1px solid #1e2535;border-radius:6px;padding:14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    @media(max-width:640px){.quant-panel{grid-template-columns:1fr}}
+    .quant-block .qb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4a5568;margin-bottom:6px}
+    .prob-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px}
+    .prob-bar-wrap{flex:1;height:5px;background:#1e2535;border-radius:3px;overflow:hidden}
+    .prob-bar{height:100%;border-radius:3px;transition:width .3s}
+    .prob-bar.bullish{background:#68d391}
+    .prob-bar.mixed{background:#fbd38d}
+    .prob-bar.bearish{background:#fc8181}
+    .regime-mult{font-size:26px;font-weight:700;margin-bottom:4px}
+    .regime-mult.expand{color:#68d391}
+    .regime-mult.compress{color:#fc8181}
+    .regime-mult.neutral{color:#94a3b8}
+    .regime-tags{display:flex;flex-wrap:wrap;gap:4px}
+    .ev-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid #0d1117}
+    .ev-row:last-child{border-bottom:none}
+    .ev-val{font-weight:700;font-size:12px}
+    .ev-val.pos{color:#68d391}
+    .ev-val.neg{color:#fc8181}
+    .ev-val.flat{color:#94a3b8}
+    .ev-bar-wrap{width:50px;height:4px;background:#1e2535;border-radius:2px;display:inline-block;vertical-align:middle;margin-left:4px}
+    .ev-bar{height:100%;border-radius:2px}
     .live-generating{text-align:center;padding:32px;color:#4a5568;font-size:13px}
     .live-generating .spin{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
     @keyframes spin{to{transform:rotate(360deg)}}
@@ -765,19 +788,84 @@
     }
   }
 
+  function renderQuantPanel(qc) {
+    if (!qc) return '';
+    const probs = qc.scenario_probabilities || {};
+    const scenarioColors = { bjp_wave:'bullish', nda_strong:'bullish', split_verdict:'mixed', nda_weak:'mixed', opposition_sweep:'bearish', hung_parliament:'bearish' };
+    const scenarioLabels = { bjp_wave:'BJP Wave', split_verdict:'Split Verdict', opposition_sweep:'Opp. Sweep', nda_strong:'NDA Strong', nda_weak:'NDA Weak', hung_parliament:'Hung Parl.' };
+
+    const probRows = Object.entries(probs).map(([sc, p]) => {
+      const pct = (p * 100).toFixed(0);
+      const cls = scenarioColors[sc] || 'mixed';
+      return `<div class="prob-row">
+        <span style="color:#94a3b8;width:80px;flex-shrink:0">${scenarioLabels[sc] || sc}</span>
+        <div class="prob-bar-wrap"><div class="prob-bar ${cls}" style="width:${pct}%"></div></div>
+        <span style="color:#e2e8f0;font-weight:700;width:30px;text-align:right">${pct}%</span>
+      </div>`;
+    }).join('');
+
+    const rm = qc.regime_multiplier || 1.0;
+    const rmClass = rm > 1.05 ? 'expand' : rm < 0.90 ? 'compress' : 'neutral';
+    const rmDir = rm > 1.05 ? '▲ expanding' : rm < 0.90 ? '▼ compressed' : '→ neutral';
+    const rc = qc.regime_context || {};
+    const regimeTags = [rc.vix_state, rc.sentiment, rc.regime, rc.gift_nifty ? `GIFT:${rc.gift_nifty}` : null]
+      .filter(Boolean).map(t => `<span class="brain-tag default" style="font-size:10px;padding:1px 6px">${t}</span>`).join('');
+
+    const maxAbsEV = Math.max(...(qc.top_sectors||[]).map(s => Math.abs(s.adj_ev)), 1);
+    const evRows = (qc.top_sectors || []).slice(0, 6).map(s => {
+      const cls = s.adj_ev >= 2 ? 'pos' : s.adj_ev <= -2 ? 'neg' : 'flat';
+      const sign = s.adj_ev >= 0 ? '+' : '';
+      const barW = Math.round(Math.abs(s.adj_ev) / maxAbsEV * 100);
+      const barColor = cls === 'pos' ? '#68d391' : cls === 'neg' ? '#fc8181' : '#718096';
+      const cons = Math.round((s.consistency || 0.5) * 100);
+      return `<div class="ev-row">
+        <span style="color:#94a3b8;font-size:10px;flex:1">${s.name.replace(' & PSU Aerospace','').replace(' — WB Projects Unlocked','').replace(' — WB Corridor','').replace(' — WB Energy','')}</span>
+        <span class="ev-val ${cls}">${sign}${s.adj_ev}%
+          <span class="ev-bar-wrap"><span class="ev-bar" style="width:${barW}%;background:${barColor}"></span></span>
+        </span>
+        <span style="color:#4a5568;font-size:10px;margin-left:6px">${cons}%✓</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="quant-panel">
+      <div class="quant-block">
+        <div class="qb-label">Scenario Probabilities</div>
+        ${probRows}
+      </div>
+      <div class="quant-block">
+        <div class="qb-label">Market Regime</div>
+        <div class="regime-mult ${rmClass}">${rm}x <span style="font-size:12px;font-weight:400">${rmDir}</span></div>
+        <div class="regime-tags">${regimeTags || '<span style="color:#4a5568;font-size:11px">Brain cache unavailable</span>'}</div>
+        ${qc.regime_context ? '' : '<div style="font-size:10px;color:#4a5568;margin-top:4px">Using neutral multiplier (1.0x)</div>'}
+      </div>
+      <div class="quant-block">
+        <div class="qb-label">Sector EV T+7 (regime-adj)</div>
+        ${evRows}
+        <div style="font-size:9px;color:#4a5568;margin-top:6px">%✓ = historical consistency</div>
+      </div>
+    </div>`;
+  }
+
   function renderLiveIntel(result, scenario) {
     const body = document.getElementById('liveIntelBody');
     const meta = document.getElementById('liveIntelMeta');
     const ts = result.generated_at ? new Date(result.generated_at).toLocaleTimeString('en-IN') : '';
-    meta.innerHTML = `Generated ${ts} · Scenario: <strong>${cachedData[scenario]?.scenario_label || scenario}</strong> <span class="live-ai-badge">AI</span>`;
+    const isPipeline = result.source === 'quant_llm_pipeline';
+    meta.innerHTML = `Generated ${ts} · Scenario: <strong>${cachedData[scenario]?.scenario_label || scenario}</strong>
+      <span class="live-ai-badge">${isPipeline ? 'Quant + AI' : 'AI'}</span>`;
 
     let html = '';
 
-    if (result.summary) {
-      html += `<div class="live-summary">${result.summary}</div>`;
-    }
-    if (result.key_risk) {
-      html += `<div class="live-risk"><div class="risk-label">⚠ Key Risk</div>${result.key_risk}</div>`;
+    // Quant context panel (scenario probs + regime + sector EVs)
+    if (result.quant_context) html += renderQuantPanel(result.quant_context);
+
+    if (result.summary) html += `<div class="live-summary">${result.summary}</div>`;
+
+    if (result.key_risk || result.regime_note) {
+      html += `<div class="live-risk">`;
+      if (result.key_risk) html += `<div class="risk-label">⚠ Key Risk</div>${result.key_risk}`;
+      if (result.regime_note) html += `<div style="margin-top:6px;color:#94a3b8"><span style="color:#63b3ed;font-weight:700;font-size:10px">REGIME · </span>${result.regime_note}</div>`;
+      html += `</div>`;
     }
 
     const sectors = result.sectors || [];
@@ -787,9 +875,10 @@
       html += `<div class="live-sector-grid">`;
       sectors.forEach(s => {
         const dirClass = s.direction || 'bullish';
-        const sign = (s.expected_move_pct || 0) >= 0 ? '+' : '';
+        const evAdj = s.ev_adj ?? s.expected_move_pct ?? 0;
+        const sign = evAdj >= 0 ? '+' : '';
         const moveColor = dirClass === 'bullish' ? '#68d391' : dirClass === 'bearish' ? '#fc8181' : '#94a3b8';
-        const convClass = s.conviction || 'medium';
+        const consistency = s.consistency_pct ? `<span style="font-size:10px;color:#4a5568;margin-left:6px">${s.consistency_pct}% consistent</span>` : '';
 
         const stocksHtml = (s.stocks || []).map(st => {
           const stDir = st.direction || 'bullish';
@@ -807,11 +896,10 @@
         }).join('');
 
         html += `<div class="live-sector-card ${dirClass}">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
             <div class="live-sector-name">${s.name}</div>
-            <span style="font-weight:700;font-size:18px;color:${moveColor}">${sign}${s.expected_move_pct || 0}%</span>
+            <span style="font-weight:700;font-size:18px;color:${moveColor}">${sign}${evAdj}%${consistency}</span>
           </div>
-          <span class="live-conv ${convClass}" style="margin-bottom:8px;display:inline-block">${convClass} conviction</span>
           <div class="live-sector-thesis">${s.thesis || ''}</div>
           ${stocksHtml}
         </div>`;
@@ -819,7 +907,7 @@
       html += `</div>`;
     }
 
-    html += `<div class="live-cached-note">⚠ AI-generated · Based on training data, not live market data · Verify before trading</div>`;
+    html += `<div class="live-cached-note">Quant pipeline: scenario probs × sector sensitivity matrix × regime multiplier → LLM synthesis · Not live market data · Verify before trading</div>`;
     body.innerHTML = html;
   }
 

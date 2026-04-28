@@ -198,61 +198,85 @@ export async function analyzeEventStocks(symbols, eventContext, scenarioLabel) {
 // ── Full event scenario generator ────────────────────────────────────────────
 // Ask LLM to generate sectors + stocks + rationale from scratch for given scenario.
 // One large call; returns structured JSON with 5 sectors × 5 stocks each.
-const EVENT_SCENARIO_PROMPT = (eventContext, scenarioLabel, today) =>
-`You are a senior Indian equity research analyst specialising in event-driven and political-economy investing.
+const EVENT_SCENARIO_PROMPT = (eventContext, scenarioLabel, quantContext, today) => {
+  const { scenario_probabilities: probs, regime_multiplier, regime_context, top_sectors } = quantContext;
+  const probLines = Object.entries(probs).map(([sc, p]) => `  ${sc}: ${(p*100).toFixed(0)}%`).join('\n');
+  const sectorLines = top_sectors.slice(0, 6).map(s =>
+    `  ${s.name}: EV=${s.raw_ev}% → regime-adj=${s.adj_ev}% | consistency=${(s.consistency*100).toFixed(0)}% | vol_mult=${s.vol_mult}x | direction=${s.direction}`
+  ).join('\n');
+  const regimeNote = regime_context
+    ? `VIX=${regime_context.vix_state}, Regime=${regime_context.regime}, Sentiment=${regime_context.sentiment}, GIFT Nifty=${regime_context.gift_nifty || '—'}`
+    : 'Brain cache unavailable — use neutral regime assumptions';
 
-EVENT CONTEXT: ${eventContext}
+  return `You are a senior Indian equity research analyst. Your role is SYNTHESIS and EXPLANATION only — the quantitative ranking has already been computed. Do not change sector ordering or EV numbers.
+
+EVENT: ${eventContext}
 SCENARIO: ${scenarioLabel}
-ANALYSIS DATE: ${today}
+DATE: ${today}
 
-Using your knowledge of Indian corporate fundamentals, government project pipelines, and political economy, generate a fresh investment analysis for this specific scenario.
+─── QUANTITATIVE CONTEXT (pre-computed, authoritative) ───────────────────────
+Scenario Probabilities:
+${probLines}
 
-Rules:
-- Only NSE-listed stocks (liquid, mid/large cap preferred — avoid illiquid micro-caps)
-- For each stock: cite the SPECIFIC contract, project, order book, regulatory change, or balance sheet factor that links it to this event
-- Reference historical precedent where relevant (past elections, past policy changes, past WB/state events)
-- 5 sectors, 5 stocks per sector
-- Sectors should be distinct — no overlap in stocks across sectors
-- expected_move_pct is your estimated % move on event day + 3 days, signed (positive = up, negative = down)
+Market Regime: ${regimeNote}
+Regime Multiplier: ${regime_multiplier}x (scales all EV estimates — <1.0 = compress, >1.0 = expand)
 
-Return ONLY raw JSON, no markdown, no explanation outside JSON:
+Top Sectors by Probability-Weighted EV (T+7, regime-adjusted):
+${sectorLines}
+──────────────────────────────────────────────────────────────────────────────
+
+INSTRUCTIONS:
+1. Cover the top 5 sectors from the list above (in order — do not reorder)
+2. For each sector: write a 2-3 sentence thesis tied to the SPECIFIC event mechanism
+3. For each sector: pick 5 NSE-listed liquid mid/large-cap stocks
+4. For each stock: provide 2-3 sentence rationale citing:
+   - Specific contract, project, or policy mechanism that links it to this event
+   - A historical precedent (year + event, e.g. "In 2014 when BJP won...")
+   - One balance-sheet / earnings sensitivity fact (revenue %, order book size, margin impact)
+5. expected_move_pct for stocks: use the sector's adj_ev as anchor, adjust ±30% for stock-specific factors
+6. Do NOT hallucinate stock symbols — only use well-known NSE-listed tickers
+
+Return ONLY raw JSON (no markdown, no text outside JSON):
 {
   "sectors": [
     {
-      "name": "Sector Name",
-      "thesis": "2-3 sentences: why this sector moves, what policy/project/regulatory mechanism, historical precedent",
-      "direction": "bullish",
-      "expected_move_pct": 12,
-      "conviction": "high",
+      "name": "exact name from sector list above",
+      "thesis": "2-3 sentences: mechanism + historical precedent + why NOW",
+      "direction": "bullish|bearish|neutral",
+      "ev_t7": <number — copy from quant context>,
+      "ev_adj": <number — copy regime-adjusted EV>,
+      "consistency_pct": <integer 0-100>,
       "stocks": [
         {
           "symbol": "NSE_SYMBOL",
           "name": "Full Company Name",
-          "direction": "bullish",
-          "expected_move_pct": 15,
-          "conviction": "high",
-          "rationale": "2-3 sentences: specific project or contract at stake, financial impact (revenue/earnings), historical analogue"
+          "direction": "bullish|bearish|neutral",
+          "expected_move_pct": <integer>,
+          "conviction": "high|medium|low",
+          "rationale": "2-3 sentences: specific project/contract + historical analogue + balance sheet link"
         }
       ]
     }
   ],
-  "summary": "2-3 sentence overall market read: what opens up, what sells off, what is the dominant narrative",
-  "key_risk": "One sentence — what single outcome could invalidate the entire bullish/bearish thesis"
+  "summary": "2-3 sentences: overall market read — what opens up, what sells off, dominant narrative",
+  "key_risk": "One sentence: what single outcome invalidates the primary thesis",
+  "regime_note": "One sentence: how current VIX/regime context shapes sizing and timing"
 }`;
+};
 
-async function generateScenarioWithGroq(eventContext, scenarioLabel, today) {
+async function generateScenarioWithGroq(eventContext, scenarioLabel, quantContext, today) {
   const { default: Groq } = await import('groq-sdk');
   const client = new Groq({ apiKey: config.llm.groqApiKey });
   const msg = await client.chat.completions.create({
     model: config.llm.groqModel,
     max_tokens: 4096,
     response_format: { type: 'json_object' },
-    messages: [{ role: 'user', content: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, today) }],
+    messages: [{ role: 'user', content: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, quantContext, today) }],
   });
   return JSON.parse(msg.choices[0].message.content.trim());
 }
 
-async function generateScenarioWithGemini(eventContext, scenarioLabel, today) {
+async function generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today) {
   const apiKey = config.llm.googleApiKey;
   if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
   const model = config.llm.geminiModel || 'gemini-2.0-flash';
@@ -262,8 +286,8 @@ async function generateScenarioWithGemini(eventContext, scenarioLabel, today) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, today) }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+        contents: [{ parts: [{ text: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, quantContext, today) }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 4096, responseMimeType: 'application/json' },
       }),
     }
   );
@@ -275,21 +299,23 @@ async function generateScenarioWithGemini(eventContext, scenarioLabel, today) {
 }
 
 /**
- * Generate fresh event scenario analysis — sectors, stocks, rationale — from LLM.
- * @param {string} eventContext  Full event description
- * @param {string} scenarioLabel  e.g. "BJP Wave — Wins WB + Retains Assam"
- * @param {string} today  ISO date string
- * @returns {{ sectors, summary, key_risk }}
+ * Generate event scenario analysis — LLM acts as synthesis layer only.
+ * Quantitative context (sector EVs, probabilities, regime) is pre-computed
+ * and passed as structured input; LLM writes rationale and validates thesis.
+ * @param {string} eventContext
+ * @param {string} scenarioLabel
+ * @param {object} quantContext  Output of buildQuantContext()
+ * @param {string} today  ISO date
  */
-export async function analyzeEventScenario(eventContext, scenarioLabel, today) {
+export async function analyzeEventScenario(eventContext, scenarioLabel, quantContext, today) {
   const provider = config.llm.provider;
   try {
-    if (provider === 'gemini') return await generateScenarioWithGemini(eventContext, scenarioLabel, today);
-    return await generateScenarioWithGroq(eventContext, scenarioLabel, today);
+    if (provider === 'gemini') return await generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today);
+    return await generateScenarioWithGroq(eventContext, scenarioLabel, quantContext, today);
   } catch (err) {
     const isRateLimit = err.message?.includes('429') || err.status === 429;
     if (isRateLimit && config.llm.googleApiKey) {
-      return await generateScenarioWithGemini(eventContext, scenarioLabel, today);
+      return await generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today);
     }
     throw err;
   }
