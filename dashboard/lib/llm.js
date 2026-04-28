@@ -201,8 +201,8 @@ export async function analyzeEventStocks(symbols, eventContext, scenarioLabel) {
 const EVENT_SCENARIO_PROMPT = (eventContext, scenarioLabel, quantContext, today) => {
   const { scenario_probabilities: probs, regime_multiplier, regime_context, top_sectors } = quantContext;
   const probLines = Object.entries(probs).map(([sc, p]) => `  ${sc}: ${(p*100).toFixed(0)}%`).join('\n');
-  const sectorLines = top_sectors.slice(0, 6).map(s =>
-    `  ${s.name}: EV=${s.raw_ev}% → regime-adj=${s.adj_ev}% | consistency=${(s.consistency*100).toFixed(0)}% | vol_mult=${s.vol_mult}x | direction=${s.direction}`
+  const sectorLines = top_sectors.slice(0, 5).map(s =>
+    `  ${s.name}: adj_EV=${s.adj_ev}% | consistency=${(s.consistency*100).toFixed(0)}% | direction=${s.direction}`
   ).join('\n');
   const regimeNote = regime_context
     ? `VIX=${regime_context.vix_state}, Regime=${regime_context.regime}, Sentiment=${regime_context.sentiment}, GIFT Nifty=${regime_context.gift_nifty || '—'}`
@@ -267,16 +267,20 @@ Return ONLY raw JSON (no markdown, no text outside JSON):
 async function generateScenarioWithGroq(eventContext, scenarioLabel, quantContext, today) {
   const { default: Groq } = await import('groq-sdk');
   const client = new Groq({ apiKey: config.llm.groqApiKey });
+  // Use smaller model for large generation to stay within free-tier RPM/TPM limits
+  const model = config.llm.groqModel === 'llama-3.3-70b-versatile'
+    ? 'llama-3.1-8b-instant'   // faster, lower token cost, still good for structured JSON
+    : config.llm.groqModel;
   const msg = await client.chat.completions.create({
-    model: config.llm.groqModel,
-    max_tokens: 4096,
+    model,
+    max_tokens: 2048,
     response_format: { type: 'json_object' },
     messages: [{ role: 'user', content: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, quantContext, today) }],
   });
   return JSON.parse(msg.choices[0].message.content.trim());
 }
 
-async function generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today) {
+async function generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today, attempt = 0) {
   const apiKey = config.llm.googleApiKey;
   if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
   const model = config.llm.geminiModel || 'gemini-2.0-flash';
@@ -287,10 +291,15 @@ async function generateScenarioWithGemini(eventContext, scenarioLabel, quantCont
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, quantContext, today) }] }],
-        generationConfig: { temperature: 0.15, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+        generationConfig: { temperature: 0.15, maxOutputTokens: 2048, responseMimeType: 'application/json' },
       }),
     }
   );
+  // Retry once on 429 after 8s back-off
+  if (res.status === 429 && attempt < 1) {
+    await new Promise(r => setTimeout(r, 8000));
+    return generateScenarioWithGemini(eventContext, scenarioLabel, quantContext, today, attempt + 1);
+  }
   if (!res.ok) throw new Error(`Gemini error ${res.status}`);
   const data = await res.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
