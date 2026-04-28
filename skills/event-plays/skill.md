@@ -185,20 +185,61 @@ export const SCENARIO_PLAYS = {
 
 ---
 
-## Brain Boost Mechanics
+## Composite Scoring — 3 Factors
+
+Scores are computed in two phases:
+
+### Phase 1 — Static (server-side, instant)
+`computeCompositeScore(avg_move, brainScore, llmScore=null)` in `eventplays.js`:
 
 ```
-final_score = stock.avg_move + (brainPick ? brainPick.score * 2 : 0)
+hist_norm  = clamp(|avg_move| / 25, 0, 1) * 10   // 25% move = score 10
+llm_norm   = llmScore ?? hist_norm                 // fallback to hist if AI not yet run
+brain_norm = brainPick?.score ?? 0                 // 0-10 from brain pipeline
 
-brainPick = brain.picks.find(p => p.symbol === stock.symbol)
+raw = (hist_norm * 0.40) + (llm_norm * 0.35) + (brain_norm * 0.25)
+final_score = sign(avg_move) * raw                 // preserves direction
 ```
 
-Brain score range: 0–10. Max brain boost = +20 (if brain scores 10 on the stock).  
-A stock with `avg_move: 15` and `brainPick.score: 8` gets `final_score = 15 + 16 = 31`.  
-This floats it above stocks with higher `avg_move` but no brain signal — which is the intent.  
-**Brain boost never changes direction.** If `avg_move` is negative, the pick stays bearish.
+**Weights:**
+| Factor | Weight | Source | Notes |
+|---|---|---|---|
+| Historical (H) | **40%** | `avg_move` in SCENARIO_PLAYS | curated from past election data |
+| AI Event Score (AI) | **35%** | `analyzeEventStocks()` LLM call | groq llama-3.3-70b → gemini fallback |
+| Brain Pick (B) | **25%** | `getBrainCache()` Supabase | 0 if no active brain pick for symbol |
 
-**When brain is unavailable** (cache miss, Supabase error): `brain = null` → `brainPickMap = {}` → all `brain_pick: null` → pure historical ranking. Page still works, just no ⚡ badges.
+**Displayed in table header as: `H40·AI35·B25`**
+
+### Phase 2 — Async LLM enrichment (client-side, ~2-4s after page load)
+`enrichWithLLM(data, scenario)` in `event.html`:
+
+1. Collects top 10 symbols from rendered picks table
+2. POSTs to `POST /api/intel?action=event_stock_analysis` with:
+   - `symbols[]` — top 10 NSE symbols
+   - `event_context` — from `SCENARIO_PLAYS[scenario].event_context` (full narrative string)
+   - `scenario_label` — display label
+3. Groq (llama-3.3-70b) → ONE call for all symbols → returns per-symbol `{ event_score, verdict, reason }`
+4. Client recomputes `compositeScore(avg_move, brainScore, event_score)` per stock
+5. Updates score cells + AI Analysis column in-place (no page reload)
+
+**When AI unavailable:** Phase 1 score persists. LLM column shows `—`. Page fully functional.
+
+### Brain Boost Mechanics
+
+Brain score range: 0–10. A stock with `avg_move: 14` and `brain.score: 8` at 25% weight:
+```
+hist_norm  = 14/25 * 10 = 5.6
+llm_norm   = (assume AI scores 8) → 8
+brain_norm = 8
+raw = (5.6*0.40) + (8*0.35) + (8*0.25) = 2.24 + 2.80 + 2.00 = 7.04
+```
+
+vs same stock without brain pick:
+```
+raw = (5.6*0.40) + (8*0.35) + (0*0.25) = 2.24 + 2.80 + 0.00 = 5.04
+```
+
+Brain pick = +2 points on composite (significant enough to change rank). **Direction never changes.**
 
 ---
 
@@ -206,10 +247,11 @@ This floats it above stocks with higher `avg_move` but no brain signal — which
 
 | Rule | Implementation |
 |---|---|
-| Picks are ranked by `|final_score|` not `final_score` | `Math.abs(b.final_score) - Math.abs(a.final_score)` |
-| Only top 3 sectors used | `plays.sectors.slice(0, 3)` — order matters, put strongest first |
-| Top 10 stocks from across all 3 sectors | Flattened + sorted + sliced, not per-sector quota |
-| Conviction = 'high' if brain_pick exists, else inherits sector confidence | Set per-stock in enrichment loop |
+| Ranked by `|final_score|` not `final_score` | `Math.abs(b.composite_score) - Math.abs(a.composite_score)` |
+| Only top 3 sectors used | `plays.sectors.slice(0, 3)` — order = priority |
+| Top 10 stocks cross-sector | Flatten all 3 sectors → sort → slice 10. No per-sector quota. |
+| Conviction = 'high' if brain_pick | Else inherits sector confidence ('high' → 'medium', others → 'low') |
+| LLM fallback | If `llmScore === null`, hist_norm used as llm_norm (conservative, no artificial boost) |
 
 ---
 

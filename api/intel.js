@@ -8,7 +8,7 @@ export const config = { maxDuration: 30 };
 
 import { getBrainResult }  from '../dashboard/lib/brain.js';
 import { getTradePlan }    from '../dashboard/lib/plan.js';
-import { analyzeStock }    from '../dashboard/lib/llm.js';
+import { analyzeStock, analyzeEventStocks } from '../dashboard/lib/llm.js';
 import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
 import { runIntersection }    from '../dashboard/lib/intersect.js';
@@ -222,7 +222,20 @@ export default async function handler(req, res) {
       });
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays' });
+    // ── Event Stock Analysis (runtime LLM scoring for event plays) ──────────────
+    // POST /api/intel?action=event_stock_analysis
+    // Body: { symbols: ['HAL','BEL',...], event_context: '...', scenario_label: '...' }
+    if (action === 'event_stock_analysis') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { symbols, event_context, scenario_label } = req.body ?? {};
+      if (!symbols?.length || !event_context) {
+        return res.status(400).json({ error: 'symbols[] and event_context required' });
+      }
+      const scores = await analyzeEventStocks(symbols, event_context, scenario_label || '');
+      return res.status(200).json({ scores, analyzed_at: new Date().toISOString() });
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

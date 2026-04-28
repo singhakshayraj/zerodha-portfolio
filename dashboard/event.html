@@ -98,28 +98,48 @@
     .sector-stock .move.neg{color:#fc8181}
     .brain-badge{font-size:9px;font-weight:600;background:#0d1f30;color:#63b3ed;border:1px solid #1a3a5a;padding:1px 4px;border-radius:3px;margin-left:4px}
 
+    /* HISTORICAL TABLE — compact */
+    .hist-table td{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+    .hist-table td.notes-cell{white-space:normal;max-width:200px;line-height:1.3}
+
     /* PICKS TABLE */
     .picks-table{width:100%;border-collapse:collapse}
     .picks-table th{color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:8px 10px;border-bottom:1px solid #1e2535;text-align:left;white-space:nowrap}
-    .picks-table td{padding:10px;border-bottom:1px solid #141820;vertical-align:middle}
+    .picks-table td{padding:9px 10px;border-bottom:1px solid #141820;vertical-align:middle}
     .picks-table tr:last-child td{border-bottom:none}
     .picks-table tr:hover td{background:#0d1117}
-    .rank-num{font-size:12px;color:#4a5568;font-weight:600;width:28px}
-    .sym-cell{font-weight:700;font-size:14px;color:#f7fafc}
-    .sym-cell small{display:block;font-size:11px;font-weight:400;color:#64748b;margin-top:1px}
-    .dir-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px}
+    .rank-num{font-size:12px;color:#4a5568;font-weight:600;width:24px}
+    .sym-cell{font-weight:700;font-size:13px;color:#f7fafc}
+    .sym-cell small{display:block;font-size:10px;font-weight:400;color:#64748b;margin-top:1px}
+    .dir-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
     .dir-long{background:#1a3a2a;color:#68d391}
     .dir-short{background:#3a1a1a;color:#fc8181}
     .dir-neutral{background:#1e2535;color:#718096}
-    .hist-pct{font-weight:700;font-size:13px}
+    .hist-pct{font-weight:700;font-size:12px}
     .hist-pct.pos{color:#68d391}
     .hist-pct.neg{color:#fc8181}
+    .score-cell{font-weight:700;font-size:13px}
+    .score-cell.high{color:#68d391}
+    .score-cell.med{color:#fbd38d}
+    .score-cell.low{color:#718096}
+    .score-cell.neg{color:#fc8181}
     .conv-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px}
     .conv-high{background:#1a3a2a;color:#68d391}
     .conv-medium{background:#1e2535;color:#94a3b8}
     .conv-low{background:#2d2d2d;color:#718096}
-    .brain-signal-cell{font-size:11px;color:#94a3b8}
+    .llm-cell{font-size:11px;color:#94a3b8;max-width:200px}
+    .llm-cell .llm-verdict{font-weight:700;font-size:10px;padding:1px 5px;border-radius:3px;margin-right:5px}
+    .llm-cell .llm-verdict.BUY{background:#1a3a2a;color:#68d391}
+    .llm-cell .llm-verdict.HOLD{background:#1e2535;color:#94a3b8}
+    .llm-cell .llm-verdict.AVOID{background:#3a1a1a;color:#fc8181}
+    .llm-cell .llm-reason{color:#718096;font-size:10px}
+    .llm-cell.analyzing{color:#4a5568;font-style:italic;animation:pulse 1.5s infinite}
     .brain-score-val{color:#63b3ed;font-weight:600}
+    .weight-bar{display:flex;gap:3px;margin-top:3px}
+    .weight-seg{height:3px;border-radius:2px}
+    .ws-hist{background:#4a5568}
+    .ws-llm{background:#9f7aea}
+    .ws-brain{background:#63b3ed}
 
     /* CONTROLS */
     .controls{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
@@ -234,10 +254,11 @@
             <th>#</th>
             <th>Symbol</th>
             <th>Sector</th>
-            <th>Direction</th>
-            <th>Hist Swing</th>
+            <th>Dir</th>
+            <th>Hist%</th>
+            <th>Score <span style="color:#4a5568;font-weight:400;font-size:9px">H40·AI35·B25</span></th>
             <th>Conviction</th>
-            <th>Brain Signal</th>
+            <th>AI Analysis <span id="llmStatus" style="color:#4a5568;font-weight:400">pending…</span></th>
           </tr>
         </thead>
         <tbody id="picksBody">
@@ -303,6 +324,8 @@
     renderSectors(data.top3Sectors, data.scenario_label);
     renderPicks(data.top10, data.scenario_label);
     renderMarketTone(data.market_tone, data.bias);
+    // Trigger async LLM enrichment after initial render
+    if (scenario === currentScenario) enrichWithLLM(data, scenario);
   }
 
   function renderEventHeader(ev) {
@@ -372,19 +395,20 @@
     tbody.innerHTML = events.map(e => {
       const pctClass = e.nifty_change >= 0 ? 'pos' : 'neg';
       const sign = e.nifty_change >= 0 ? '+' : '';
-      const typeClass = e.type === 'exit_poll' ? 'exit_poll' : '';
+      const typeClass = e.type === 'exit_poll' || e.type === 'assembly_election_exit_poll' ? 'exit_poll' : '';
+      const typeLabel = e.type.includes('exit_poll') ? 'Exit Poll' : 'Result';
       const topSectors = e.sector_moves
         ? Object.entries(e.sector_moves).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0,2)
-            .map(([s,v]) => `${s} ${v >= 0 ? '+' : ''}${v}%`).join(', ')
+            .map(([s,v]) => `${s.replace(' & PSU Aerospace','').replace(' & Capex','')}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
         : '';
       return `<tr>
         <td><strong>${e.year}</strong></td>
-        <td><span class="type-badge ${typeClass}">${e.type === 'exit_poll' ? 'Exit Poll' : 'Result'}</span></td>
+        <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
         <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
-        <td style="color:#718096;font-size:11px;line-height:1.4">
-          ${topSectors ? `<span style="color:#94a3b8">${topSectors}</span><br>` : ''}
-          ${e.notes}
-          ${e.recovery_3d ? `<br><span style="color:#68d391;font-size:10px">Recovery +${e.recovery_3d}% over 3d</span>` : ''}
+        <td class="notes-cell" style="color:#718096">
+          ${topSectors ? `<span style="color:#94a3b8;font-size:10px">${topSectors}</span><br>` : ''}
+          <span style="font-size:10px">${e.notes.length > 70 ? e.notes.slice(0,70)+'…' : e.notes}</span>
+          ${e.recovery_3d ? `<br><span style="color:#68d391;font-size:9px">+${e.recovery_3d}% 3d recovery</span>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -401,12 +425,12 @@
       const confClass = `conf-${s.confidence}`;
       const cardClass = s.confidence;
 
-      const stockRows = s.stocks.slice(0, 4).map(st => {
+      const stockRows = s.stocks.slice(0, 6).map(st => {
         const isBrain = !!st.brain_pick;
         const stSign = st.avg_move >= 0 ? '+' : '';
         const stMoveClass = st.avg_move >= 0 ? 'pos' : 'neg';
         return `<div class="sector-stock">
-          <span class="sym ${isBrain ? 'brain' : ''}">${st.symbol}${isBrain ? ' <span class="brain-badge">⚡</span>' : ''}</span>
+          <span class="sym ${isBrain ? 'brain' : ''}">${st.symbol}${isBrain ? '<span class="brain-badge">⚡</span>' : ''}</span>
           <span class="move ${stMoveClass}">${stSign}${st.avg_move}%</span>
         </div>`;
       }).join('');
@@ -417,46 +441,114 @@
         <span class="sector-confidence ${confClass}">${s.confidence} conviction</span>
         <div class="sector-rationale">${s.rationale}</div>
         <div class="sector-stocks">${stockRows}</div>
+        ${s.stocks.length > 6 ? `<div style="font-size:10px;color:#4a5568;margin-top:4px">+${s.stocks.length-6} more stocks</div>` : ''}
       </div>`;
     }).join('');
+  }
+
+  // Composite score helpers (mirrors eventplays.js logic client-side)
+  function compositeScore(avg_move, brainScore, llmScore) {
+    const hist  = Math.min(Math.abs(avg_move) / 25, 1) * 10;
+    const llm   = llmScore !== null ? Math.min(Math.max(llmScore, 0), 10) : hist;
+    const brain = Math.min(Math.max(brainScore || 0, 0), 10);
+    return Math.sign(avg_move || 1) * ((hist * 0.40) + (llm * 0.35) + (brain * 0.25));
   }
 
   function renderPicks(picks, label) {
     document.getElementById('picksScenarioLabel').textContent = label || '';
     const tbody = document.getElementById('picksBody');
-    if (!picks || !picks.length) { tbody.innerHTML = '<tr><td colspan="7" class="loading-row">No picks</td></tr>'; return; }
+    if (!picks || !picks.length) { tbody.innerHTML = '<tr><td colspan="8" class="loading-row">No picks</td></tr>'; return; }
 
     const bias = cachedData[currentScenario]?.bias || 'bullish';
     tbody.innerHTML = picks.map((p, i) => {
       const dir = bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral';
-      const dirLabel = dir === 'long' ? '▲ Long' : dir === 'short' ? '▼ Short' : '→ Neutral';
+      const dirLabel = dir === 'long' ? '▲' : dir === 'short' ? '▼' : '→';
       const dirClass = `dir-${dir}`;
       const sign = p.avg_move >= 0 ? '+' : '';
       const pctClass = p.avg_move >= 0 ? 'pos' : 'neg';
       const convClass = `conv-${p.conviction}`;
 
-      let brainCell = '<span style="color:#4a5568">—</span>';
-      if (p.brain_pick) {
-        const bp = p.brain_pick;
-        brainCell = `⚡ <span class="brain-score-val">${bp.score?.toFixed(1)}</span> · ${bp.event_type || bp.directional_bias || ''}`;
-      }
+      const brainScore = p.brain_pick?.score || 0;
+      const score = compositeScore(p.avg_move, brainScore, p.llm_score ?? null);
+      const scoreAbs = Math.abs(score);
+      const scoreCls = score < 0 ? 'neg' : scoreAbs >= 7 ? 'high' : scoreAbs >= 4 ? 'med' : 'low';
+      const scoreDisplay = score.toFixed(1);
 
-      return `<tr>
+      const llmHtml = `<td class="llm-cell analyzing" id="llm-${p.symbol}">analyzing…</td>`;
+      const brainHtml = p.brain_pick
+        ? `⚡<span class="brain-score-val">${p.brain_pick.score?.toFixed(1)}</span>`
+        : '';
+
+      return `<tr id="row-${p.symbol}">
         <td class="rank-num">${i + 1}</td>
-        <td class="sym-cell">${p.symbol}<small>${p.name || ''}</small></td>
-        <td style="font-size:12px;color:#94a3b8">${p.sector}</td>
+        <td class="sym-cell">${p.symbol}${brainHtml ? ' '+brainHtml : ''}<small>${p.name || ''}</small></td>
+        <td style="font-size:11px;color:#718096">${p.sector}</td>
         <td><span class="dir-badge ${dirClass}">${dirLabel}</span></td>
         <td class="hist-pct ${pctClass}">${sign}${p.avg_move}%</td>
+        <td class="score-cell ${scoreCls}" id="score-${p.symbol}">${scoreDisplay}</td>
         <td><span class="conv-badge ${convClass}">${p.conviction}</span></td>
-        <td class="brain-signal-cell">${brainCell}</td>
+        ${llmHtml}
       </tr>`;
     }).join('');
   }
 
+  // ── LLM async enrichment ─────────────────────────────────────────────────
+  async function enrichWithLLM(data, scenario) {
+    const picks = data.top10;
+    const symbols = picks.map(p => p.symbol);
+    const event_context = data.event_context || 'Indian state assembly elections 2026';
+    const scenario_label = data.scenario_label || scenario;
+
+    const llmStatus = document.getElementById('llmStatus');
+    if (llmStatus) llmStatus.textContent = '⏳ analyzing…';
+
+    try {
+      const res = await fetch('/api/intel?action=event_stock_analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols, event_context, scenario_label })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { scores } = await res.json();
+
+      const bias = data.bias || 'bullish';
+      picks.forEach(p => {
+        const s = scores[p.symbol];
+        if (!s) return;
+        const brainScore = p.brain_pick?.score || 0;
+        const newScore = compositeScore(p.avg_move, brainScore, s.event_score);
+        const scoreAbs = Math.abs(newScore);
+        const scoreCls = newScore < 0 ? 'neg' : scoreAbs >= 7 ? 'high' : scoreAbs >= 4 ? 'med' : 'low';
+
+        // Update score cell
+        const scoreEl = document.getElementById(`score-${p.symbol}`);
+        if (scoreEl) {
+          scoreEl.textContent = newScore.toFixed(1);
+          scoreEl.className = `score-cell ${scoreCls}`;
+        }
+
+        // Update LLM cell
+        const llmEl = document.getElementById(`llm-${p.symbol}`);
+        if (llmEl) {
+          llmEl.classList.remove('analyzing');
+          const verdictCls = s.verdict || 'HOLD';
+          llmEl.innerHTML = `<span class="llm-verdict ${verdictCls}">${verdictCls}</span><span class="llm-reason">${s.reason || ''}</span>`;
+        }
+      });
+
+      if (llmStatus) llmStatus.textContent = `✓ AI scored`;
+    } catch (e) {
+      if (llmStatus) llmStatus.textContent = `⚠ AI unavailable`;
+      document.querySelectorAll('.llm-cell.analyzing').forEach(el => {
+        el.classList.remove('analyzing');
+        el.textContent = '—';
+      });
+    }
+  }
+
   // Init
   loadEventPlays('bjp_wave');
-  // Preload other scenarios in background after initial render
-  setTimeout(() => { loadEventPlays('split_verdict'); loadEventPlays('opposition_sweep'); }, 2000);
+  setTimeout(() => { loadEventPlays('split_verdict'); loadEventPlays('opposition_sweep'); }, 3000);
 </script>
 </body>
 </html>

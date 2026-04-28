@@ -107,4 +107,92 @@ export async function analyzeStock(company) {
   }
 }
 
+// ── Event-aware multi-stock scorer ───────────────────────────────────────────
+// Single LLM call for all stocks in event context. Returns per-symbol scores.
+const EVENT_STOCKS_PROMPT = (symbols, eventContext, scenarioLabel) =>
+`You are an Indian equity analyst scoring stocks for event-driven trading.
+
+EVENT: ${eventContext}
+SCENARIO: ${scenarioLabel}
+
+Score each stock on how directly it benefits (or is hurt by) this specific event outcome.
+Focus on: policy tailwind/headwind, order book sensitivity, sector exposure, near-term catalyst.
+
+Stocks to score: ${symbols.join(', ')}
+
+Return ONLY raw JSON — no markdown, no explanation outside JSON:
+{
+  "SYMBOL": {
+    "event_score": <integer 0-10>,
+    "verdict": "BUY" | "HOLD" | "AVOID",
+    "reason": "<max 12 words — specific to this event>"
+  },
+  ...
+}
+
+event_score rubric:
+  9-10 = primary policy beneficiary, direct orderbook/revenue impact
+  7-8  = strong indirect beneficiary, sector tailwind
+  5-6  = moderate benefit, broader market play
+  3-4  = neutral to slight positive
+  1-2  = minimal connection to this event
+  0    = no connection or negatively affected`;
+
+async function scoreEventStocksWithGroq(symbols, eventContext, scenarioLabel) {
+  const { default: Groq } = await import('groq-sdk');
+  const client = new Groq({ apiKey: config.llm.groqApiKey });
+  const msg = await client.chat.completions.create({
+    model: config.llm.groqModel,
+    max_tokens: 2048,
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: EVENT_STOCKS_PROMPT(symbols, eventContext, scenarioLabel) }],
+  });
+  return JSON.parse(msg.choices[0].message.content.trim());
+}
+
+async function scoreEventStocksWithGemini(symbols, eventContext, scenarioLabel) {
+  const apiKey = config.llm.googleApiKey;
+  if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
+  const model = config.llm.geminiModel || 'gemini-2.0-flash';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: EVENT_STOCKS_PROMPT(symbols, eventContext, scenarioLabel) }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  const clean = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  return JSON.parse(clean);
+}
+
+/**
+ * Score multiple stocks for a specific event scenario in one LLM call.
+ * @param {string[]} symbols  NSE symbols
+ * @param {string}   eventContext  e.g. "BJP wins West Bengal 2026 assembly election"
+ * @param {string}   scenarioLabel  e.g. "BJP Wave — Wins WB + Retains Assam"
+ * @returns {Record<string, {event_score:number, verdict:string, reason:string}>}
+ */
+export async function analyzeEventStocks(symbols, eventContext, scenarioLabel) {
+  const provider = config.llm.provider;
+  try {
+    if (provider === 'gemini') {
+      return await scoreEventStocksWithGemini(symbols, eventContext, scenarioLabel);
+    }
+    return await scoreEventStocksWithGroq(symbols, eventContext, scenarioLabel);
+  } catch (err) {
+    const isRateLimit = err.message?.includes('429') || err.status === 429;
+    if (isRateLimit && config.llm.googleApiKey) {
+      return await scoreEventStocksWithGemini(symbols, eventContext, scenarioLabel);
+    }
+    throw err;
+  }
+}
+
 export { STOCK_ANALYSIS_PROMPT };
