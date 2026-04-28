@@ -163,6 +163,40 @@
     .dot-gray{background:#4a5568;animation:pulse 1.5s infinite}
     @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 
+    /* LIVE AI SECTION */
+    .live-summary{font-size:13px;color:#a0aec0;line-height:1.6;padding:10px 14px;background:#0a0e18;border-left:3px solid #63b3ed;border-radius:0 4px 4px 0;margin-bottom:16px}
+    .live-risk{font-size:12px;color:#fbd38d;background:#1a1800;border:1px solid #3a3000;border-radius:4px;padding:8px 12px;margin-bottom:16px}
+    .live-risk .risk-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#d4a017;margin-bottom:3px}
+    .live-sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    @media(max-width:900px){.live-sector-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:540px){.live-sector-grid{grid-template-columns:1fr}}
+    .live-sector-card{background:#0d1117;border:1px solid #1e2535;border-radius:8px;padding:14px}
+    .live-sector-card.bullish{border-color:#2d4a3e}
+    .live-sector-card.bearish{border-color:#4a2020}
+    .live-sector-card.neutral{border-color:#2d2d2d}
+    .live-sector-name{font-size:13px;font-weight:700;color:#f7fafc;margin-bottom:4px}
+    .live-sector-thesis{font-size:11px;color:#718096;line-height:1.4;margin-bottom:10px}
+    .live-stock{padding:7px 8px;border-radius:4px;background:#141820;margin-bottom:4px;cursor:pointer}
+    .live-stock:hover{background:#1a2535}
+    .live-stock-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+    .live-stock-sym{font-weight:700;font-size:13px;color:#f7fafc}
+    .live-stock-move.pos{color:#68d391;font-weight:700;font-size:12px}
+    .live-stock-move.neg{color:#fc8181;font-weight:700;font-size:12px}
+    .live-stock-move.neutral{color:#94a3b8;font-weight:700;font-size:12px}
+    .live-stock-name{font-size:10px;color:#4a5568;margin-bottom:4px}
+    .live-stock-rationale{font-size:11px;color:#718096;line-height:1.4;display:none}
+    .live-stock.expanded .live-stock-rationale{display:block}
+    .live-stock.expanded{background:#1a2535}
+    .live-conv{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+    .live-conv.high{background:#1a3a2a;color:#68d391}
+    .live-conv.medium{background:#1e2535;color:#94a3b8}
+    .live-conv.low{background:#2d2d2d;color:#718096}
+    .live-generating{text-align:center;padding:32px;color:#4a5568;font-size:13px}
+    .live-generating .spin{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .live-ai-badge{font-size:10px;background:#0d1f30;color:#63b3ed;border:1px solid #1a3a5a;padding:2px 7px;border-radius:3px;margin-left:6px;vertical-align:middle}
+    .live-cached-note{font-size:11px;color:#4a5568;margin-top:8px;text-align:right}
+
     /* DISCLAIMER */
     .disclaimer{margin-top:24px;padding:10px 14px;background:#0d1117;border:1px solid #1e2535;border-radius:6px;font-size:11px;color:#4a5568;line-height:1.5}
 
@@ -300,6 +334,24 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Live AI Intelligence Section -->
+  <div class="card" style="margin-top:20px" id="liveIntelCard">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+      <div>
+        <div class="card-title" style="margin-bottom:2px">⚡ Live AI Intelligence
+          <span style="font-size:10px;color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">AI generates fresh sector + stock picks at runtime using financial reasoning</span>
+        </div>
+        <div style="font-size:11px;color:#4a5568" id="liveIntelMeta">Not yet generated for this scenario.</div>
+      </div>
+      <button class="btn" id="btnLiveIntel" onclick="generateLiveIntel()"
+        style="background:#1a2a3a;color:#63b3ed;border:1px solid #2a4a6a;white-space:nowrap">
+        ⚡ Generate Live Analysis
+      </button>
+    </div>
+
+    <div id="liveIntelBody" style="margin-top:14px"></div>
   </div>
 
   <div class="disclaimer">
@@ -652,6 +704,112 @@
         el.textContent = '—';
       });
     }
+  }
+
+  // ── Live AI Intelligence ──────────────────────────────────────────────────
+  let liveIntelCache = {};
+
+  async function generateLiveIntel() {
+    const scenario = currentScenario;
+    const data = cachedData[scenario];
+    if (!data) { alert('Load event plays first.'); return; }
+
+    const btn = document.getElementById('btnLiveIntel');
+    const body = document.getElementById('liveIntelBody');
+    const meta = document.getElementById('liveIntelMeta');
+
+    // Serve cache if same scenario already generated
+    if (liveIntelCache[scenario]) {
+      renderLiveIntel(liveIntelCache[scenario], scenario);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    body.innerHTML = `<div class="live-generating"><span class="spin">⚡</span>AI is analysing ${data.scenario_label} — generating sectors, stocks, and financial rationale…<br><span style="font-size:11px;margin-top:6px;display:block">Usually takes 8-15 seconds.</span></div>`;
+    meta.textContent = 'Generating…';
+
+    try {
+      const res = await fetch('/api/intel?action=event_live_intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_context: data.event_context || '',
+          scenario_label: data.scenario_label || scenario
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      const result = await res.json();
+      liveIntelCache[scenario] = result;
+      renderLiveIntel(result, scenario);
+    } catch (e) {
+      body.innerHTML = `<div style="color:#fc8181;font-size:13px;padding:16px">⚠ Generation failed: ${e.message}</div>`;
+      meta.textContent = 'Failed.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '↻ Regenerate';
+    }
+  }
+
+  function renderLiveIntel(result, scenario) {
+    const body = document.getElementById('liveIntelBody');
+    const meta = document.getElementById('liveIntelMeta');
+    const ts = result.generated_at ? new Date(result.generated_at).toLocaleTimeString('en-IN') : '';
+    meta.innerHTML = `Generated ${ts} · Scenario: <strong>${cachedData[scenario]?.scenario_label || scenario}</strong> <span class="live-ai-badge">AI</span>`;
+
+    let html = '';
+
+    if (result.summary) {
+      html += `<div class="live-summary">${result.summary}</div>`;
+    }
+    if (result.key_risk) {
+      html += `<div class="live-risk"><div class="risk-label">⚠ Key Risk</div>${result.key_risk}</div>`;
+    }
+
+    const sectors = result.sectors || [];
+    if (!sectors.length) {
+      html += `<div style="color:#4a5568;font-size:13px">No sectors returned by AI.</div>`;
+    } else {
+      html += `<div class="live-sector-grid">`;
+      sectors.forEach(s => {
+        const dirClass = s.direction || 'bullish';
+        const sign = (s.expected_move_pct || 0) >= 0 ? '+' : '';
+        const moveColor = dirClass === 'bullish' ? '#68d391' : dirClass === 'bearish' ? '#fc8181' : '#94a3b8';
+        const convClass = s.conviction || 'medium';
+
+        const stocksHtml = (s.stocks || []).map(st => {
+          const stDir = st.direction || 'bullish';
+          const stSign = (st.expected_move_pct || 0) >= 0 ? '+' : '';
+          const stMoveClass = stDir === 'bullish' ? 'pos' : stDir === 'bearish' ? 'neg' : 'neutral';
+          const stConv = st.conviction || 'medium';
+          return `<div class="live-stock" onclick="this.classList.toggle('expanded')">
+            <div class="live-stock-header">
+              <span class="live-stock-sym">${st.symbol} <span class="live-conv ${stConv}">${stConv}</span></span>
+              <span class="live-stock-move ${stMoveClass}">${stSign}${st.expected_move_pct || 0}%</span>
+            </div>
+            <div class="live-stock-name">${st.name || ''} <span style="font-size:9px;color:#4a5568">▾ tap for rationale</span></div>
+            <div class="live-stock-rationale">${st.rationale || ''}</div>
+          </div>`;
+        }).join('');
+
+        html += `<div class="live-sector-card ${dirClass}">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+            <div class="live-sector-name">${s.name}</div>
+            <span style="font-weight:700;font-size:18px;color:${moveColor}">${sign}${s.expected_move_pct || 0}%</span>
+          </div>
+          <span class="live-conv ${convClass}" style="margin-bottom:8px;display:inline-block">${convClass} conviction</span>
+          <div class="live-sector-thesis">${s.thesis || ''}</div>
+          ${stocksHtml}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `<div class="live-cached-note">⚠ AI-generated · Based on training data, not live market data · Verify before trading</div>`;
+    body.innerHTML = html;
   }
 
   // Init

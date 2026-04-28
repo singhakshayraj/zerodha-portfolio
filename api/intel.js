@@ -8,7 +8,7 @@ export const config = { maxDuration: 30 };
 
 import { getBrainResult }  from '../dashboard/lib/brain.js';
 import { getTradePlan }    from '../dashboard/lib/plan.js';
-import { analyzeStock, analyzeEventStocks } from '../dashboard/lib/llm.js';
+import { analyzeStock, analyzeEventStocks, analyzeEventScenario } from '../dashboard/lib/llm.js';
 import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
 import { runIntersection }    from '../dashboard/lib/intersect.js';
@@ -235,7 +235,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ scores, analyzed_at: new Date().toISOString() });
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis' });
+    // ── Live Event Scenario (LLM generates sectors+stocks+rationale from scratch) ──
+    // POST /api/intel?action=event_live_intel
+    // Body: { event_context, scenario_label }
+    if (action === 'event_live_intel') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { event_context, scenario_label } = req.body ?? {};
+      if (!event_context) return res.status(400).json({ error: 'event_context required' });
+      const today = new Date().toISOString().slice(0, 10);
+      const result = await analyzeEventScenario(event_context, scenario_label || '', today);
+      return res.status(200).json({ ...result, generated_at: new Date().toISOString(), source: 'live_ai' });
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

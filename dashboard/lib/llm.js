@@ -195,4 +195,104 @@ export async function analyzeEventStocks(symbols, eventContext, scenarioLabel) {
   }
 }
 
+// ── Full event scenario generator ────────────────────────────────────────────
+// Ask LLM to generate sectors + stocks + rationale from scratch for given scenario.
+// One large call; returns structured JSON with 5 sectors × 5 stocks each.
+const EVENT_SCENARIO_PROMPT = (eventContext, scenarioLabel, today) =>
+`You are a senior Indian equity research analyst specialising in event-driven and political-economy investing.
+
+EVENT CONTEXT: ${eventContext}
+SCENARIO: ${scenarioLabel}
+ANALYSIS DATE: ${today}
+
+Using your knowledge of Indian corporate fundamentals, government project pipelines, and political economy, generate a fresh investment analysis for this specific scenario.
+
+Rules:
+- Only NSE-listed stocks (liquid, mid/large cap preferred — avoid illiquid micro-caps)
+- For each stock: cite the SPECIFIC contract, project, order book, regulatory change, or balance sheet factor that links it to this event
+- Reference historical precedent where relevant (past elections, past policy changes, past WB/state events)
+- 5 sectors, 5 stocks per sector
+- Sectors should be distinct — no overlap in stocks across sectors
+- expected_move_pct is your estimated % move on event day + 3 days, signed (positive = up, negative = down)
+
+Return ONLY raw JSON, no markdown, no explanation outside JSON:
+{
+  "sectors": [
+    {
+      "name": "Sector Name",
+      "thesis": "2-3 sentences: why this sector moves, what policy/project/regulatory mechanism, historical precedent",
+      "direction": "bullish",
+      "expected_move_pct": 12,
+      "conviction": "high",
+      "stocks": [
+        {
+          "symbol": "NSE_SYMBOL",
+          "name": "Full Company Name",
+          "direction": "bullish",
+          "expected_move_pct": 15,
+          "conviction": "high",
+          "rationale": "2-3 sentences: specific project or contract at stake, financial impact (revenue/earnings), historical analogue"
+        }
+      ]
+    }
+  ],
+  "summary": "2-3 sentence overall market read: what opens up, what sells off, what is the dominant narrative",
+  "key_risk": "One sentence — what single outcome could invalidate the entire bullish/bearish thesis"
+}`;
+
+async function generateScenarioWithGroq(eventContext, scenarioLabel, today) {
+  const { default: Groq } = await import('groq-sdk');
+  const client = new Groq({ apiKey: config.llm.groqApiKey });
+  const msg = await client.chat.completions.create({
+    model: config.llm.groqModel,
+    max_tokens: 4096,
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, today) }],
+  });
+  return JSON.parse(msg.choices[0].message.content.trim());
+}
+
+async function generateScenarioWithGemini(eventContext, scenarioLabel, today) {
+  const apiKey = config.llm.googleApiKey;
+  if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
+  const model = config.llm.geminiModel || 'gemini-2.0-flash';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: EVENT_SCENARIO_PROMPT(eventContext, scenarioLabel, today) }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  const clean = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+  return JSON.parse(clean);
+}
+
+/**
+ * Generate fresh event scenario analysis — sectors, stocks, rationale — from LLM.
+ * @param {string} eventContext  Full event description
+ * @param {string} scenarioLabel  e.g. "BJP Wave — Wins WB + Retains Assam"
+ * @param {string} today  ISO date string
+ * @returns {{ sectors, summary, key_risk }}
+ */
+export async function analyzeEventScenario(eventContext, scenarioLabel, today) {
+  const provider = config.llm.provider;
+  try {
+    if (provider === 'gemini') return await generateScenarioWithGemini(eventContext, scenarioLabel, today);
+    return await generateScenarioWithGroq(eventContext, scenarioLabel, today);
+  } catch (err) {
+    const isRateLimit = err.message?.includes('429') || err.status === 429;
+    if (isRateLimit && config.llm.googleApiKey) {
+      return await generateScenarioWithGemini(eventContext, scenarioLabel, today);
+    }
+    throw err;
+  }
+}
+
 export { STOCK_ANALYSIS_PROMPT };
