@@ -527,7 +527,7 @@
       const confClass = `conf-${s.confidence}`;
       const cardClass = s.confidence;
 
-      const stockRows = s.stocks.slice(0, 7).map(st => {
+      const makeStockRow = (st) => {
         const isBrain = !!st.brain_pick;
         const stSign = st.avg_move >= 0 ? '+' : '';
         const stMoveClass = st.avg_move >= 0 ? 'pos' : 'neg';
@@ -541,15 +541,24 @@
           </span>
           <span class="move ${stMoveClass}">${stSign}${st.avg_move}%</span>
         </div>`;
-      }).join('');
+      };
+
+      const visibleRows = s.stocks.slice(0, 7).map(makeStockRow).join('');
+      const hiddenRows = s.stocks.slice(7).map(makeStockRow).join('');
+      const sectorId = s.name.replace(/\s+/g,'_');
 
       return `<div class="sector-card ${cardClass}">
         <div class="sector-name">${s.name}</div>
         <div class="sector-move ${moveClass}">${sign}${s.avg_move}%</div>
         <span class="sector-confidence ${confClass}">${s.confidence} conviction</span>
         <div class="sector-rationale">${s.rationale}</div>
-        <div class="sector-stocks">${stockRows}</div>
-        ${s.stocks.length > 7 ? `<div style="font-size:10px;color:#4a5568;margin-top:4px">+${s.stocks.length-7} more stocks</div>` : ''}
+        <div class="sector-stocks">${visibleRows}</div>
+        ${hiddenRows ? `
+          <div class="sector-stocks" id="extra-${sectorId}" style="display:none;margin-top:3px">${hiddenRows}</div>
+          <div style="font-size:10px;color:#63b3ed;margin-top:6px;cursor:pointer;user-select:none"
+            onclick="const el=document.getElementById('extra-${sectorId}');const hidden=el.style.display==='none';el.style.display=hidden?'flex':'none';this.textContent=hidden?'▲ show less':'▼ +${s.stocks.length-7} more stocks'">
+            ▼ +${s.stocks.length-7} more stocks
+          </div>` : ''}
       </div>`;
     }).join('');
   }
