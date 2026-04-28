@@ -408,27 +408,38 @@
     pickRow.after(tr);
   }
 
-  async function loadEventPlays(scenario) {
+  async function loadEventPlays(scenario, silent) {
     scenario = scenario || currentScenario;
+    const isActive = scenario === currentScenario;
     const btn = document.getElementById('btnRefresh');
     const status = document.getElementById('statusLabel');
-    btn.classList.add('loading');
-    btn.textContent = '↻ Loading…';
-    status.textContent = 'Fetching event plays…';
+
+    if (!silent) {
+      btn.classList.add('loading');
+      btn.textContent = '↻ Loading…';
+      status.textContent = 'Fetching event plays…';
+    }
 
     try {
       const res = await fetch(`/api/intel?action=event_plays&scenario=${scenario}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       cachedData[scenario] = data;
-      renderAll(data, scenario);
-      status.textContent = `Updated ${new Date().toLocaleTimeString('en-IN')}`;
+      // Only render if this scenario is still the active one
+      if (scenario === currentScenario) {
+        renderAll(data, scenario);
+        if (!silent) status.textContent = `Updated ${new Date().toLocaleTimeString('en-IN')}`;
+      }
     } catch (e) {
-      status.textContent = `Error: ${e.message}`;
-      document.getElementById('picksBody').innerHTML = `<tr><td colspan="8" class="error-row">Failed to load: ${e.message}</td></tr>`;
+      if (!silent && scenario === currentScenario) {
+        status.textContent = `Error: ${e.message}`;
+        document.getElementById('picksBody').innerHTML = `<tr><td colspan="8" class="error-row">Failed to load: ${e.message}</td></tr>`;
+      }
     } finally {
-      btn.classList.remove('loading');
-      btn.textContent = '↻ Refresh';
+      if (!silent) {
+        btn.classList.remove('loading');
+        btn.textContent = '↻ Refresh';
+      }
     }
   }
 
@@ -814,7 +825,7 @@
 
   // Init
   loadEventPlays('bjp_wave');
-  setTimeout(() => { loadEventPlays('split_verdict'); loadEventPlays('opposition_sweep'); }, 3000);
+  setTimeout(() => { loadEventPlays('split_verdict', true); loadEventPlays('opposition_sweep', true); }, 3000);
 </script>
 </body>
 </html>
