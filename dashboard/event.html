@@ -53,9 +53,9 @@
     .scenario-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
     .scenario-tab{padding:8px 16px;border:1px solid #2d3748;border-radius:6px;background:#141820;color:#94a3b8;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
     .scenario-tab:hover{border-color:#4a5568;color:#e2e8f0}
-    .scenario-tab.active{border-color:#63b3ed;color:#63b3ed;background:#0d1f2e}
-    .scenario-tab.active.bearish{border-color:#fc8181;color:#fc8181;background:#1a0d0d}
-    .scenario-tab.active.mixed{border-color:#fbd38d;color:#fbd38d;background:#1a1800}
+    .scenario-tab.active{border-color:#63b3ed;color:#e2e8f0;background:#0d1f2e;box-shadow:0 0 0 1px #63b3ed;font-weight:700}
+    .scenario-tab.active.bearish{border-color:#fc8181;color:#fca5a5;background:#1a0d0d;box-shadow:0 0 0 1px #fc8181;font-weight:700}
+    .scenario-tab.active.mixed{border-color:#fbd38d;color:#fde68a;background:#1a1800;box-shadow:0 0 0 1px #fbd38d;font-weight:700}
     .market-tone{font-size:12px;color:#64748b;margin-bottom:20px;padding:8px 12px;background:#0d1117;border-left:3px solid #2d3748;border-radius:0 4px 4px 0}
 
     /* TWO-COL LAYOUT */
@@ -269,7 +269,7 @@
 
     <!-- Sector Cards -->
     <div>
-      <div class="section-label">Top Sectors — <span id="sectorScenarioLabel"></span></div>
+      <div class="section-label">Top Sectors — <span id="sectorScenarioLabel"></span> <span id="sectorCount" style="color:#4a5568;font-weight:400;text-transform:none"></span></div>
       <div class="sector-grid" id="sectorGrid">
         <div class="loading-row" style="grid-column:1/-1">Loading sectors…</div>
       </div>
@@ -518,6 +518,8 @@
 
   function renderSectors(sectors, label) {
     document.getElementById('sectorScenarioLabel').textContent = label || '';
+    const sc = document.getElementById('sectorCount');
+    if (sc && sectors) sc.textContent = `(${sectors.length} sectors)`;
     const grid = document.getElementById('sectorGrid');
     if (!sectors || !sectors.length) { grid.innerHTML = '<div class="error-row">No sectors</div>'; return; }
 
