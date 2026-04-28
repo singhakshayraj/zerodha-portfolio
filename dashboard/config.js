@@ -21,7 +21,7 @@ export const config = {
     openaiApiKey:   process.env.OPENAI_API_KEY || '',
     openaiModel:    process.env.OPENAI_MODEL   || 'gpt-4o-mini',
     googleApiKey:   process.env.GOOGLE_API_KEY || '',
-    geminiModel:    process.env.GEMINI_MODEL   || 'gemini-1.5-flash',
+    geminiModel:    process.env.GEMINI_MODEL   || 'gemini-2.0-flash',
   },
 
   port: parseInt(process.env.PORT || '7432', 10),
