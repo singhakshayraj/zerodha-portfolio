@@ -14,6 +14,7 @@ import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboa
 import { runIntersection }    from '../dashboard/lib/intersect.js';
 import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
 import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
+import { getEventPlays, getActiveEvent } from '../dashboard/lib/eventplays.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -190,7 +191,38 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset' });
+    // ── Event Plays ───────────────────────────────────────────────────────────
+    // GET /api/intel?action=event_plays[&scenario=nda_strong|nda_weak|hung_parliament]
+    if (action === 'event_plays') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const scenario = url.searchParams.get('scenario') || 'nda_strong';
+      const activeEvent = getActiveEvent();
+
+      // Reuse brain cache — event plays are brain-boosted, not brain-blocked
+      let brain = null;
+      try {
+        const cached = await getBrainCache();
+        if (cached) {
+          const ageMs = Date.now() - new Date(cached.updated_at).getTime();
+          if (ageMs < CACHE_TTL_MS) brain = cached.data;
+        }
+      } catch { /* no cache — brain boost simply won't fire */ }
+
+      const result = getEventPlays(brain, scenario);
+      return res.status(200).json({
+        ...result,
+        active_event: activeEvent,
+        brain_context: brain ? {
+          sentiment: brain.market_sentiment,
+          regime: brain.regime,
+          vix_state: brain.vix_state,
+          gift_nifty_bias: brain.gift_nifty_bias,
+          cached: true
+        } : null
+      });
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

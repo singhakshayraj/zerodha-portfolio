@@ -20,6 +20,7 @@
     { "source": "/alpha",              "destination": "/modules/alpha-scorer/report.html" },
     { "source": "/connect",            "destination": "/dashboard/connect.html" },
     { "source": "/trader",             "destination": "/dashboard/trader.html" },
+    { "source": "/event",              "destination": "/dashboard/event.html" },
     { "source": "/research.html",      "destination": "/dashboard/research.html" },
     { "source": "/login",              "destination": "/dashboard/login.html" },
     { "source": "/",                   "destination": "/dashboard/index.html" }

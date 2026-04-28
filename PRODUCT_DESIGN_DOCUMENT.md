@@ -3,7 +3,7 @@
 
 **Owner:** Akshay Singh  
 **Status:** Active — iterative development  
-**Last Updated:** 2026-04-27  
+**Last Updated:** 2026-04-29  
 **Deployment:** Vercel (Hobby) + Supabase + Upstash Redis + GitHub Actions
 
 ---
@@ -38,7 +38,9 @@ Browser
   │
   ├── dashboard/index.html          Portfolio overview + holdings
   ├── dashboard/intraday.html       Live intraday scanner
-  ├── dashboard/research.html       Research desk (AI stock analysis + triggers)
+  ├── dashboard/research.html       Research desk (AI analysis + full pipeline UI)
+  ├── dashboard/trader.html         Trader Desk (session-based execution with order placement)
+  ├── dashboard/event.html          Event Plays (historical patterns + brain boost for market events)
   ├── dashboard/trades.html         Trade journal
   ├── dashboard/connect.html        Kite login / enctoken capture
   └── reports/daily/YYYY-MM-DD.html Auto-generated daily report (read-only)
@@ -56,7 +58,8 @@ Vercel Serverless (4 API routers — Hobby plan hard limit)
   ├── Supabase (PostgreSQL)         trades, snapshots, brain picks, outcomes, calibration stats
   ├── Upstash Redis (HTTP REST)     Trigger engine state, VWAP, baselines, adaptive curve,
   │                                 LLM analysis cache, NSE history cache, degradation log
-  └── Google News RSS               Article source for Market Brain (no paid APIs)
+  └── Indian Financial RSS           Article source for Market Brain — ET, Business Standard,
+                                    MoneyControl, Mint, Financial Express (no paid APIs)
 
 Scheduled (Remote CCR Agents — claude.ai/code/scheduled)
   └── Daily Portfolio Report        3:33 PM IST weekdays — fetches holdings via Vercel API,
@@ -79,6 +82,9 @@ Scheduled (Remote CCR Agents — claude.ai/code/scheduled)
 | `api/intel.js` | `calibration_stats` | GET | Source performance stats from Supabase |
 | `api/intel.js` | `intersect` | POST | Step 3: brain picks × trigger events |
 | `api/intel.js` | `trade_plan` | POST | Step 4: generate executable trade plans |
+| `api/intel.js` | `allocate` | POST | Capital allocation + position sizing across trade plans |
+| `api/intel.js` | `allocate_update` | POST | Update allocation state mid-session (partial fill, skip) |
+| `api/intel.js` | `event_plays` | GET | Event-driven sector/stock picks (election, budget, RBI…) |
 | `api/research.js` | `quotes` | GET | Live NSE OHLCV for symbols |
 | `api/research.js` | `symbol` | POST | Symbol search |
 | `api/research.js` | `alpha` | POST | Alpha scorer proxy |
@@ -115,15 +121,61 @@ Active during market hours. Fetches live quotes for a configured watchlist and s
 
 ### 5.3 Research Desk (`dashboard/research.html`)
 
-On-demand AI analysis for any Indian stock or company name, plus live trigger feed for the NIFTY 50 universe.
+On-demand AI analysis for any Indian stock or company name, plus the full four-step intelligence pipeline wired as a UI.
 
 **Analysis flow:** User types a company → `POST /api/intel?action=analyze` → `dashboard/lib/llm.js` → Groq (llama-3.3-70b, primary) → Gemini (fallback on rate limit) → JSON result with: symbol, sector, AI score (0–100), verdict (Buy/Hold/Sell/Review), bull/bear cases, key ratios, red flags, buy price, sell price, summary.
+
+**Intelligence pipeline UI:** Four sequential panels: Brain Picks → Triggers → Intersect → Trade Plans. Each step calls its respective API action and renders results inline. Entry point for exploring signals before committing to a session.
 
 **Trigger feed:** `GET /api/research?action=triggers&vix=normal` → Step 2 trigger engine → live NIFTY 50 movement events.
 
 ---
 
-### 5.4 Trade Journal (`dashboard/trades.html`)
+### 5.4 Trader Desk (`dashboard/trader.html`)
+
+Session-based execution interface. User sets session parameters, runs the full four-step pipeline, and places live orders — all in one view. Supports two modes: **pre-market** (builds plans from brain signals without waiting for triggers) and **live-market** (full pipeline with trigger confirmation + order execution).
+
+**Session parameters (input):**
+- Capital to Deploy (₹), Target Profit (₹), Max Loss (₹)
+- Max Trades (3/5/7/10), Min Signal Score (0.55–0.82), Min EV Gate (0.02–0.10)
+
+**Derived metrics (computed):**
+- Risk Budget, Max Risk %, Target R-Multiple, Implied R:R, Hard Stop (50% of max loss)
+
+**Pipeline tracker:** Five step badges (Brain → Triggers → Intersect → Trade Plans → Allocate) show live status per step.
+
+**Market context card:** Sentiment, regime, GIFT Nifty bias, VIX state, brain picks count.
+
+**Session stats grid:** Trades count, Capital Deployed (+ free remaining), Risk Used (vs budget), Expected P&L, mode + status.
+
+**Output tabs:**
+- **Trades** — Allocated trade table: symbol, direction, confidence, entry/target/SL, qty, capital, risk ₹, R:R, setup type. Execute button opens modal → places MARKET CNC order via `api/kite.js`.
+- **Skipped** — Signals rejected at allocation with skip reasons.
+- **Brain Picks** — Raw Step 1 picks: rank, symbol, directional bias, score, event type, sector, reason.
+
+---
+
+### 5.5 Event Plays (`dashboard/event.html`)
+
+Pre-event research page. Surfaces top 10 stocks across top 3 sectors most likely to move on a high-impact market event, using curated historical swing data + live brain signal boost.
+
+**Supported events:** Any event added to `UPCOMING_EVENTS` in `dashboard/lib/eventplays.js`. First event: Indian General Election 2026 exit poll day (2026-04-30).
+
+**Scenario tabs:** Each event has 3 scenarios (e.g. NDA Strong / NDA Weak / Hung Parliament for elections). Switching scenario re-ranks sectors and stocks client-side using cached API data; other scenarios are preloaded in background.
+
+**Historical precedents panel:** Curated dataset of 7 past Indian election events (2004–2024) — year, event type (exit poll vs result), Nifty %, top sector movers.
+
+**Top 3 sector cards:** Per-scenario sector ranking with avg historical swing %, confidence (high/medium/low), rationale, and top 4 stocks inline. Brain-aligned stocks (where brain has an active pick) show ⚡ badge.
+
+**Top 10 picks table:** Flattened cross-sector ranking. Each row: symbol, sector, direction (long/short/neutral), hist swing %, conviction badge, brain signal score + event type if brain-aligned.
+
+**Brain integration:** `GET /api/intel?action=event_plays` reads brain cache (Supabase, 30-min TTL). If warm, stocks where brain has an active pick get `final_score = avg_move + brain.score × 2`. If cold (cache miss), page still works — pure historical ranking, no ⚡ badges.
+
+**Reusable framework:** Adding a new event = update `eventplays.js` only (UPCOMING_EVENTS + HISTORICAL_EVENTS + SCENARIO_PLAYS). See `skills/event-plays/skill.md` for step-by-step guide.
+
+---
+
+### 5.6 Trade Journal (`dashboard/trades.html`)
 
 Structured journal for every trade taken. Records the full decision context, not just execution.
 
@@ -133,7 +185,7 @@ Structured journal for every trade taken. Records the full decision context, not
 
 ---
 
-### 5.5 Adaptive Trade Plan Engine — Legacy (`dashboard/lib/plan.js`)
+### 5.7 Adaptive Trade Plan Engine — Legacy (`dashboard/lib/plan.js`)
 
 On-demand trade plan for any symbol + LTP. Called via `POST /api/intel?action=plan`. Remains available as a standalone tool independent of the four-step pipeline.
 
@@ -158,7 +210,7 @@ Context intelligence layer. Produces a daily structured context: which stocks ha
 #### Pipeline
 
 ```
-Google News RSS (21 sources, grouped by signal type)
+Indian Financial RSS (ET, Business Standard, MoneyControl, Mint, Financial Express — grouped by signal type)
     ↓ fetchNewsItems()
 Articles array (oldest → newest, source metadata attached)
     ↓ extractWithLLM()  ← Groq llama-3.3-70b, Gemini fallback
@@ -171,9 +223,9 @@ Scored, ranked picks
 brain_picks, brain_outcomes, brain_source_stats tables (Supabase)
 ```
 
-#### Source Registry (21 sources)
+#### Source Registry
 
-Signal types and weights (bounded 0.80–1.20):
+Signal types and weights (bounded 0.80–1.20). Sources: Economic Times, Business Standard, MoneyControl, Mint, Financial Express — fed directly from their RSS feeds, grouped by signal type.
 
 | Signal Type | Weight | Examples |
 |---|---|---|
@@ -183,7 +235,7 @@ Signal types and weights (bounded 0.80–1.20):
 | `negative_events` | 1.10 | SEBI actions, promoter pledging, governance alerts |
 | `derivatives` | 1.05 | Nifty/BankNifty OI, stock OI buildup |
 | `macro` | 0.00 | RBI, Fed, GDP — structural only, never per-stock |
-| `media` | 0.80 | ET Markets, Moneycontrol, Business Standard, Mint |
+| `media` | 0.80 | ET Markets, Moneycontrol, Business Standard, Mint, Financial Express |
 
 #### Scoring Formula
 
@@ -516,7 +568,17 @@ LLM is always extract-only in the brain pipeline. No scores, no rankings. The ba
 
 ---
 
-## 10. Scheduled Automation
+## 10. System Health (`dashboard/lib/health.js`)
+
+Shared diagnostic widget embedded on every page. Runs a full suite of connectivity and integration checks on demand.
+
+**Tests covered:** Supabase read/write, Redis get/set, Kite API reachability, brain cache freshness, holdings fetch, positions fetch, margins fetch, trigger engine cycle, LLM provider reachability (Groq + Gemini), NSE quotes proxy, snapshot write.
+
+**Integration:** Served via `/health.js` route in `vercel.json`. Each page imports and renders the panel in a collapsible drawer. Results shown as pass/fail/warn badges with latency. Degraded cycles (from `trig:degrade_alert`) surface as a warning badge in the panel header.
+
+---
+
+## 12. Scheduled Automation
 
 ### Daily Portfolio Report (claude.ai Remote CCR)
 
@@ -536,7 +598,7 @@ Fails gracefully with a clear error message if Kite enctoken is stale.
 
 ---
 
-## 11. Environment Variables
+## 13. Environment Variables
 
 | Variable | Used By |
 |---|---|
@@ -551,7 +613,7 @@ Fails gracefully with a clear error message if Kite enctoken is stale.
 
 ---
 
-## 12. Design Principles
+## 14. Design Principles
 
 1. **Determinism over vibes.** The LLM produces structure; the backend produces scores. These two roles never blur. Every score can be reproduced from its `score_factors` audit trail.
 
@@ -571,30 +633,35 @@ Fails gracefully with a clear error message if Kite enctoken is stale.
 
 ---
 
-## 13. File Map
+## 15. File Map
 
 ```
 /
 ├── api/
 │   ├── intel.js          Brain | plan | analyze | record_outcome | calibration_stats
-│   │                     intersect | trade_plan
+│   │                     intersect | trade_plan | allocate | allocate_update
 │   ├── kite.js           Holdings, margins, positions, LTP proxy
 │   ├── orders.js         Order placement, GTTs
 │   └── research.js       NSE quotes | symbol search | alpha proxy | triggers
 ├── dashboard/
 │   ├── index.html        Portfolio overview
 │   ├── intraday.html     Live intraday scanner
-│   ├── research.html     Research desk + trigger feed
+│   ├── research.html     Research desk + full pipeline UI
+│   ├── trader.html       Trader Desk — session params, pipeline, order execution
+│   ├── event.html        Event Plays — historical sector patterns + brain boost
 │   ├── trades.html       Trade journal
 │   ├── connect.html      Kite login
 │   ├── config.js         LLM keys, model names
 │   ├── server.js         Local dev server
+│   ├── health.js         System health widget (shared, all pages)
 │   └── lib/
 │       ├── brain.js      Step 1 — Market Brain (context intelligence)
 │       ├── outcomes.js   Calibration — picks, outcomes, source stats
 │       ├── trigger.js    Step 2 — Trigger Engine (real-time detection)
 │       ├── intersect.js  Step 3 — Intersection Engine (opportunity filter)
 │       ├── tradeplan.js  Step 4 — Trade Plan Engine (execution math)
+│       ├── allocate.js   Capital allocator — position sizing across plans
+│       ├── eventplays.js Event Plays engine — historical DB, scenario plays, brain-boost scorer
 │       ├── indicators.js Technical indicators (ATR, RSI, MACD, BB, ST, EMA, S/R, pivots, patterns)
 │       ├── plan.js       Legacy adaptive trade plan (standalone tool)
 │       ├── redis.js      Upstash HTTP wrapper (graceful degradation)
@@ -611,6 +678,9 @@ Fails gracefully with a clear error message if Kite enctoken is stale.
 │   └── trades.json       Local trade backup
 ├── reports/
 │   └── daily/            Auto-generated daily HTML reports
+├── skills/
+│   └── event-plays/
+│       └── skill.md      How-to guide: add new events, scenarios, stocks to event plays page
 ├── supabase-schema.sql   Full schema with migrations (run in Supabase SQL Editor)
 ├── vercel.json           Vercel routing config
 └── PRODUCT_DESIGN_DOCUMENT.md   This file
@@ -618,13 +688,16 @@ Fails gracefully with a clear error message if Kite enctoken is stale.
 
 ---
 
-## 14. Planned / In Progress
+## 16. Planned / In Progress
 
 | Feature | Status | Notes |
 |---|---|---|
-| Step 3+4 frontend integration | Planned | UI in research.html to call intersect → trade_plan and display opportunities |
+| Step 3+4 frontend integration | ✅ Done | research.html (pipeline UI) + trader.html (execution) |
+| Trader Desk order execution | ✅ Done | Live-market mode places MARKET CNC orders via Kite |
+| Event Plays page | ✅ Done | `/event` — election exit poll, 3 scenarios, brain boost, historical table |
+| `record_outcome` client trigger | ✅ Done | Implemented in outcomes.js + intel router |
+| System Health panel | ✅ Done | health.js shared across all pages |
 | Alpha scorer → brain integration | Planned | Feed ML scores as `smart_money` signal type with reliability tied to model accuracy |
-| `record_outcome` client trigger | Planned | Dashboard calls record_outcome with live ltpMap when user opens brain panel |
 | Calibration visualization | Planned | Table in dashboard showing top/bottom performing sources by win_rate |
 | Trade close automation | Planned | Hook from orders.js to update trade status + log exit reason on SL/target hit |
 | Step 2 degradation alerting | Planned | Surface `trig:degrade_alert` in dashboard header when alerting=true |
