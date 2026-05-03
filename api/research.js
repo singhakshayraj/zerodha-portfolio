@@ -9,7 +9,47 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { UNIVERSE, runTriggerCycle } from '../dashboard/lib/trigger.js';
 import { redisGet, redisSet } from '../dashboard/lib/redis.js';
-import { getHistory } from '../dashboard/lib/kite.js';
+
+// Inline Kite history fetcher — avoids importing kite.js (which uses Node `https` module,
+// causing Vercel to silently drop this function when api/kite.js also bundles that file)
+let _instrCache = null;
+async function fetchKiteHistory(symbol, interval, count, enctoken) {
+  const defaultCounts = { day: 200, week: 104, month: 60 };
+  const n = count || defaultCounts[interval] || 200;
+
+  let token;
+  if (symbol === 'NIFTY 50' || symbol === 'NIFTY50') {
+    token = '256265';
+  } else {
+    if (!_instrCache) {
+      const r = await fetch('https://api.kite.trade/instruments/NSE', { headers: { 'X-Kite-Version': '3' } });
+      const csv = await r.text();
+      const lines = csv.trim().split('\n');
+      const h = lines[0].split(',');
+      const ti = h.indexOf('instrument_token'), si = h.indexOf('tradingsymbol');
+      _instrCache = {};
+      for (let i = 1; i < lines.length; i++) {
+        const c = lines[i].split(',');
+        if (c[si]) _instrCache[c[si].trim()] = c[ti].trim();
+      }
+    }
+    token = _instrCache[symbol.toUpperCase()];
+    if (!token) throw new Error(`Token not found for ${symbol}`);
+  }
+
+  const to = new Date(), from = new Date(to);
+  if (interval === 'day') from.setDate(from.getDate() - Math.ceil(n * 1.5));
+  else if (interval === 'week') from.setDate(from.getDate() - n * 7 + 7);
+  else if (interval === 'month') { from.setMonth(from.getMonth() - n + 1); from.setDate(1); }
+  const fmt = d => d.toISOString().slice(0, 10);
+
+  const url = `https://kite.zerodha.com/oms/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
+  const r = await fetch(url, { headers: { Authorization: `enctoken ${enctoken}`, 'X-Kite-Version': '3' } });
+  const data = await r.json();
+  return (data?.data?.candles || data?.candles || [])
+    .map(c => ({ date: c[0], open: c[1], high: c[2], low: c[3], close: c[4], volume: c[5] || 0 }))
+    .slice(-n);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
@@ -344,8 +384,8 @@ export default async function handler(req, res) {
 
       // Fetch stock + Nifty50 in parallel
       const [candles, niftyCandles] = await Promise.allSettled([
-        getHistory(symbol, kiteInterval, count, enctoken),
-        getHistory('NIFTY 50', kiteInterval, count, enctoken).catch(() => []),
+        fetchKiteHistory(symbol, kiteInterval, count, enctoken),
+        fetchKiteHistory('NIFTY 50', kiteInterval, count, enctoken).catch(() => []),
       ]);
 
       const stockCandles = candles.status === 'fulfilled' ? candles.value : [];
