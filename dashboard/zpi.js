@@ -4,34 +4,41 @@
  */
 
 // ── Theme ─────────────────────────────────────────────────────────────────
-export function toggleTheme() {
+
+/** Toggle between dark and light mode, persist to localStorage. */
+function toggleTheme() {
   const isLight = document.body.classList.toggle('light');
+  const moon = document.getElementById('theme-icon-moon');
+  const sun  = document.getElementById('theme-icon-sun');
+  const lbl  = document.getElementById('theme-label');
+  if (moon) moon.style.display = isLight ? 'none'  : '';
+  if (sun)  sun.style.display  = isLight ? ''      : 'none';
+  if (lbl)  lbl.textContent    = isLight ? 'Dark'  : 'Light';
   localStorage.setItem('zpi-theme', isLight ? 'light' : 'dark');
   return isLight;
 }
 
+/** Restore saved theme immediately on page load (call in <head> before render). */
+(function () {
+  if (localStorage.getItem('zpi-theme') === 'light') {
+    document.body.classList.add('light');
+    document.addEventListener('DOMContentLoaded', function () {
+      const moon = document.getElementById('theme-icon-moon');
+      const sun  = document.getElementById('theme-icon-sun');
+      const lbl  = document.getElementById('theme-label');
+      if (moon) moon.style.display = 'none';
+      if (sun)  sun.style.display  = '';
+      if (lbl)  lbl.textContent    = 'Dark';
+    });
+  }
+})();
+
+// Expose globally for inline onclick usage
+window.toggleTheme = toggleTheme;
+
 export function getTheme() {
   return document.body.classList.contains('light') ? 'light' : 'dark';
 }
-
-/** Render theme toggle button HTML (icon + label). */
-export function themeToggleHTML() {
-  const isDark = !document.body.classList.contains('light');
-  return isDark
-    ? '<button class="theme-toggle btn" onclick="window.__zpiToggleTheme()" title="Switch to light mode"><span class="icon">☀︎</span><span>Light</span></button>'
-    : '<button class="theme-toggle btn" onclick="window.__zpiToggleTheme()" title="Switch to dark mode"><span class="icon">☽</span><span>Dark</span></button>';
-}
-
-// Expose for inline onclick
-window.__zpiToggleTheme = function () {
-  const isLight = toggleTheme();
-  // Update button label/icon
-  document.querySelectorAll('.theme-toggle').forEach(btn => {
-    btn.innerHTML = isLight
-      ? '<span class="icon">☽</span><span>Dark</span>'
-      : '<span class="icon">☀︎</span><span>Light</span>';
-  });
-};
 
 // ── Toast system ───────────────────────────────────────────────────────────
 let _toastContainer = null;

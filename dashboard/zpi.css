@@ -82,35 +82,51 @@
 
 /* ── Light Theme ──────────────────────────────────────────────────────────── */
 body.light {
+  /* Surfaces */
   --bg-base:     #f5f5f4;
   --bg-surface:  #fafaf9;
   --bg-elevated: #ffffff;
   --bg-card:     #ffffff;
   --bg-hover:    #f0efee;
   --bg-active:   #e8e7e5;
+  --bg-border:   #dddbd8;
 
+  /* Borders */
   --border-dim:    rgba(0,0,0,0.07);
   --border-subtle: rgba(0,0,0,0.10);
   --border-strong: rgba(0,0,0,0.16);
 
+  /* Accent */
+  --accent:       oklch(48% 0.18 165);
+  --accent-dim:   oklch(48% 0.18 165 / 0.10);
+  --accent-hover: oklch(43% 0.18 165);
+  --accent-text:  oklch(42% 0.18 165);
+
+  /* Positive / Negative */
+  --positive:      oklch(48% 0.18 165);
+  --positive-dim:  oklch(48% 0.18 165 / 0.10);
+  --positive-text: oklch(38% 0.18 165);
+  --negative:      oklch(50% 0.22 20);
+  --negative-dim:  oklch(50% 0.22 20 / 0.10);
+  --negative-text: oklch(44% 0.22 20);
+
+  /* Warning */
+  --warning-dim:  oklch(60% 0.16 75 / 0.10);
+  --warning-text: oklch(50% 0.16 75);
+
+  /* Signal colors */
+  --signal-buy:    oklch(48% 0.18 165);
+  --signal-sell:   oklch(50% 0.22 20);
+  --signal-hold:   oklch(52% 0.14 70);
+  --signal-strong: oklch(50% 0.18 140);
+  --signal-medium: oklch(52% 0.14 70);
+  --signal-weak:   oklch(50% 0.08 50);
+
+  /* Text */
   --text-primary:   rgba(0,0,0,0.88);
   --text-secondary: rgba(0,0,0,0.52);
   --text-tertiary:  rgba(0,0,0,0.35);
   --text-disabled:  rgba(0,0,0,0.22);
-
-  --accent:       oklch(48% 0.18 165);
-  --accent-dim:   oklch(48% 0.18 165 / 0.12);
-  --accent-hover: oklch(42% 0.18 165);
-
-  --positive:      oklch(48% 0.18 165);
-  --positive-text: oklch(38% 0.18 165);
-  --negative:      oklch(52% 0.22 20);
-  --negative-text: oklch(44% 0.22 20);
-
-  --positive-dim: oklch(48% 0.18 165 / 0.10);
-  --negative-dim: oklch(52% 0.22 20  / 0.10);
-  --warning-dim:  oklch(60% 0.16 75  / 0.10);
-  --warning-text: oklch(50% 0.16 75);
 }
 
 /* ── Reset & Base ─────────────────────────────────────────────────────────── */
@@ -649,25 +665,25 @@ body.light .zpi-select {
 .theme-toggle {
   display: inline-flex;
   align-items: center;
-  gap: var(--sp-2);
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 3px 9px;
-  cursor: pointer;
-  transition: var(--t-bg), var(--t-border), var(--t-color);
   font-family: var(--font-ui);
-  line-height: 1.5;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 120ms ease, border-color 180ms ease;
 }
 .theme-toggle:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--border-strong);
 }
-.theme-toggle .icon { font-size: 12px; line-height: 1; }
+.theme-toggle svg { flex-shrink: 0; }
 
 /* ── Utility classes ──────────────────────────────────────────────────────── */
 .flex         { display: flex; }
@@ -704,3 +720,139 @@ body.light .zpi-select {
 .mb-4 { margin-bottom: var(--sp-4); }
 .mb-5 { margin-bottom: var(--sp-5); }
 .p-0 { padding: 0; }
+
+/* ── Global theme transition ──────────────────────────────────────────────── */
+body, body * {
+  transition: background-color 180ms ease, border-color 180ms ease, color 120ms ease;
+}
+/* Exclude elements where transitions cause jank */
+body *, body *::before, body *::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 180ms, 180ms, 120ms;
+  transition-timing-function: ease;
+}
+
+/* ── Light theme: scrollbars ─────────────────────────────────────────────── */
+body.light ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }
+body.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+
+/* ── Light theme: sidebar ────────────────────────────────────────────────── */
+body.light .zpi-sidebar,
+body.light .sidebar { background: var(--bg-surface); border-right-color: var(--border-dim); }
+body.light .sidebar-logo-mark { color: #fff; }
+body.light .nav-section { border-bottom-color: var(--border-dim); }
+body.light .nav-item { color: var(--text-tertiary); }
+body.light .nav-item:hover { background: var(--bg-hover); color: var(--text-secondary); }
+body.light .nav-item.active { background: var(--bg-active); color: var(--text-primary); border-left-color: var(--accent); }
+body.light .nav-section-label { color: var(--text-disabled); }
+body.light .sidebar-status { border-top-color: var(--border-dim); }
+body.light .status-label { color: var(--text-tertiary); }
+body.light .collapse-btn { border-top-color: var(--border-dim); color: var(--text-tertiary); }
+body.light .collapse-btn:hover { background: var(--bg-hover); }
+
+/* ── Light theme: page header / topnav ───────────────────────────────────── */
+body.light .page-header,
+body.light .zpi-page-header,
+body.light .zpi-topnav,
+body.light .topnav { background: var(--bg-surface); border-bottom-color: var(--border-dim); }
+
+/* ── Light theme: buttons ────────────────────────────────────────────────── */
+body.light .btn-primary { background: var(--accent); color: #fff; }
+body.light .btn-primary:hover { background: var(--accent-hover); }
+body.light .btn-ghost { border-color: var(--border-subtle); color: var(--text-secondary); }
+body.light .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong); }
+
+/* ── Light theme: badges ─────────────────────────────────────────────────── */
+body.light .badge-buy    { background: oklch(48% 0.18 165 / 0.10); color: oklch(38% 0.18 165); border-color: oklch(48% 0.18 165 / 0.25); }
+body.light .badge-sell   { background: oklch(50% 0.22 20  / 0.10); color: oklch(44% 0.22 20);  border-color: oklch(50% 0.22 20  / 0.25); }
+body.light .badge-hold   { background: oklch(52% 0.14 70  / 0.10); color: oklch(45% 0.14 70);  border-color: oklch(52% 0.14 70  / 0.22); }
+body.light .badge-accent { background: oklch(48% 0.18 165 / 0.10); color: oklch(42% 0.18 165); border-color: oklch(48% 0.18 165 / 0.25); }
+body.light .badge-neutral { background: rgba(0,0,0,0.05); color: var(--text-secondary); border-color: var(--border-dim); }
+body.light .badge-weak   { background: rgba(0,0,0,0.04); color: var(--text-tertiary);  border-color: var(--border-subtle); }
+body.light .badge-strong { background: oklch(50% 0.18 140 / 0.10); color: oklch(42% 0.18 140); border-color: oklch(50% 0.18 140 / 0.22); }
+body.light .badge-medium { background: oklch(52% 0.14 70  / 0.10); color: oklch(45% 0.14 70);  border-color: oklch(52% 0.14 70  / 0.22); }
+
+/* ── Light theme: cards ──────────────────────────────────────────────────── */
+body.light .zpi-card,
+body.light .card,
+body.light .stat-card { background: var(--bg-card); border-color: var(--border-dim); }
+
+/* ── Light theme: AI/brain card ──────────────────────────────────────────── */
+body.light .ai-card {
+  background: linear-gradient(135deg, oklch(48% 0.18 165 / 0.06) 0%, transparent 60%);
+  border-color: oklch(48% 0.18 165 / 0.20);
+}
+body.light .regime-pill {
+  background: oklch(48% 0.18 165 / 0.10);
+  color: oklch(42% 0.18 165);
+  border-color: oklch(48% 0.18 165 / 0.25);
+}
+
+/* ── Light theme: tables ─────────────────────────────────────────────────── */
+body.light .zpi-table thead th,
+body.light .data-table th { color: var(--text-tertiary); border-bottom-color: var(--border-dim); }
+body.light .zpi-table tbody td,
+body.light .data-table td { border-bottom-color: var(--border-dim); }
+body.light .zpi-table tbody tr:hover td,
+body.light .data-table tbody tr:hover { background: var(--bg-hover); }
+
+/* ── Light theme: sector tags / change chips ─────────────────────────────── */
+body.light .sector-tag { background: var(--bg-elevated); border-color: var(--border-dim); color: var(--text-tertiary); }
+body.light .change-chip.pos { background: oklch(48% 0.18 165 / 0.10); color: oklch(38% 0.18 165); }
+body.light .change-chip.neg { background: oklch(50% 0.22 20  / 0.10); color: oklch(44% 0.22 20); }
+
+/* ── Light theme: inputs ─────────────────────────────────────────────────── */
+body.light .zpi-input,
+body.light .input { background: var(--bg-elevated); border-color: var(--border-subtle); color: var(--text-primary); }
+body.light .zpi-input::placeholder,
+body.light .input::placeholder { color: var(--text-tertiary); }
+body.light .zpi-input:focus,
+body.light .input:focus { border-color: var(--accent); }
+
+/* ── Light theme: modal ──────────────────────────────────────────────────── */
+body.light .modal-overlay { background: rgba(0,0,0,0.45); }
+body.light .modal-box { background: var(--bg-card); border-color: var(--border-strong); }
+
+/* ── Light theme: toasts ─────────────────────────────────────────────────── */
+body.light .zpi-toast,
+body.light .toast { background: #ffffff; border-color: var(--border-strong); color: var(--text-primary); }
+body.light .zpi-toast.success,
+body.light .toast.success { border-left-color: var(--positive); }
+body.light .zpi-toast.error,
+body.light .toast.error   { border-left-color: var(--negative); }
+body.light .zpi-toast.info,
+body.light .toast.info    { border-left-color: var(--accent); }
+
+/* ── Light theme: market pills ───────────────────────────────────────────── */
+body.light .market-pill.open   { background: oklch(48% 0.18 165 / 0.10); color: oklch(38% 0.18 165); }
+body.light .market-pill.closed { background: rgba(0,0,0,0.06); color: var(--text-tertiary); }
+body.light .market-pill.pre    { background: oklch(52% 0.14 70  / 0.10); color: oklch(45% 0.14 70); }
+
+/* ── Light theme: chart placeholder ─────────────────────────────────────── */
+body.light .chart-placeholder {
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 4px,
+    rgba(0,0,0,0.02) 4px, rgba(0,0,0,0.02) 8px
+  );
+}
+
+/* ── Light theme: pipeline stepper ──────────────────────────────────────── */
+body.light .step-item.active .step-num { color: #fff; }
+body.light .step-item.done .step-num   { background: oklch(48% 0.18 165 / 0.12); color: oklch(38% 0.18 165); }
+
+/* ── Light theme: tabs ───────────────────────────────────────────────────── */
+body.light .zpi-tabs,
+body.light .tabs { border-bottom-color: var(--border-dim); }
+body.light .zpi-tab,
+body.light .tab-btn { color: var(--text-tertiary); }
+body.light .zpi-tab:hover,
+body.light .tab-btn:hover { color: var(--text-secondary); }
+body.light .zpi-tab.active,
+body.light .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+
+/* ── Light theme: section headers ────────────────────────────────────────── */
+body.light .section-hd { border-bottom-color: var(--border-dim); }
+body.light .section-hd h2 { color: var(--text-secondary); }
+
+/* ── Light theme: history rows ───────────────────────────────────────────── */
+body.light .history-row:hover { background: var(--bg-hover); }

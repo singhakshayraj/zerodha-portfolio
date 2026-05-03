@@ -111,6 +111,29 @@
       table { min-width: 480px; font-size: var(--text-sm); }
     }
   </style>
+
+<script>
+function toggleTheme(){
+  var isLight=document.body.classList.toggle('light');
+  var moon=document.getElementById('theme-icon-moon');
+  var sun=document.getElementById('theme-icon-sun');
+  var lbl=document.getElementById('theme-label');
+  if(moon)moon.style.display=isLight?'none':'';
+  if(sun)sun.style.display=isLight?'':'none';
+  if(lbl)lbl.textContent=isLight?'Dark':'Light';
+  localStorage.setItem('zpi-theme',isLight?'light':'dark');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  if(localStorage.getItem('zpi-theme')==='light'){
+    var moon=document.getElementById('theme-icon-moon');
+    var sun=document.getElementById('theme-icon-sun');
+    var lbl=document.getElementById('theme-label');
+    if(moon)moon.style.display='none';
+    if(sun)sun.style.display='';
+    if(lbl)lbl.textContent='Dark';
+  }
+});
+</script>
 </head>
 <body>
 

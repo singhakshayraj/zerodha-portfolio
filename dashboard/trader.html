@@ -128,6 +128,29 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
   </style>
+
+<script>
+function toggleTheme(){
+  var isLight=document.body.classList.toggle('light');
+  var moon=document.getElementById('theme-icon-moon');
+  var sun=document.getElementById('theme-icon-sun');
+  var lbl=document.getElementById('theme-label');
+  if(moon)moon.style.display=isLight?'none':'';
+  if(sun)sun.style.display=isLight?'':'none';
+  if(lbl)lbl.textContent=isLight?'Dark':'Light';
+  localStorage.setItem('zpi-theme',isLight?'light':'dark');
+}
+document.addEventListener('DOMContentLoaded',function(){
+  if(localStorage.getItem('zpi-theme')==='light'){
+    var moon=document.getElementById('theme-icon-moon');
+    var sun=document.getElementById('theme-icon-sun');
+    var lbl=document.getElementById('theme-label');
+    if(moon)moon.style.display='none';
+    if(sun)sun.style.display='';
+    if(lbl)lbl.textContent='Dark';
+  }
+});
+</script>
 </head>
 <body>
 
@@ -141,6 +164,11 @@
     <a href="/research.html">Research Desk</a>
     <a href="/connect">Connect Kite</a>
   </div>
+    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">
+      <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg id="theme-icon-sun" width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span id="theme-label">Light</span>
+    </button>
 </nav>
 
 <!-- CONFIRMATION MODAL -->
