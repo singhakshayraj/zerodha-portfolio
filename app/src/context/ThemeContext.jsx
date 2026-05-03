@@ -6,7 +6,7 @@ const ThemeContext = createContext({ theme: 'dark', toggleTheme: () => {} });
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('theme') || 'dark';
+      return localStorage.getItem('zpi-theme') || 'dark';
     } catch {
       return 'dark';
     }
@@ -15,7 +15,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
-      localStorage.setItem('theme', theme);
+      localStorage.setItem('zpi-theme', theme);
     } catch {}
   }, [theme]);
 

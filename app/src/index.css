@@ -20,17 +20,17 @@
 }
 
 [data-theme="light"] {
-  --bg: #F8FAFC;
-  --card: #FFFFFF;
-  --card-2: #F1F5F9;
-  --border: #E5E7EB;
-  --text-primary: #0B0F14;
-  --text-secondary: #475569;
-  --text-muted: #94A3B8;
-  --green: #16A34A;
-  --red: #DC2626;
-  --yellow: #CA8A04;
-  --blue: #2563EB;
+  --bg:             #f5f5f4;
+  --card:           #ffffff;
+  --card-2:         #fafaf9;
+  --border:         rgba(0,0,0,0.10);
+  --text-primary:   rgba(0,0,0,0.88);
+  --text-secondary: rgba(0,0,0,0.52);
+  --text-muted:     rgba(0,0,0,0.35);
+  --green:          oklch(38% 0.18 165);
+  --red:            oklch(44% 0.22 20);
+  --yellow:         oklch(45% 0.14 70);
+  --blue:           oklch(42% 0.18 230);
 }
 
 /* ── Base ── */
@@ -114,4 +114,12 @@ tr:hover td {
 }
 [data-theme="light"] .row-bear-tint td {
   background: rgba(220, 38, 38, 0.06);
+}
+
+/* ── Theme transitions ── */
+body {
+  transition: background-color 180ms ease, color 120ms ease;
+}
+*, *::before, *::after {
+  transition: background-color 180ms ease, border-color 180ms ease, color 120ms ease;
 }

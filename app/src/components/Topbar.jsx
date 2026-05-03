@@ -162,21 +162,50 @@ export default function Topbar() {
           onClick={toggleTheme}
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: '50%',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
+            borderRadius: 5,
             border: '1px solid var(--border)',
             background: 'var(--card-2)',
             color: 'var(--text-secondary)',
+            fontSize: 11,
+            fontWeight: 500,
+            fontFamily: 'inherit',
             cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 14,
+            whiteSpace: 'nowrap',
             flexShrink: 0,
+            transition: 'background 80ms ease, color 80ms ease, border-color 80ms ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'var(--card)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'var(--card-2)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
           }}
         >
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z"
+                      stroke="currentColor" strokeWidth="1.5"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Light
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"
+                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              Dark
+            </>
+          )}
         </button>
       </div>
     </header>
