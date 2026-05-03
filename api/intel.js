@@ -15,6 +15,8 @@ import { runIntersection }    from '../dashboard/lib/intersect.js';
 import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
 import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
 import { getEventPlays, getActiveEvent, buildQuantContext } from '../dashboard/lib/eventplays.js';
+import { redisGet, redisSet } from '../dashboard/lib/redis.js';
+import { config as appConfig } from '../dashboard/config.js';
 
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -287,15 +289,12 @@ export default async function handler(req, res) {
       const { symbol, faData } = req.body ?? {};
       if (!symbol || !faData) { res.status(400).json({ error: 'symbol and faData required' }); return; }
 
-      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
       const cacheKey = `fa:narrative:${symbol}`;
       const cached = await redisGet(cacheKey);
       if (cached && cached.generatedAt) {
         const ageMs = Date.now() - new Date(cached.generatedAt).getTime();
         if (ageMs < 4 * 60 * 60 * 1000) return res.status(200).json({ ...cached, _cached: true });
       }
-
-      const { config: appConfig } = await import('../dashboard/config.js');
 
       const FA_NARRATIVE_SYSTEM = `You are a fundamental analyst at a top-tier Indian institutional fund. You write precise, jargon-light analysis. You never pad. Every sentence must contain a specific data point or observable fact. You do not assign buy/sell ratings. You never make up numbers not given to you.`;
 

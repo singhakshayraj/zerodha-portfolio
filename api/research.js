@@ -8,6 +8,8 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { UNIVERSE, runTriggerCycle } from '../dashboard/lib/trigger.js';
+import { redisGet, redisSet } from '../dashboard/lib/redis.js';
+import { getHistory } from '../dashboard/lib/kite.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
@@ -209,7 +211,6 @@ export default async function handler(req, res) {
       const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
       if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
 
-      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
       const cacheKey = `fa:${symbol}`;
       const cached = await redisGet(cacheKey);
       if (cached && cached.lastUpdated) {
@@ -329,7 +330,6 @@ export default async function handler(req, res) {
       const enctoken = req.headers['x-kite-enctoken'] || '';
       if (!enctoken) { res.status(401).json({ error: 'X-Kite-Enctoken header required' }); return; }
 
-      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
       const cacheKey = `ta:${symbol}:${timeframe}`;
       const cached = await redisGet(cacheKey);
       if (cached && cached.fetchedAt) {
@@ -341,8 +341,6 @@ export default async function handler(req, res) {
       const kiteInterval = intervalMap[timeframe] || 'day';
       const countMap = { daily: 200, weekly: 104, monthly: 60 };
       const count = countMap[timeframe] || 200;
-
-      const { getHistory } = await import('../dashboard/lib/kite.js');
 
       // Fetch stock + Nifty50 in parallel
       const [candles, niftyCandles] = await Promise.allSettled([
