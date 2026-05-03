@@ -134,6 +134,77 @@ export async function getHistorical(symbol, interval = '5minute', clientEnctoken
 }
 
 /**
+ * Fetch OHLCV history for daily/weekly/monthly analysis.
+ * interval: 'day' | 'week' | 'month'
+ * count: number of candles to fetch (default: day=200, week=104, month=60)
+ */
+export async function getHistory(symbol, interval = 'day', count, clientEnctoken) {
+  const enctoken = clientEnctoken || config.kite.enctoken;
+  if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
+
+  const defaultCounts = { day: 200, week: 104, month: 60 };
+  const n = count || defaultCounts[interval] || 200;
+
+  // Load instruments cache (reuse same _instrumentsCache pattern)
+  if (!_instrumentsCache) {
+    const csv = await new Promise((resolve, reject) => {
+      const opts = { hostname: 'api.kite.trade', path: '/instruments/NSE', method: 'GET',
+        headers: { 'X-Kite-Version': '3' } };
+      const req = https.request(opts, res => {
+        let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+      });
+      req.on('error', reject); req.end();
+    });
+    const lines = csv.trim().split('\n');
+    const h = lines[0].split(',');
+    const ti = h.indexOf('instrument_token'), si = h.indexOf('tradingsymbol');
+    _instrumentsCache = {};
+    for (let i = 1; i < lines.length; i++) {
+      const c = lines[i].split(',');
+      if (c[si]) _instrumentsCache[c[si].trim()] = c[ti].trim();
+    }
+  }
+
+  // NIFTY 50 index uses a fixed token
+  let token;
+  if (symbol === 'NIFTY 50' || symbol === 'NIFTY50') {
+    token = '256265'; // NSE NIFTY 50 instrument token (fixed)
+  } else {
+    token = _instrumentsCache[symbol.toUpperCase()];
+    if (!token) throw new Error(`Instrument token not found for ${symbol}`);
+  }
+
+  // Calculate date range based on interval and count
+  const to = new Date();
+  const from = new Date(to);
+  if (interval === 'day') {
+    // Add buffer for weekends/holidays (~1.4x trading days)
+    from.setDate(from.getDate() - Math.ceil(n * 1.5));
+  } else if (interval === 'week') {
+    from.setDate(from.getDate() - n * 7 + 7);
+  } else if (interval === 'month') {
+    from.setMonth(from.getMonth() - n + 1);
+    from.setDate(1);
+  }
+
+  const fmt = d => d.toISOString().slice(0, 10);
+  const path = `/oms/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
+
+  const raw = await kiteRequest(path, enctoken, 'oms');
+  // Kite returns { candles: [[timestamp, o, h, l, c, volume], ...] }
+  const candles = (raw?.candles || []).map(c => ({
+    date: c[0],
+    open: c[1],
+    high: c[2],
+    low: c[3],
+    close: c[4],
+    volume: c[5] || 0,
+  }));
+  // Return last n candles
+  return candles.slice(-n);
+}
+
+/**
  * Place a market order via Kite REST API.
  * Works in both modes (already used this way in server.js /trade endpoint).
  */

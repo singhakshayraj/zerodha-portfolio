@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){var t=localStorage.getItem("zpi-theme");if(t==="light")document.body.classList.add("light");})()</script>
+  <meta charset="UTF-8"/>
+  <script>
+    if(!localStorage.getItem('pf_auth')){ location.replace('/login?next='+encodeURIComponent(location.pathname)); }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="/dashboard/zpi.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <title>Fundamental Analysis — Portfolio Intelligence</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg-base);color:var(--text-primary);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    /* NAV */
+    .topnav{background:var(--bg-surface);border-bottom:1px solid var(--border-dim);padding:0 40px;display:flex;align-items:center;justify-content:space-between;height:48px;position:sticky;top:0;z-index:100}
+    .topnav-brand{font-size:14px;font-weight:700;color:var(--text-primary);text-decoration:none;letter-spacing:.02em}
+    .topnav-links{display:flex;gap:28px;align-items:center}
+    .topnav-links a{font-size:13px;color:var(--text-tertiary);text-decoration:none;transition:color .15s}
+    .topnav-links a:hover,.topnav-links a.active{color:var(--text-primary)}
+    .theme-btn{background:none;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:12px;padding:4px 10px;display:flex;align-items:center;gap:5px;transition:border-color .15s,color .15s}
+    .theme-btn:hover{border-color:var(--border-strong);color:var(--text-primary)}
+    @media(max-width:900px){.topnav{padding:0 16px}.topnav-links{gap:14px}}
+    @media(max-width:640px){.topnav-links .hide-mobile{display:none}}
+
+    /* PAGE */
+    .page{max-width:1200px;margin:0 auto;padding:24px 16px 64px}
+    .page-header{margin-bottom:20px}
+    .page-header h1{font-size:22px;font-weight:700;color:var(--text-primary)}
+    .page-header p{color:var(--text-secondary);margin-top:4px;font-size:13px}
+
+    /* TABS */
+    .tab-bar{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border-dim);padding-bottom:0}
+    .tab-btn{padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-tertiary);cursor:pointer;font-size:13px;font-weight:500;transition:color .15s,border-color .15s;margin-bottom:-1px}
+    .tab-btn:hover{color:var(--text-primary)}
+    .tab-btn.active{color:var(--text-primary);border-bottom-color:var(--accent);font-weight:600}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+
+    /* SUMMARY STRIP */
+    .summary-strip{display:flex;flex-wrap:wrap;gap:10px;padding:14px;background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;margin-bottom:20px;align-items:center}
+    .summary-strip .sum-stat{display:flex;flex-direction:column;gap:2px;padding-right:16px;border-right:1px solid var(--border-dim)}
+    .summary-strip .sum-stat:last-child{border-right:none;padding-right:0}
+    .sum-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-tertiary)}
+    .sum-value{font-size:18px;font-weight:700;color:var(--text-primary)}
+    .chips-row{display:flex;flex-wrap:wrap;gap:6px;margin-left:4px}
+
+    /* VERDICT CHIPS */
+    .verdict-chip{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+    .verdict-chip.strong-buy{background:oklch(45% 0.18 165 / 0.25);color:oklch(65% 0.20 165);border:1px solid oklch(65% 0.18 165 / 0.4)}
+    .verdict-chip.buy{background:oklch(50% 0.16 195 / 0.2);color:oklch(68% 0.16 195);border:1px solid oklch(68% 0.16 195 / 0.4)}
+    .verdict-chip.hold{background:var(--warning-dim);color:var(--warning-text);border:1px solid oklch(75% 0.16 75 / 0.35)}
+    .verdict-chip.review{background:oklch(55% 0.18 45 / 0.2);color:oklch(72% 0.18 45);border:1px solid oklch(72% 0.18 45 / 0.4)}
+    .verdict-chip.avoid{background:var(--negative-dim);color:var(--negative);border:1px solid oklch(62% 0.20 20 / 0.4)}
+
+    /* PORTFOLIO GRID */
+    .portfolio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+    @media(max-width:720px){.portfolio-grid{grid-template-columns:1fr}}
+
+    /* HOLDING CARD */
+    .holding-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:16px;cursor:pointer;transition:border-color .18s,background .18s}
+    .holding-card:hover{border-color:var(--border-strong);background:var(--bg-card)}
+    .holding-card.expanded{border-color:var(--accent);background:var(--bg-card)}
+    .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+    .card-sym{font-size:15px;font-weight:700;color:var(--text-primary)}
+    .card-name{font-size:12px;color:var(--text-secondary);margin-top:2px}
+    .card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .badge{font-size:10px;padding:2px 7px;border-radius:3px;background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border-subtle)}
+    .card-score{font-size:22px;font-weight:700;color:var(--text-primary);text-align:right}
+    .card-score span{font-size:11px;color:var(--text-tertiary);font-weight:400}
+
+    /* SCORE BARS */
+    .score-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .score-row{display:flex;align-items:center;gap:8px}
+    .score-label{width:70px;font-size:11px;color:var(--text-secondary);flex-shrink:0}
+    .score-track{flex:1;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
+    .score-bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
+    .score-val{width:44px;font-size:11px;color:var(--text-secondary);text-align:right;flex-shrink:0}
+
+    /* CARD FOOTER */
+    .card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-dim)}
+    .expand-btn{font-size:12px;color:var(--accent);background:none;border:1px solid var(--border-subtle);border-radius:4px;padding:4px 10px;cursor:pointer;transition:border-color .15s}
+    .expand-btn:hover{border-color:var(--accent)}
+    .piotroski-mini{font-size:11px;color:var(--text-secondary)}
+    .flag-badge{background:var(--negative-dim);color:var(--negative);border:1px solid oklch(62% 0.20 20 / 0.35);border-radius:4px;padding:2px 8px;font-size:11px;display:inline-block}
+
+    /* SEARCH */
+    .search-wrap{position:relative;max-width:520px;margin-bottom:24px}
+    .search-input{width:100%;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:7px;color:var(--text-primary);font-size:14px;padding:10px 14px;outline:none;transition:border-color .18s}
+    .search-input:focus{border-color:var(--accent)}
+    .search-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border-strong);border-radius:7px;margin-top:4px;z-index:200;max-height:280px;overflow-y:auto;display:none}
+    .search-dropdown.visible{display:block}
+    .search-item{padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-dim)}
+    .search-item:last-child{border-bottom:none}
+    .search-item:hover{background:var(--bg-hover)}
+    .search-sym{font-size:13px;font-weight:600;color:var(--text-primary)}
+    .search-nm{font-size:12px;color:var(--text-secondary)}
+    .search-exch{font-size:10px;color:var(--text-tertiary);background:var(--bg-hover);padding:2px 6px;border-radius:3px}
+
+    /* DETAIL VIEW */
+    .detail-view{display:none;margin-top:16px;animation:fadeIn .2s ease}
+    .detail-view.visible{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    /* DETAIL HEADER */
+    .detail-header{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:16px 20px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+    .detail-sym{font-size:20px;font-weight:700;color:var(--text-primary)}
+    .detail-name{font-size:14px;color:var(--text-secondary);margin-top:2px}
+    .detail-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:12px;color:var(--text-tertiary)}
+    .detail-meta span{background:var(--bg-hover);padding:3px 9px;border-radius:4px;border:1px solid var(--border-dim)}
+    .detail-updated{font-size:11px;color:var(--text-tertiary)}
+
+    /* SCORE STRIP */
+    .score-strip{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+    .score-tile{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:8px;padding:12px 16px;text-align:center;flex:1;min-width:130px}
+    .score-tile-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-tertiary);margin-bottom:4px}
+    .score-tile-val{font-size:20px;font-weight:700}
+    .score-tile-max{font-size:11px;color:var(--text-tertiary);font-weight:400}
+    .score-tile.verdict-tile{min-width:180px;flex:1.5}
+    .score-tile.verdict-tile .score-tile-val{font-size:16px;font-weight:700}
+
+    /* TWO-COL DETAIL */
+    .detail-body{display:grid;grid-template-columns:60fr 40fr;gap:16px;margin-bottom:16px}
+    @media(max-width:860px){.detail-body{grid-template-columns:1fr}}
+
+    /* DATA TABLES */
+    .data-section{margin-bottom:18px}
+    .data-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-disabled);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-dim)}
+    .data-table{width:100%;border-collapse:collapse;font-size:12px}
+    .data-table th{color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:5px 8px;border-bottom:1px solid var(--border-dim);text-align:left;font-weight:600}
+    .data-table td{padding:6px 8px;border-bottom:1px solid var(--bg-base);vertical-align:middle}
+    .data-table tr:last-child td{border-bottom:none}
+    .data-table .val{font-weight:600;color:var(--text-primary)}
+    .data-table .sig{font-size:11px}
+    .data-table .sig.good{color:var(--positive)}
+    .data-table .sig.warn{color:var(--warning-text)}
+    .data-table .sig.bad{color:var(--negative)}
+    .data-table .vs-sector{font-size:11px;color:var(--text-tertiary)}
+    .data-table .vs-sector.good{color:var(--positive)}
+    .data-table .vs-sector.bad{color:var(--negative)}
+
+    /* METRICS GRID */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+    .metric-item{background:var(--bg-hover);border-radius:6px;padding:10px 12px;border:1px solid var(--border-dim)}
+    .metric-key{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary);margin-bottom:3px}
+    .metric-val{font-size:14px;font-weight:600;color:var(--text-primary)}
+    .metric-yoy{font-size:11px;margin-top:1px}
+    .metric-yoy.pos{color:var(--positive)}
+    .metric-yoy.neg{color:var(--negative)}
+
+    /* CHART AREA */
+    .chart-area{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:14px;margin-bottom:18px}
+    .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .chart-title-sm{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-tertiary)}
+    .chart-toggle{display:flex;gap:4px}
+    .chart-toggle-btn{background:none;border:1px solid var(--border-subtle);border-radius:4px;color:var(--text-secondary);cursor:pointer;font-size:11px;padding:3px 9px;transition:all .15s}
+    .chart-toggle-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--text-primary)}
+    .chart-placeholder{text-align:center;padding:40px;color:var(--text-tertiary);font-size:12px}
+    canvas.q-chart{max-height:200px}
+
+    /* OWNERSHIP DONUT */
+    .donut-wrap{display:flex;align-items:center;gap:16px}
+    .donut-legend{flex:1;display:flex;flex-direction:column;gap:5px}
+    .legend-item{display:flex;align-items:center;justify-content:space-between;font-size:11px;gap:8px}
+    .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .legend-label{color:var(--text-secondary);flex:1}
+    .legend-pct{color:var(--text-primary);font-weight:600}
+    .pledge-line{font-size:11px;margin-top:8px;color:var(--negative)}
+    canvas.donut-chart{width:110px!important;height:110px!important;flex-shrink:0}
+
+    /* PIOTROSKI */
+    .piotroski-score-line{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+    .pio-score-val{font-size:24px;font-weight:700;color:var(--text-primary)}
+    .pio-score-lbl{font-size:12px;color:var(--text-secondary)}
+    .pio-bar{height:4px;border-radius:2px;background:var(--bg-hover);margin-bottom:12px;overflow:hidden}
+    .pio-bar-fill{height:100%;border-radius:2px;background:var(--positive);transition:width .4s}
+    .piotroski-item{display:flex;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border-dim);align-items:flex-start}
+    .piotroski-item:last-child{border-bottom:none}
+    .pio-icon{font-size:12px;flex-shrink:0;margin-top:1px}
+    .pio-icon.pass{color:var(--positive)}
+    .pio-icon.fail{color:var(--negative)}
+    .pio-text{color:var(--text-secondary)}
+
+    /* RED FLAGS */
+    .flags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .no-flags{color:var(--positive);font-size:12px;padding:6px 0}
+
+    /* AI NARRATIVE */
+    .narrative-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:18px;margin-bottom:16px}
+    .narrative-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-disabled);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border-dim)}
+    .narrative-summary{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px}
+    .bull-bear{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+    @media(max-width:540px){.bull-bear{grid-template-columns:1fr}}
+    .bull-col,.bear-col{display:flex;flex-direction:column;gap:2px}
+    .bb-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+    .bull-col .bb-title{color:var(--positive)}
+    .bear-col .bb-title{color:var(--negative)}
+    .bb-item{font-size:12px;color:var(--text-secondary);padding:3px 0;display:flex;gap:6px}
+    .bb-dot{flex-shrink:0;margin-top:4px;width:4px;height:4px;border-radius:50%}
+    .bull-col .bb-dot{background:var(--positive)}
+    .bear-col .bb-dot{background:var(--negative)}
+    .narrative-extras{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+    .narrative-line{font-size:12px;color:var(--text-secondary)}
+    .narrative-line strong{color:var(--text-primary)}
+    .narrative-disclaimer{font-size:11px;color:var(--text-disabled);border-top:1px solid var(--border-dim);padding-top:10px;margin-top:4px}
+
+    /* PEERS */
+    .peers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    .peer-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:7px;padding:13px;cursor:pointer;transition:border-color .18s}
+    .peer-card:hover{border-color:var(--border-strong)}
+    .peer-sym{font-size:13px;font-weight:700;color:var(--text-primary)}
+    .peer-name{font-size:11px;color:var(--text-secondary);margin-top:1px;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .peer-score{font-size:22px;font-weight:700;color:var(--text-primary)}
+    .peer-loading{color:var(--text-tertiary);font-size:11px}
+
+    /* SHIMMER */
+    .shimmer{background:linear-gradient(90deg,var(--bg-card) 25%,var(--bg-hover) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .shimmer-block{height:18px;margin-bottom:8px}
+    .shimmer-block.tall{height:120px}
+    .shimmer-block.short{height:12px;width:60%}
+
+    /* EMPTY / ERROR STATES */
+    .empty-state{text-align:center;padding:48px 24px;color:var(--text-tertiary)}
+    .empty-state h3{font-size:16px;color:var(--text-secondary);margin-bottom:8px}
+    .empty-state p{font-size:13px;margin-bottom:16px}
+    .empty-state a{color:var(--accent);text-decoration:none;border:1px solid var(--accent);padding:8px 18px;border-radius:6px;font-size:13px}
+    .empty-state a:hover{background:var(--accent-dim)}
+    .error-card{background:var(--negative-dim);border:1px solid oklch(62% 0.20 20 / 0.35);border-radius:8px;padding:16px;color:var(--negative);font-size:13px;margin-bottom:14px}
+    .loading-state{text-align:center;padding:32px;color:var(--text-tertiary);font-size:13px}
+
+    /* CARD */
+    .card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:16px}
+    .card-title{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+
+    /* COLOR HELPERS */
+    .c-pos{color:var(--positive)}
+    .c-neg{color:var(--negative)}
+    .c-warn{color:var(--warning-text)}
+    .c-dim{color:var(--text-tertiary)}
+    .fw7{font-weight:700}
+
+    /* SECTION SEPARATOR */
+    .section-sep{margin-bottom:16px}
+  </style>
+  <script>
+  function toggleTheme(){
+    var isLight=document.body.classList.toggle('light');
+    var moon=document.getElementById('theme-icon-moon');
+    var sun=document.getElementById('theme-icon-sun');
+    var lbl=document.getElementById('theme-label');
+    if(moon)moon.style.display=isLight?'none':'';
+    if(sun)sun.style.display=isLight?'':'none';
+    if(lbl)lbl.textContent=isLight?'Dark':'Light';
+    localStorage.setItem('zpi-theme',isLight?'light':'dark');
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    var t=localStorage.getItem('zpi-theme');
+    if(t==='light'){
+      var moon=document.getElementById('theme-icon-moon');
+      var sun=document.getElementById('theme-icon-sun');
+      var lbl=document.getElementById('theme-label');
+      if(moon)moon.style.display='none';
+      if(sun)sun.style.display='';
+      if(lbl)lbl.textContent='Dark';
+    }
+  });
+  </script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <a class="topnav-brand" href="/">Intelligence</a>
+  <div class="topnav-links">
+    <a href="/" class="hide-mobile">Dashboard</a>
+    <a href="/intraday" class="hide-mobile">Intraday</a>
+    <a href="/research.html" class="hide-mobile">Research</a>
+    <a href="/trader">Trader</a>
+    <a href="/event">Event</a>
+    <a href="/trades" class="hide-mobile">Journal</a>
+    <a href="/fundamental" class="active">Fundamental</a>
+    <a href="/technical" class="hide-mobile">Technical</a>
+    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+      <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="theme-icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span id="theme-label">Light</span>
+    </button>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+  <div class="page-header">
+    <h1>Fundamental Analysis</h1>
+    <p>Score holdings and search any stock on Quality · Growth · Valuation · Health</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-portfolio" onclick="switchTab('portfolio')">My Portfolio</button>
+    <button class="tab-btn" id="tab-search" onclick="switchTab('search')">Search Any Stock</button>
+  </div>
+
+  <!-- PORTFOLIO TAB -->
+  <div class="tab-pane active" id="pane-portfolio">
+    <div id="portfolio-summary-strip"></div>
+    <div id="portfolio-content">
+      <div class="loading-state" id="portfolio-loading" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        Analyzing portfolio...
+      </div>
+      <div id="portfolio-grid-wrap"></div>
+    </div>
+  </div>
+
+  <!-- SEARCH TAB -->
+  <div class="tab-pane" id="pane-search">
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input" placeholder="Search symbol or company name…" autocomplete="off"/>
+      <div class="search-dropdown" id="search-dropdown"></div>
+    </div>
+    <div id="search-detail-wrap"></div>
+  </div>
+</div>
+
+<style>
+@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+</style>
+
+<script type="module">
+import { computeComposite, computePiotroski, detectRedFlags, getSectorMedianPE, getPeers, fmtINR, fmtPct, SECTOR_MEDIANS } from '/dashboard/lib/fundamental.js';
+import { analyzeFA, analyzePortfolio, fetchFANarrative } from '/dashboard/lib/screener.js';
+
+// ── Chart.js instances (tracked for cleanup)
+const chartInstances = {};
+
+// ── Formatting helpers
+function fmt(v, dec=1){ if(v===null||v===undefined||isNaN(v)) return '—'; return Number(v).toFixed(dec); }
+function fmtCr(v){ if(v===null||v===undefined||isNaN(v)) return '—'; const n=Number(v); if(n>=10000) return '₹'+(n/10000).toFixed(1)+'L Cr'; if(n>=100) return '₹'+n.toFixed(0)+' Cr'; return '₹'+n.toFixed(1)+' Cr'; }
+function scoreColor(score, max){ const pct=score/max; if(pct>=0.8) return 'oklch(65% 0.18 165)'; if(pct>=0.5) return 'oklch(75% 0.16 75)'; return 'oklch(62% 0.20 20)'; }
+function scoreBg(score, max){ const pct=score/max; if(pct>=0.8) return 'oklch(65% 0.18 165 / 0.12)'; if(pct>=0.5) return 'oklch(75% 0.16 75 / 0.12)'; return 'oklch(62% 0.20 20 / 0.12)'; }
+function verdictClass(v){ const m={'Strong Buy':'strong-buy','Buy':'buy','Hold':'hold','Review':'review','Avoid':'avoid'}; return m[v]||'hold'; }
+
+// ── Piotroski labels
+const PIO_LABELS = [
+  'ROA positive','Operating CF positive','ROA improving','Cash earnings quality',
+  'Leverage decreasing','Liquidity improving','No share dilution',
+  'Gross margin improving','Asset turnover improving'
+];
+
+// ── Tab switching
+window.switchTab = function(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('pane-'+tab).classList.add('active');
+};
+
+// ── Render Portfolio Summary Strip
+function renderPortfolioSummary(results){
+  const el = document.getElementById('portfolio-summary-strip');
+  if(!results||!results.length){ el.innerHTML=''; return; }
+  const total = results.length;
+  const avg = Math.round(results.reduce((s,r)=>s+(r.composite||0),0)/total);
+  const counts = {'Strong Buy':0,'Buy':0,'Hold':0,'Review':0,'Avoid':0};
+  results.forEach(r=>{ if(r.verdict && counts[r.verdict]!==undefined) counts[r.verdict]++; });
+  el.innerHTML=`<div class="summary-strip">
+    <div class="sum-stat"><span class="sum-label">Holdings</span><span class="sum-value">${total}</span></div>
+    <div class="sum-stat"><span class="sum-label">Avg FA Score</span><span class="sum-value" style="color:${scoreColor(avg,100)}">${avg}</span></div>
+    <div class="sum-stat" style="border-right:none;padding-right:0"><span class="sum-label">Verdict Mix</span>
+      <div class="chips-row" style="margin-top:4px">
+        ${Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="verdict-chip ${verdictClass(k)}">${v} ${k}</span>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Render score bar fill
+function barFill(score, max){ return `<div class="score-track"><div class="score-bar-fill" style="width:${Math.round(score/max*100)}%;background:${scoreColor(score,max)}"></div></div>`; }
+
+// ── Render single holding card (collapsed)
+function renderHoldingCard(r){
+  const id = 'card-'+r.symbol.replace(/[^A-Z0-9]/g,'_');
+  const detailId = 'detail-'+r.symbol.replace(/[^A-Z0-9]/g,'_');
+  const q=r.quality||0, g=r.growth||0, v=r.valuation||0, h=r.health||0;
+  const total=r.composite||0;
+  const flags = r.flags||[];
+  const pio = r.piotroski||0;
+  const vc = verdictClass(r.verdict||'Hold');
+  return `<div class="holding-card" id="${id}" onclick="toggleCard('${r.symbol}','${id}','${detailId}')">
+    <div class="card-top">
+      <div>
+        <div class="card-sym">${r.symbol}</div>
+        <div class="card-name">${r.name||''}</div>
+        <div class="card-badges">
+          ${r.sector?`<span class="badge">${r.sector}</span>`:''}
+          ${r.exchange?`<span class="badge">${r.exchange}</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-score" style="color:${scoreColor(total,100)}">${total}<span>/100</span></div>
+        <div style="margin-top:5px"><span class="verdict-chip ${vc}">${r.verdict||'—'}</span></div>
+      </div>
+    </div>
+    <div class="score-bars">
+      <div class="score-row"><span class="score-label">Quality</span>${barFill(q,30)}<span class="score-val">${q}/30</span></div>
+      <div class="score-row"><span class="score-label">Growth</span>${barFill(g,25)}<span class="score-val">${g}/25</span></div>
+      <div class="score-row"><span class="score-label">Valuation</span>${barFill(v,25)}<span class="score-val">${v}/25</span></div>
+      <div class="score-row"><span class="score-label">Health</span>${barFill(h,20)}<span class="score-val">${h}/20</span></div>
+    </div>
+    <div class="card-footer">
+      <button class="expand-btn" id="btn-${id}">Details ▸</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="piotroski-mini">Piotroski: <strong>${pio}/9</strong></span>
+        ${flags.length?`<span class="flag-badge">⚠ ${flags.length} flag${flags.length>1?'s':''}</span>`:''}
+      </div>
+    </div>
+    <div class="detail-view" id="${detailId}"></div>
+  </div>`;
+}
+
+// ── Toggle card expand/collapse
+window.toggleCard = async function(symbol, cardId, detailId){
+  const card = document.getElementById(cardId);
+  const detail = document.getElementById(detailId);
+  const btn = document.getElementById('btn-'+cardId);
+  if(detail.classList.contains('visible')){
+    detail.classList.remove('visible');
+    card.classList.remove('expanded');
+    if(btn) btn.textContent='Details ▸';
+    return;
+  }
+  card.classList.add('expanded');
+  if(btn) btn.textContent='Close ✕';
+  if(detail.innerHTML.trim()){ detail.classList.add('visible'); return; }
+  detail.innerHTML = shimmerBlocks(6);
+  detail.classList.add('visible');
+  try{
+    const data = await analyzeFA(symbol);
+    detail.innerHTML = renderDetailView(data, false);
+    initDetailCharts(data, symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadPeers(data.sector, symbol, 'peers-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+  } catch(e){
+    detail.innerHTML = `<div class="error-card" style="margin-top:12px">Failed to load FA data: ${e.message}</div>`;
+  }
+};
+
+// ── Shimmer placeholder
+function shimmerBlocks(n){
+  let h='<div style="padding:12px 0">';
+  for(let i=0;i<n;i++) h+=`<div class="shimmer shimmer-block" style="margin-bottom:10px;height:${i===0?24:i===2?80:14}px"></div>`;
+  return h+'</div>';
+}
+
+// ── Render full detail view HTML
+function renderDetailView(d, standalone=true){
+  if(!d) return '<div class="error-card">No data returned.</div>';
+  const q=d.quality||0, g=d.growth||0, v=d.valuation||0, h=d.health||0, total=d.composite||0;
+  const vc = verdictClass(d.verdict||'Hold');
+  const sfx = (d.symbol||'X').replace(/[^A-Z0-9]/g,'_');
+
+  // Valuation table
+  const sectorPE = getSectorMedianPE ? getSectorMedianPE(d.sector) : null;
+  const pe = d.pe||null;
+  const peDiff = (pe&&sectorPE) ? ((pe-sectorPE)/sectorPE*100) : null;
+  const peClass = pe&&sectorPE ? (pe<sectorPE?'good':(pe>sectorPE*1.5?'bad':'')) : '';
+  const peVsStr = peDiff!==null ? `${peDiff>0?'+':''}${peDiff.toFixed(0)}% vs ${fmt(sectorPE)}` : '—';
+
+  const valRows = [
+    ['PE', fmt(pe), peVsStr, peClass, pe&&sectorPE?(pe<sectorPE?'✓ Discount':pe>sectorPE*1.5?'✗ Rich':'~ Fair'):'—', peClass],
+    ['Forward PE', fmt(d.forwardPE), '—', '', '—', ''],
+    ['PB', fmt(d.pb), '—', '', d.pb?(d.pb<3?'✓ Fair':'~ High'):'—', d.pb?(d.pb<3?'good':'warn'):''],
+    ['EV/EBITDA', fmt(d.evEbitda), '—', '', d.evEbitda?(d.evEbitda<12?'✓ Good':'~ Check'):'—', d.evEbitda?(d.evEbitda<12?'good':''):''],
+    ['Div Yield', d.divYield!=null?fmt(d.divYield,2)+'%':'—', '—', '', '—', ''],
+    ['52W High', d.high52w?'₹'+Number(d.high52w).toLocaleString('en-IN'):'—', '—', '', '—', ''],
+    ['52W Low', d.low52w?'₹'+Number(d.low52w).toLocaleString('en-IN'):'—', '—', '', '—', ''],
+  ];
+
+  const valTable = `<table class="data-table">
+    <tr><th>Metric</th><th>Value</th><th>vs Sector</th><th>Signal</th></tr>
+    ${valRows.map(([m,val,vs,vsc,sig,sc])=>`<tr>
+      <td class="c-dim">${m}</td>
+      <td class="val ${vsc}">${val}</td>
+      <td class="vs-sector ${vsc}">${vs}</td>
+      <td class="sig ${sc||''}">${sig}</td>
+    </tr>`).join('')}
+  </table>`;
+
+  // Profitability
+  const profHtml = `<div class="metrics-grid">
+    <div class="metric-item"><div class="metric-key">ROE</div><div class="metric-val">${d.roe!=null?fmt(d.roe)+'%':'—'}</div>${d.roeYoy!=null?`<div class="metric-yoy ${d.roeYoy>=0?'pos':'neg'}">${d.roeYoy>=0?'+':''}${fmt(d.roeYoy)}% YoY</div>`:''}</div>
+    <div class="metric-item"><div class="metric-key">ROCE</div><div class="metric-val">${d.roce!=null?fmt(d.roce)+'%':'—'}</div>${d.roceYoy!=null?`<div class="metric-yoy ${d.roceYoy>=0?'pos':'neg'}">${d.roceYoy>=0?'+':''}${fmt(d.roceYoy)}% YoY</div>`:''}</div>
+    <div class="metric-item"><div class="metric-key">Net Margin</div><div class="metric-val">${d.netMargin!=null?fmt(d.netMargin)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Oper. Margin</div><div class="metric-val">${d.operMargin!=null?fmt(d.operMargin)+'%':'—'}</div></div>
+  </div>`;
+
+  // Growth
+  const growthHtml = `<div class="metrics-grid">
+    <div class="metric-item"><div class="metric-key">Rev CAGR 3yr</div><div class="metric-val ${d.revCagr3>=0?'c-pos':'c-neg'}">${d.revCagr3!=null?(d.revCagr3>=0?'+':'')+fmt(d.revCagr3)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Profit CAGR 3yr</div><div class="metric-val ${d.profitCagr3>=0?'c-pos':'c-neg'}">${d.profitCagr3!=null?(d.profitCagr3>=0?'+':'')+fmt(d.profitCagr3)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">EPS CAGR 3yr</div><div class="metric-val ${d.epsCagr3>=0?'c-pos':'c-neg'}">${d.epsCagr3!=null?(d.epsCagr3>=0?'+':'')+fmt(d.epsCagr3)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Revenue QoQ</div><div class="metric-val ${d.revQoQ>=0?'c-pos':'c-neg'}">${d.revQoQ!=null?(d.revQoQ>=0?'+':'')+fmt(d.revQoQ)+'%':'—'}</div></div>
+  </div>`;
+
+  // Health
+  const de = d.debtEquity;
+  const ic = d.intCoverage;
+  const cr = d.currentRatio;
+  const fcfYears = Array.isArray(d.fcfPositive)?d.fcfPositive:[];
+  const healthHtml = `<div class="metrics-grid">
+    <div class="metric-item"><div class="metric-key">D/E Ratio</div><div class="metric-val">${de!=null?fmt(de):' — '}</div><div class="metric-yoy ${de!=null&&de<0.5?'pos':de>1.5?'neg':''}">${de!=null?(de<0.5?'✓ Low':de>1.5?'✗ High':'~ Moderate'):'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Interest Coverage</div><div class="metric-val">${ic!=null?fmt(ic)+'×':'—'}</div><div class="metric-yoy ${ic&&ic>4?'pos':ic&&ic<2?'neg':''}">${ic?(ic>4?'✓ Strong':ic<2?'✗ Weak':'~ Adequate'):'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Current Ratio</div><div class="metric-val">${cr!=null?fmt(cr):' — '}</div><div class="metric-yoy ${cr&&cr>1.5?'pos':cr&&cr<1?'neg':''}">${cr?(cr>1.5?'✓ Healthy':cr<1?'✗ Tight':'~ OK'):'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">FCF Positive</div><div class="metric-val">${fcfYears.length?fcfYears.map(y=>y?'✓':'✗').join(' '):'—'}</div><div class="metric-yoy">${fcfYears.length?`${fcfYears.filter(Boolean).length} of ${fcfYears.length} yrs`:'—'}</div></div>
+  </div>`;
+
+  // Piotroski
+  const pioScore = d.piotroski||0;
+  const pioFlags = Array.isArray(d.piotroskiFlags)?d.piotroskiFlags:Array(9).fill(false);
+  const pioLbl = pioScore>=8?'Strong':pioScore>=5?'Neutral':'Weak';
+  const pioHtml = `<div class="piotroski-score-line">
+    <span class="pio-score-val">${pioScore}/9</span>
+    <span class="pio-score-lbl">— ${pioLbl}</span>
+  </div>
+  <div class="pio-bar"><div class="pio-bar-fill" style="width:${pioScore/9*100}%;background:${scoreColor(pioScore,9)}"></div></div>
+  <div>${PIO_LABELS.map((lbl,i)=>`<div class="piotroski-item">
+    <span class="pio-icon ${pioFlags[i]?'pass':'fail'}">${pioFlags[i]?'✓':'✗'}</span>
+    <span class="pio-text">F${i+1}: ${lbl}</span>
+  </div>`).join('')}</div>`;
+
+  // Red flags
+  const flags = d.flags||[];
+  const flagsHtml = flags.length
+    ? `<div class="flags-wrap">${flags.map(f=>`<span class="flag-badge">⚠ ${f.name||f}: ${f.detail||''}</span>`).join('')}</div>`
+    : `<p class="no-flags">✓ No red flags detected</p>`;
+
+  // Ownership
+  const own = d.ownership||{};
+  const ownItems = [
+    {label:'Promoter', pct:own.promoter, color:'oklch(65% 0.18 165)'},
+    {label:'FII', pct:own.fii, color:'oklch(68% 0.16 195)'},
+    {label:'DII', pct:own.dii, color:'oklch(75% 0.16 75)'},
+    {label:'Public', pct:own.public, color:'oklch(55% 0.12 240)'},
+  ];
+  const hasOwn = ownItems.some(o=>o.pct!=null);
+  const donutId = 'donut-'+sfx;
+  const ownHtml = hasOwn
+    ? `<div class="donut-wrap">
+        <canvas class="donut-chart" id="${donutId}"></canvas>
+        <div class="donut-legend">
+          ${ownItems.map(o=>`<div class="legend-item"><span class="legend-dot" style="background:${o.color}"></span><span class="legend-label">${o.label}</span><span class="legend-pct">${o.pct!=null?fmt(o.pct)+'%':'—'}</span></div>`).join('')}
+          ${own.pledge>0?`<p class="pledge-line">Promoter Pledge: ${fmt(own.pledge,1)}%</p>`:''}
+        </div>
+      </div>`
+    : `<p class="c-dim" style="font-size:12px;padding:20px 0">Ownership data unavailable</p>`;
+
+  // Quarterly chart placeholders
+  const qChartId = 'qchart-'+sfx;
+  const hasQData = Array.isArray(d.quarterly) && d.quarterly.length > 0;
+
+  return `
+  ${standalone?`<div class="detail-header">
+    <div>
+      <div class="detail-sym">${d.symbol||'—'}</div>
+      <div class="detail-name">${d.name||''}</div>
+      <div class="detail-meta">
+        ${d.exchange?`<span>${d.exchange}</span>`:''}
+        ${d.sector?`<span>${d.sector}</span>`:''}
+        ${d.marketCap?`<span>${fmtCr(d.marketCap)}</span>`:''}
+      </div>
+    </div>
+    <div class="detail-updated c-dim">Updated: just now</div>
+  </div>`:''}
+
+  <!-- SCORE STRIP -->
+  <div class="score-strip" style="${standalone?'':'margin-top:16px'}">
+    <div class="score-tile" style="background:${scoreBg(q,30)};border-color:${scoreColor(q,30)}40">
+      <div class="score-tile-label">Quality</div>
+      <div class="score-tile-val" style="color:${scoreColor(q,30)}">${q}<span class="score-tile-max">/30</span></div>
+    </div>
+    <div class="score-tile" style="background:${scoreBg(g,25)};border-color:${scoreColor(g,25)}40">
+      <div class="score-tile-label">Growth</div>
+      <div class="score-tile-val" style="color:${scoreColor(g,25)}">${g}<span class="score-tile-max">/25</span></div>
+    </div>
+    <div class="score-tile" style="background:${scoreBg(v,25)};border-color:${scoreColor(v,25)}40">
+      <div class="score-tile-label">Valuation</div>
+      <div class="score-tile-val" style="color:${scoreColor(v,25)}">${v}<span class="score-tile-max">/25</span></div>
+    </div>
+    <div class="score-tile" style="background:${scoreBg(h,20)};border-color:${scoreColor(h,20)}40">
+      <div class="score-tile-label">Health</div>
+      <div class="score-tile-val" style="color:${scoreColor(h,20)}">${h}<span class="score-tile-max">/20</span></div>
+    </div>
+    <div class="score-tile verdict-tile" style="background:${scoreBg(total,100)};border-color:${scoreColor(total,100)}40;min-width:180px">
+      <div class="score-tile-label">Total Score</div>
+      <div class="score-tile-val" style="color:${scoreColor(total,100)}">${total}<span class="score-tile-max">/100</span></div>
+      <div style="margin-top:6px"><span class="verdict-chip ${vc}">${d.verdict||'—'}</span></div>
+    </div>
+  </div>
+
+  <!-- DETAIL BODY: 60/40 -->
+  <div class="detail-body">
+    <!-- LEFT -->
+    <div>
+      <div class="data-section">
+        <div class="data-section-title">Valuation</div>
+        ${valTable}
+      </div>
+      <div class="data-section">
+        <div class="data-section-title">Profitability</div>
+        ${profHtml}
+      </div>
+      <div class="data-section">
+        <div class="data-section-title">Growth</div>
+        ${growthHtml}
+      </div>
+      <div class="data-section">
+        <div class="data-section-title">Financial Health</div>
+        ${healthHtml}
+      </div>
+      <!-- QUARTERLY CHART -->
+      <div class="chart-area">
+        <div class="chart-header">
+          <span class="chart-title-sm">Quarterly Revenue &amp; Profit</span>
+          <div class="chart-toggle">
+            <button class="chart-toggle-btn active" id="btn-abs-${sfx}" onclick="toggleQChart('${sfx}','abs')">Absolute ₹</button>
+            <button class="chart-toggle-btn" id="btn-pct-${sfx}" onclick="toggleQChart('${sfx}','pct')">QoQ Growth %</button>
+          </div>
+        </div>
+        ${hasQData
+          ? `<canvas class="q-chart" id="${qChartId}"></canvas>`
+          : `<div class="chart-placeholder">Quarterly data unavailable</div>`}
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <!-- OWNERSHIP -->
+      <div class="data-section">
+        <div class="data-section-title">Ownership Pattern</div>
+        ${ownHtml}
+      </div>
+      <!-- PIOTROSKI -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Piotroski F-Score</div>
+        ${pioHtml}
+      </div>
+      <!-- RED FLAGS -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Red Flags</div>
+        ${flagsHtml}
+      </div>
+    </div>
+  </div>
+
+  <!-- AI NARRATIVE -->
+  <div class="narrative-card" id="narr-${sfx}">
+    <div class="narrative-section-title">AI Narrative</div>
+    ${shimmerBlocks(4)}
+  </div>
+
+  <!-- PEERS -->
+  <div class="section-sep">
+    <div class="data-section-title">Peer Comparison — ${d.sector||'Same Sector'}</div>
+    <div class="peers-grid" id="peers-${sfx}">
+      <div class="peer-loading">Loading peers…</div>
+    </div>
+  </div>
+  `;
+}
+
+// ── Init Charts after HTML injection
+function initDetailCharts(d, sfx){
+  // Quarterly chart
+  const qCtx = document.getElementById('qchart-'+sfx);
+  if(qCtx && Array.isArray(d.quarterly) && d.quarterly.length){
+    const qData = d.quarterly.slice(-8);
+    const labels = qData.map(q=>q.label||q.quarter||'');
+    const rev = qData.map(q=>q.revenue||0);
+    const profit = qData.map(q=>q.netProfit||0);
+    const inst = new Chart(qCtx, {
+      data:{
+        labels,
+        datasets:[
+          {type:'bar', label:'Revenue (₹Cr)', data:rev, backgroundColor:'oklch(65% 0.18 165 / 0.25)', borderColor:'oklch(65% 0.18 165)', borderWidth:1, yAxisID:'y'},
+          {type:'line', label:'Net Profit (₹Cr)', data:profit, borderColor:'oklch(62% 0.20 20)', backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3, yAxisID:'y'},
+        ]
+      },
+      options:{responsive:true, interaction:{mode:'index',intersect:false}, plugins:{legend:{labels:{color:'rgba(255,255,255,0.55)',font:{size:11}}}},
+        scales:{x:{ticks:{color:'rgba(255,255,255,0.3)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{ticks:{color:'rgba(255,255,255,0.3)',font:{size:10},callback:v=>fmtCr(v)},grid:{color:'rgba(255,255,255,0.04)'}}}},
+    });
+    chartInstances['qchart-'+sfx] = {inst, qData};
+  }
+
+  // Donut chart
+  const dCtx = document.getElementById('donut-'+sfx);
+  if(dCtx && d.ownership){
+    const own = d.ownership;
+    const vals=[own.promoter,own.fii,own.dii,own.public].map(v=>v||0);
+    new Chart(dCtx,{
+      type:'doughnut',
+      data:{
+        labels:['Promoter','FII','DII','Public'],
+        datasets:[{data:vals, backgroundColor:['oklch(65% 0.18 165 / 0.8)','oklch(68% 0.16 195 / 0.8)','oklch(75% 0.16 75 / 0.8)','oklch(55% 0.12 240 / 0.8)'],
+          borderColor:'transparent', hoverOffset:4}]
+      },
+      options:{cutout:'70%',plugins:{legend:{display:false}},responsive:false}
+    });
+  }
+}
+
+// ── Toggle Quarterly chart mode
+window.toggleQChart = function(sfx, mode){
+  document.getElementById('btn-abs-'+sfx).classList.toggle('active', mode==='abs');
+  document.getElementById('btn-pct-'+sfx).classList.toggle('active', mode==='pct');
+  const entry = chartInstances['qchart-'+sfx];
+  if(!entry) return;
+  const {inst, qData} = entry;
+  if(mode==='pct'){
+    const revPct = qData.map((q,i)=>i===0?0:((q.revenue-qData[i-1].revenue)/Math.abs(qData[i-1].revenue||1)*100));
+    const profPct = qData.map((q,i)=>i===0?0:((q.netProfit-qData[i-1].netProfit)/Math.abs(qData[i-1].netProfit||1)*100));
+    inst.data.datasets[0].data = revPct;
+    inst.data.datasets[1].data = profPct;
+    inst.data.datasets[0].label = 'Revenue QoQ %';
+    inst.data.datasets[1].label = 'Profit QoQ %';
+    inst.options.scales.y.ticks.callback = v=>v.toFixed(1)+'%';
+  } else {
+    const rev = qData.map(q=>q.revenue||0);
+    const profit = qData.map(q=>q.netProfit||0);
+    inst.data.datasets[0].data = rev;
+    inst.data.datasets[1].data = profit;
+    inst.data.datasets[0].label = 'Revenue (₹Cr)';
+    inst.data.datasets[1].label = 'Net Profit (₹Cr)';
+    inst.options.scales.y.ticks.callback = v=>fmtCr(v);
+  }
+  inst.update();
+};
+
+// ── Load AI Narrative
+async function loadNarrative(symbol, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  try{
+    const narr = await fetchFANarrative(symbol);
+    if(!narr){ el.innerHTML=`<div class="narrative-section-title">AI Narrative</div><p class="c-dim" style="font-size:12px">Narrative unavailable.</p>`; return; }
+    const bulls = Array.isArray(narr.bullCase)?narr.bullCase:[];
+    const bears = Array.isArray(narr.bearCase)?narr.bearCase:[];
+    el.innerHTML=`<div class="narrative-section-title">AI Narrative</div>
+      ${narr.summary?`<p class="narrative-summary">${narr.summary}</p>`:''}
+      <div class="bull-bear">
+        <div class="bull-col">
+          <div class="bb-title">Bull Case</div>
+          ${bulls.map(p=>`<div class="bb-item"><span class="bb-dot"></span><span>${p}</span></div>`).join('')}
+        </div>
+        <div class="bear-col">
+          <div class="bb-title">Bear Case</div>
+          ${bears.map(p=>`<div class="bb-item"><span class="bb-dot"></span><span>${p}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="narrative-extras">
+        ${narr.watchQuestion?`<p class="narrative-line"><strong>Watch Q:</strong> ${narr.watchQuestion}</p>`:''}
+        ${narr.management?`<p class="narrative-line"><strong>Management:</strong> ${narr.management}</p>`:''}
+      </div>
+      <p class="narrative-disclaimer">⚠ Narrative by AI — verify with latest annual report and audited financials.</p>`;
+  } catch(e){
+    if(el) el.innerHTML=`<div class="narrative-section-title">AI Narrative</div><p class="c-dim" style="font-size:12px">Could not load narrative: ${e.message}</p>`;
+  }
+}
+
+// ── Load Peers
+async function loadPeers(sector, currentSymbol, containerId){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  try{
+    const peers = (getPeers ? getPeers(sector) : []).filter(s=>s!==currentSymbol).slice(0,4);
+    if(!peers.length){ el.innerHTML='<p class="c-dim" style="font-size:12px">No peer data available.</p>'; return; }
+    el.innerHTML = peers.map(s=>`<div class="peer-card" id="peer-${s.replace(/[^A-Z0-9]/g,'_')}" onclick="loadSymbolFromSearch('${s}')">
+      <div class="peer-sym">${s}</div>
+      <div class="peer-name peer-loading">Loading…</div>
+    </div>`).join('');
+    await Promise.all(peers.map(async s=>{
+      const pEl = document.getElementById('peer-'+s.replace(/[^A-Z0-9]/g,'_'));
+      if(!pEl) return;
+      try{
+        const pd = await analyzeFA(s);
+        const vc = verdictClass(pd.verdict||'Hold');
+        pEl.innerHTML=`<div class="peer-sym">${s}</div>
+          <div class="peer-name">${pd.name||s}</div>
+          <div class="peer-score" style="color:${scoreColor(pd.composite||0,100)}">${pd.composite||'—'}</div>
+          <div style="margin-top:4px"><span class="verdict-chip ${vc}">${pd.verdict||'—'}</span></div>`;
+      } catch{
+        pEl.innerHTML=`<div class="peer-sym">${s}</div><div class="peer-loading">Data unavailable</div>`;
+      }
+    }));
+  } catch(e){
+    if(el) el.innerHTML=`<p class="c-dim" style="font-size:12px">Peer load failed.</p>`;
+  }
+}
+
+// ── Portfolio load
+async function loadPortfolio(){
+  const enc = localStorage.getItem('kite_enctoken')||'';
+  if(!enc){
+    document.getElementById('portfolio-grid-wrap').innerHTML=`<div class="empty-state">
+      <h3>Kite not connected</h3>
+      <p>Connect your Zerodha account to view portfolio fundamental analysis.</p>
+      <a href="/connect">Connect Kite →</a>
+    </div>`;
+    return;
+  }
+  document.getElementById('portfolio-loading').style.display='block';
+  try{
+    const results = await analyzePortfolio(enc);
+    document.getElementById('portfolio-loading').style.display='none';
+    if(!results||!results.length){
+      document.getElementById('portfolio-grid-wrap').innerHTML=`<div class="empty-state"><h3>No holdings found</h3><p>Your portfolio appears to be empty.</p></div>`;
+      return;
+    }
+    renderPortfolioSummary(results);
+    document.getElementById('portfolio-grid-wrap').innerHTML=`<div class="portfolio-grid">${results.map(r=>renderHoldingCard(r)).join('')}</div>`;
+  } catch(e){
+    document.getElementById('portfolio-loading').style.display='none';
+    document.getElementById('portfolio-grid-wrap').innerHTML=`<div class="error-card">Failed to load portfolio: ${e.message}</div>`;
+  }
+}
+
+// ── Search symbol from peers / external
+window.loadSymbolFromSearch = function(symbol){
+  switchTab('search');
+  document.getElementById('search-input').value=symbol;
+  loadSymbol(symbol);
+};
+
+// ── Load a symbol into search tab detail
+async function loadSymbol(symbol){
+  const wrap = document.getElementById('search-detail-wrap');
+  wrap.innerHTML = shimmerBlocks(8);
+  try{
+    const data = await analyzeFA(symbol);
+    wrap.innerHTML = renderDetailView(data, true);
+    initDetailCharts(data, symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadPeers(data.sector, symbol, 'peers-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+  } catch(e){
+    wrap.innerHTML=`<div class="error-card">Could not load data for <strong>${symbol}</strong>: ${e.message}</div>`;
+  }
+}
+
+// ── Search input wiring
+let searchTimer=null;
+const searchInput=document.getElementById('search-input');
+const searchDropdown=document.getElementById('search-dropdown');
+
+searchInput.addEventListener('input',function(){
+  clearTimeout(searchTimer);
+  const q=this.value.trim();
+  if(q.length<2){ searchDropdown.classList.remove('visible'); searchDropdown.innerHTML=''; return; }
+  searchTimer=setTimeout(()=>doSearch(q),300);
+});
+
+searchInput.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){
+    const q=this.value.trim();
+    if(q){ searchDropdown.classList.remove('visible'); loadSymbol(q.toUpperCase()); }
+  }
+  if(e.key==='Escape'){ searchDropdown.classList.remove('visible'); }
+});
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.search-wrap')) searchDropdown.classList.remove('visible');
+});
+
+async function doSearch(q){
+  try{
+    const res = await fetch('/api/research?action=symbol',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
+    const data = await res.json();
+    const items = Array.isArray(data)?data:(data.results||data.data||[]);
+    if(!items.length){ searchDropdown.innerHTML='<div class="search-item"><span class="c-dim">No results</span></div>'; searchDropdown.classList.add('visible'); return; }
+    searchDropdown.innerHTML=items.slice(0,8).map(it=>`<div class="search-item" onclick="selectSymbol('${it.symbol||it.tradingsymbol}','${(it.name||it.company||'').replace(/'/g,"\\'")}')">
+      <div><div class="search-sym">${it.symbol||it.tradingsymbol}</div><div class="search-nm">${it.name||it.company||''}</div></div>
+      <span class="search-exch">${it.exchange||it.segment||''}</span>
+    </div>`).join('');
+    searchDropdown.classList.add('visible');
+  } catch(e){
+    searchDropdown.innerHTML=`<div class="search-item"><span class="c-dim">Search failed</span></div>`;
+    searchDropdown.classList.add('visible');
+  }
+}
+
+window.selectSymbol=function(symbol, name){
+  searchInput.value=symbol;
+  searchDropdown.classList.remove('visible');
+  loadSymbol(symbol);
+};
+
+// ── Init on load
+document.addEventListener('DOMContentLoaded',function(){
+  // Check ?symbol= param
+  const params=new URLSearchParams(location.search);
+  const sym=params.get('symbol');
+  if(sym){
+    switchTab('search');
+    searchInput.value=sym;
+    loadSymbol(sym.toUpperCase());
+  } else {
+    // Auto-load portfolio
+    loadPortfolio();
+  }
+});
+</script>
+</body>
+</html>

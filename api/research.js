@@ -202,7 +202,175 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers' });
+    // ── Fundamental Data Proxy ──────────────────────────────────────────────────
+    // GET /api/research?action=fundamental&symbol=RELIANCE
+    if (action === 'fundamental') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
+      if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
+
+      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
+      const cacheKey = `fa:${symbol}`;
+      const cached = await redisGet(cacheKey);
+      if (cached && cached.lastUpdated) {
+        const ageMs = Date.now() - new Date(cached.lastUpdated).getTime();
+        if (ageMs < 4 * 60 * 60 * 1000) return res.status(200).json({ ...cached, _cached: true });
+      }
+
+      const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+      const fetchWithTimeout = (url, opts, ms=8000) => Promise.race([fetch(url, opts), timeout(ms)]);
+
+      const result = { symbol, sources: [], lastUpdated: new Date().toISOString() };
+
+      // --- Yahoo Finance ---
+      try {
+        const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend';
+        const yUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}`;
+        const yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (yRes.ok) {
+          const yData = await yRes.json();
+          const s = yData?.quoteSummary?.result?.[0];
+          if (s) {
+            const fd = s.financialData || {};
+            const ks = s.defaultKeyStatistics || {};
+            const sd = s.summaryDetail || {};
+            const income = s.incomeStatementHistory?.incomeStatementHistory || [];
+            const balance = s.balanceSheetHistory?.balanceSheetStatements || [];
+            const cashflow = s.cashflowStatementHistory?.cashflowStatements || [];
+
+            result.companyName = ks.shortName || symbol;
+            result.pe = sd.trailingPE?.raw ?? null;
+            result.forwardPE = sd.forwardPE?.raw ?? null;
+            result.pb = ks.priceToBook?.raw ?? null;
+            result.evEbitda = ks.enterpriseToEbitda?.raw ?? null;
+            result.roe = fd.returnOnEquity?.raw != null ? fd.returnOnEquity.raw * 100 : null;
+            result.netMargin = fd.profitMargins?.raw != null ? fd.profitMargins.raw * 100 : null;
+            result.operatingMargin = fd.operatingMargins?.raw != null ? fd.operatingMargins.raw * 100 : null;
+            result.grossMargin = fd.grossMargins?.raw != null ? fd.grossMargins.raw * 100 : null;
+            result.revenueGrowth = fd.revenueGrowth?.raw != null ? fd.revenueGrowth.raw * 100 : null;
+            result.earningsGrowth = fd.earningsGrowth?.raw != null ? fd.earningsGrowth.raw * 100 : null;
+            result.debtEquity = fd.debtToEquity?.raw != null ? fd.debtToEquity.raw / 100 : null;
+            result.currentRatio = fd.currentRatio?.raw ?? null;
+            result.quickRatio = fd.quickRatio?.raw ?? null;
+            result.operatingCashflow = fd.operatingCashflow?.raw ?? null;
+            result.freeCashflow = fd.freeCashflow?.raw ?? null;
+            result.dividendYield = sd.dividendYield?.raw != null ? sd.dividendYield.raw * 100 : null;
+            result.beta = ks.beta?.raw ?? null;
+            result.high52w = sd.fiftyTwoWeekHigh?.raw ?? null;
+            result.low52w = sd.fiftyTwoWeekLow?.raw ?? null;
+            result.marketCap = sd.marketCap?.raw ?? null;
+            result.sharesOutstanding = ks.sharesOutstanding?.raw ?? null;
+            // FCF positive years from last 3 cashflow statements
+            const fcfYears = cashflow.slice(0, 3).filter(c => (c.totalCashFromOperatingActivities?.raw || 0) > (c.capitalExpenditures?.raw || 0) * -1).length;
+            result.fcfPositiveYears3yr = fcfYears;
+            // Revenue CAGR 3yr from income statements
+            if (income.length >= 4) {
+              const revNow = income[0]?.totalRevenue?.raw;
+              const rev3yr = income[3]?.totalRevenue?.raw;
+              if (revNow && rev3yr && rev3yr > 0) result.revenueCagr3yr = +((Math.pow(revNow/rev3yr, 1/3)-1)*100).toFixed(1);
+            }
+            if (income.length >= 4) {
+              const epsNow = income[0]?.dilutedEPS?.raw ?? income[0]?.basicEPS?.raw;
+              const eps3yr = income[3]?.dilutedEPS?.raw ?? income[3]?.basicEPS?.raw;
+              if (epsNow && eps3yr && eps3yr > 0) result.epsCagr3yr = +((Math.pow(Math.abs(epsNow/eps3yr), 1/3)-1)*100).toFixed(1);
+            }
+            result.sources.push('yahoo');
+          }
+        }
+      } catch (e) { /* Yahoo failed — continue */ }
+
+      // --- NSE shareholding ---
+      try {
+        const nseHdrs = { 'User-Agent': UA, 'Referer': 'https://www.nseindia.com/', 'Accept': 'application/json' };
+        const shRes = await fetchWithTimeout(
+          `https://www.nseindia.com/api/corporate-shareholding-pattern?symbol=${encodeURIComponent(symbol)}&series=EQ`,
+          { headers: nseHdrs }
+        );
+        if (shRes.ok) {
+          const shData = await shRes.json();
+          const rows = shData?.data || [];
+          if (rows.length > 0) {
+            const latest = rows[0];
+            result.promoterHolding = latest?.promoterAndPromoterGroup ?? null;
+            result.fiiHolding = latest?.foreignInstitutionalInvestors ?? null;
+            result.diiHolding = latest?.domesticInstitutionalInvestors ?? null;
+            result.promoterPledge = latest?.promoterPledge ?? null;
+            // Trend: delta over available quarters
+            if (rows.length >= 4) {
+              const old = rows[3]?.promoterAndPromoterGroup ?? null;
+              const now = rows[0]?.promoterAndPromoterGroup ?? null;
+              result.promoterTrendDelta4q = (now != null && old != null) ? +(now - old).toFixed(2) : null;
+            }
+            result.sources.push('nse_shareholding');
+          }
+        }
+      } catch (e) { /* NSE failed — continue */ }
+
+      // Fallback defaults for missing fields
+      result.exchange = result.exchange || 'NSE';
+      if (!result.companyName) result.companyName = symbol;
+
+      // Cache if we got at least one source
+      if (result.sources.length > 0) {
+        redisSet(cacheKey, result, 4 * 60 * 60).catch(() => {});
+      }
+
+      return res.status(200).json(result);
+    }
+
+    // ── Technical Full Data ──────────────────────────────────────────────────────
+    // GET /api/research?action=technical_full&symbol=RELIANCE&timeframe=daily
+    if (action === 'technical_full') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
+      const timeframe = url.searchParams.get('timeframe') || 'daily';
+      if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
+
+      const enctoken = req.headers['x-kite-enctoken'] || '';
+      if (!enctoken) { res.status(401).json({ error: 'X-Kite-Enctoken header required' }); return; }
+
+      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
+      const cacheKey = `ta:${symbol}:${timeframe}`;
+      const cached = await redisGet(cacheKey);
+      if (cached && cached.fetchedAt) {
+        const ageMs = Date.now() - new Date(cached.fetchedAt).getTime();
+        if (ageMs < 15 * 60 * 1000) return res.status(200).json({ ...cached, _cached: true });
+      }
+
+      const intervalMap = { daily: 'day', weekly: 'week', monthly: 'month' };
+      const kiteInterval = intervalMap[timeframe] || 'day';
+      const countMap = { daily: 200, weekly: 104, monthly: 60 };
+      const count = countMap[timeframe] || 200;
+
+      const { getHistory } = await import('../dashboard/lib/kite.js');
+
+      // Fetch stock + Nifty50 in parallel
+      const [candles, niftyCandles] = await Promise.allSettled([
+        getHistory(symbol, kiteInterval, count, enctoken),
+        getHistory('NIFTY 50', kiteInterval, count, enctoken).catch(() => []),
+      ]);
+
+      const stockCandles = candles.status === 'fulfilled' ? candles.value : [];
+      const nifty = niftyCandles.status === 'fulfilled' ? niftyCandles.value : [];
+
+      if (!stockCandles.length) {
+        return res.status(502).json({ error: `No candle data for ${symbol}` });
+      }
+
+      const result = {
+        symbol,
+        timeframe,
+        candles: stockCandles,
+        niftyCandles: nifty,
+        fetchedAt: new Date().toISOString(),
+        count: stockCandles.length,
+      };
+
+      redisSet(cacheKey, result, 15 * 60).catch(() => {});
+      return res.status(200).json(result);
+    }
+
+    res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers | fundamental | technical_full' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

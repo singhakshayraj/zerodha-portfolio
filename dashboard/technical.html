@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){var t=localStorage.getItem("zpi-theme");if(t==="light")document.body.classList.add("light");})()</script>
+  <meta charset="UTF-8"/>
+  <script>if(!localStorage.getItem('pf_auth')){location.replace('/login?next='+encodeURIComponent(location.pathname));}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="/dashboard/zpi.css"/>
+  <title>Technical Analysis — ZPI</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
+
+    /* ── Top Nav ─────────────────────────────────────────────────────────── */
+    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; transition: var(--t-bg), var(--t-border); }
+    .topnav-brand { font-size: var(--text-md); font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
+    .topnav-links { display: flex; gap: 24px; align-items: center; }
+    .topnav-links a { font-size: var(--text-md); color: var(--text-secondary); text-decoration: none; transition: var(--t-color); }
+    .topnav-links a:hover, .topnav-links a.active { color: var(--text-primary); }
+
+    /* ── Page Header ─────────────────────────────────────────────────────── */
+    header { background: var(--bg-surface); padding: 20px 40px; border-bottom: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; transition: var(--t-bg), var(--t-border); }
+    header h1 { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); }
+    header p  { color: var(--text-secondary); margin-top: 3px; font-size: var(--text-md); }
+
+    /* ── Tabs ────────────────────────────────────────────────────────────── */
+    .page-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-dim); background: var(--bg-surface); padding: 0 40px; }
+    .page-tab  { padding: 12px 20px; font-size: var(--text-md); font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: var(--t-color); }
+    .page-tab:hover  { color: var(--text-primary); }
+    .page-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Container ───────────────────────────────────────────────────────── */
+    .container { max-width: 1400px; margin: 0 auto; padding: 28px 40px; }
+
+    /* ── Sort bar ────────────────────────────────────────────────────────── */
+    .sort-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .sort-bar span { font-size: var(--text-xs); color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .sort-btn { padding: 5px 14px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--bg-card); color: var(--text-secondary); font-size: var(--text-sm); cursor: pointer; transition: var(--t-bg), var(--t-border); font-family: var(--font-ui); }
+    .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+    /* ── Stock Card Grid ─────────────────────────────────────────────────── */
+    .stock-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .stock-card { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 16px; cursor: pointer; transition: var(--t-bg), var(--t-border), transform 0.15s; }
+    .stock-card:hover { border-color: var(--border-subtle); transform: translateY(-1px); }
+    .stock-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .stock-card-sym { font-size: var(--text-lg); font-weight: 700; color: var(--text-primary); }
+    .stock-card-price { text-align: right; }
+    .stock-card-ltp { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 600; color: var(--text-primary); }
+    .stock-card-chg { font-family: var(--font-mono); font-size: var(--text-sm); margin-top: 2px; }
+    .stock-card-tf { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tf-badge { padding: 3px 9px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; }
+    .tf-badge.bullish { background: var(--positive-dim); color: var(--positive-text); border: 1px solid var(--positive); }
+    .tf-badge.bearish { background: var(--negative-dim); color: var(--negative-text); border: 1px solid var(--negative); }
+    .tf-badge.neutral { background: var(--warning-dim); color: var(--warning-text); border: 1px solid var(--warning-text); }
+    .stock-card-body { display: flex; gap: 14px; align-items: flex-start; }
+    .ta-score-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; border: 3px solid var(--accent); flex-shrink: 0; }
+    .ta-score-circle.strong-bullish { border-color: var(--positive); color: var(--positive-text); }
+    .ta-score-circle.bullish        { border-color: var(--accent); color: var(--accent); }
+    .ta-score-circle.neutral        { border-color: var(--warning-text); color: var(--warning-text); }
+    .ta-score-circle.bearish        { border-color: oklch(62% 0.20 20 / 0.7); color: var(--negative-text); }
+    .ta-score-circle.strong-bearish { border-color: var(--negative); color: var(--negative-text); }
+    .stock-card-signals { flex: 1; }
+    .stock-card-verdict { font-size: var(--text-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .stock-card-bullets { list-style: none; margin: 0; padding: 0; }
+    .stock-card-bullets li { font-size: var(--text-sm); color: var(--text-secondary); padding: 2px 0; }
+    .stock-card-bullets li::before { content: '• '; color: var(--accent); }
+
+    /* ── Search Bar ──────────────────────────────────────────────────────── */
+    .search-wrap { position: relative; max-width: 480px; margin-bottom: 24px; }
+    .search-input { width: 100%; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); color: var(--text-primary); font-size: var(--text-md); font-family: var(--font-ui); outline: none; transition: var(--t-bg), var(--t-border); box-sizing: border-box; }
+    .search-input::placeholder { color: var(--text-disabled); }
+    .search-input:focus { border-color: var(--accent); }
+    .search-sugg { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-top: 4px; z-index: 200; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden; }
+    .search-sugg.visible { display: block; }
+    .sugg-item { padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--border-dim); display: flex; justify-content: space-between; align-items: center; transition: var(--t-bg); }
+    .sugg-item:last-child { border-bottom: none; }
+    .sugg-item:hover { background: var(--bg-hover); }
+    .sugg-sym { font-size: var(--text-md); font-weight: 700; color: var(--text-primary); }
+    .sugg-name { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
+
+    /* ── MTF Badge ───────────────────────────────────────────────────────── */
+    .mtf-badge { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+    .mtf-badge .tf-label { font-size: var(--text-xs); opacity: 0.75; font-weight: 400; }
+    .mtf-badge.bullish { background: var(--positive-dim); color: var(--positive-text); border: 1px solid var(--positive); }
+    .mtf-badge.bearish { background: var(--negative-dim); color: var(--negative-text); border: 1px solid var(--negative); }
+    .mtf-badge.neutral { background: var(--warning-dim); color: var(--warning-text); border: 1px solid var(--warning-text); }
+
+    /* ── Detail View ─────────────────────────────────────────────────────── */
+    .detail-wrap { display: none; }
+    .detail-wrap.visible { display: block; }
+
+    .detail-header { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 14px; }
+    .detail-title  { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+    .detail-sym    { font-size: var(--text-2xl); font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+    .detail-name   { font-size: var(--text-md); color: var(--text-secondary); }
+    .detail-exchange { font-size: var(--text-xs); padding: 2px 8px; border-radius: var(--radius-md); background: var(--bg-elevated); color: var(--text-tertiary); border: 1px solid var(--border-dim); }
+    .detail-ltp    { font-size: var(--text-2xl); font-weight: 700; font-family: var(--font-mono); color: var(--text-primary); }
+    .detail-chg    { font-size: var(--text-md); font-family: var(--font-mono); }
+    .detail-ohlc   { font-size: var(--text-sm); color: var(--text-secondary); }
+    .detail-52w    { font-size: var(--text-sm); color: var(--text-tertiary); }
+
+    .mtf-row { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 14px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .mtf-align { font-size: var(--text-md); color: var(--text-secondary); padding-left: 8px; border-left: 2px solid var(--border-subtle); }
+
+    /* ── Chart Section ───────────────────────────────────────────────────── */
+    .chart-section { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 14px; }
+    .chart-controls { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .chart-tf-tabs  { display: flex; gap: 4px; }
+    .chart-tf-tab   { padding: 5px 13px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary); font-size: var(--text-sm); cursor: pointer; transition: var(--t-bg), var(--t-border); font-family: var(--font-ui); }
+    .chart-tf-tab.active, .chart-tf-tab:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .chart-period-tabs { display: flex; gap: 4px; }
+    .chart-period-tab  { padding: 4px 10px; border-radius: var(--radius-md); border: 1px solid var(--border-dim); background: transparent; color: var(--text-tertiary); font-size: var(--text-xs); cursor: pointer; transition: var(--t-bg); font-family: var(--font-ui); }
+    .chart-period-tab.active, .chart-period-tab:hover { background: var(--bg-hover); color: var(--text-secondary); border-color: var(--border-subtle); }
+    .overlay-toggles { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; padding: 10px 14px; background: var(--bg-elevated); border-radius: var(--radius-md); }
+    .overlay-toggle  { display: flex; align-items: center; gap: 5px; font-size: var(--text-sm); color: var(--text-secondary); cursor: pointer; }
+    .overlay-toggle input { accent-color: var(--accent); cursor: pointer; }
+    .chart-main-wrap { height: 320px; margin-bottom: 12px; }
+    .chart-vol-wrap  { height: 100px; }
+
+    /* ── Indicator Panels ────────────────────────────────────────────────── */
+    .indicator-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .ind-panel { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px; }
+    .ind-panel h3 { font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-dim); }
+    .ind-row  { margin-bottom: 12px; }
+    .ind-row:last-child { margin-bottom: 0; }
+    .ind-label { font-size: var(--text-xs); color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .ind-values { font-family: var(--font-mono); font-size: var(--text-md); color: var(--text-primary); }
+    .ind-desc { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
+
+    /* RSI Gauge */
+    .rsi-gauge { margin-bottom: 14px; }
+    .rsi-gauge-arc { width: 100%; height: 70px; position: relative; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
+    .rsi-gauge-svg { width: 140px; height: 70px; }
+    .rsi-gauge-val { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); }
+    .rsi-gauge-zones { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--text-tertiary); }
+
+    /* MACD mini chart */
+    .macd-chart-wrap { height: 80px; margin-bottom: 6px; }
+    .macd-vals { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
+
+    /* ADX Progress bar */
+    .adx-bar { height: 6px; background: var(--bg-elevated); border-radius: 3px; margin: 6px 0; overflow: hidden; }
+    .adx-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s ease; }
+
+    /* OBV Sparkline */
+    .obv-chart-wrap { height: 60px; }
+
+    /* Volume Profile */
+    .vp-chart-wrap { height: 160px; }
+
+    /* ── Support/Resistance Table ─────────────────────────────────────────── */
+    .sr-section { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 14px; }
+    .sr-section h3 { font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-dim); }
+    table.sr-table { width: 100%; border-collapse: collapse; font-size: var(--text-md); }
+    table.sr-table th { text-align: left; padding: 6px 12px; color: var(--text-tertiary); font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border-dim); }
+    table.sr-table td { padding: 9px 12px; border-bottom: 1px solid var(--border-dim); color: var(--text-primary); font-family: var(--font-mono); font-size: var(--text-sm); }
+    table.sr-table td.label-col { font-family: var(--font-ui); color: var(--text-secondary); }
+    table.sr-table tr:hover td { background: var(--bg-hover); }
+    .sr-row-resistance td:first-child { border-left: 3px solid var(--negative); padding-left: 9px; }
+    .sr-row-support    td:first-child { border-left: 3px solid var(--positive); padding-left: 9px; }
+    .sr-row-current td { background: var(--bg-elevated) !important; font-weight: 600; }
+    .sr-row-current td:first-child { border-left: 3px solid var(--accent); padding-left: 9px; }
+
+    /* ── Pattern Recognition ─────────────────────────────────────────────── */
+    .pattern-section { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 14px; }
+    .pattern-section h3 { font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-dim); }
+    .pattern-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border-dim); }
+    .pattern-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .pattern-icon { font-size: var(--text-xl); line-height: 1; flex-shrink: 0; margin-top: 1px; }
+    .pattern-name { font-size: var(--text-md); font-weight: 600; color: var(--text-primary); }
+    .pattern-meta { font-size: var(--text-xs); color: var(--text-tertiary); margin-top: 2px; }
+    .pattern-desc { font-size: var(--text-sm); color: var(--text-secondary); margin-top: 3px; }
+
+    /* ── Signal Cards ────────────────────────────────────────────────────── */
+    .signal-section { background: var(--bg-card); border: 1px solid var(--border-dim); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 14px; }
+    .signal-section h3 { font-size: var(--text-xs); font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border-dim); }
+    .signal-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .signal-card { padding: 12px 14px; border-radius: var(--radius-lg); display: flex; gap: 10px; align-items: flex-start; }
+    .signal-card.bullish { background: var(--positive-dim); border: 1px solid var(--positive); }
+    .signal-card.bearish { background: var(--negative-dim); border: 1px solid var(--negative); }
+    .signal-card.warning { background: var(--warning-dim); border: 1px solid var(--warning-text); }
+    .signal-card.neutral { background: var(--accent-dim); border: 1px solid var(--accent); }
+    .signal-icon { font-size: var(--text-lg); flex-shrink: 0; }
+    .signal-text { font-size: var(--text-sm); color: var(--text-primary); line-height: 1.45; }
+
+    /* ── Misc ────────────────────────────────────────────────────────────── */
+    .empty-state { padding: 40px; text-align: center; color: var(--text-tertiary); font-size: var(--text-md); }
+    .empty-state a { color: var(--accent); text-decoration: none; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border-subtle); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { display: flex; align-items: center; gap: 10px; color: var(--text-secondary); font-size: var(--text-md); padding: 20px 0; }
+    .green { color: var(--positive-text); }
+    .red   { color: var(--negative-text); }
+    .warn  { color: var(--warning-text); }
+
+    /* Theme toggle */
+    .theme-btn { padding: 6px 14px; background: transparent; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-sm); cursor: pointer; font-family: var(--font-ui); transition: var(--t-bg), var(--t-border); }
+    .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    footer { text-align: center; padding: 24px; color: var(--text-tertiary); font-size: var(--text-sm); border-top: 1px solid var(--border-dim); margin-top: 16px; }
+
+    @media (max-width: 900px) {
+      .stock-grid { grid-template-columns: repeat(2, 1fr); }
+      .indicator-panels { grid-template-columns: 1fr; }
+      .signal-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .topnav { padding: 0 16px; }
+      .topnav-links { gap: 12px; overflow-x: auto; }
+      .container { padding: 14px 16px; }
+      header { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 8px; }
+      .page-tabs { padding: 0 16px; }
+      .stock-grid { grid-template-columns: 1fr; }
+      .signal-cards { grid-template-columns: 1fr; }
+      .mtf-row { gap: 10px; }
+    }
+  </style>
+
+  <script>
+  function toggleTheme() {
+    var isLight = document.body.classList.toggle('light');
+    var lbl = document.getElementById('theme-label');
+    if (lbl) lbl.textContent = isLight ? 'Dark' : 'Light';
+    localStorage.setItem('zpi-theme', isLight ? 'light' : 'dark');
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('zpi-theme') === 'light') {
+      var lbl = document.getElementById('theme-label');
+      if (lbl) lbl.textContent = 'Dark';
+    }
+  });
+  </script>
+</head>
+<body>
+
+<!-- ── Top Nav ──────────────────────────────────────────────────────────── -->
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/intraday">Intraday</a>
+    <a href="/research.html">Research</a>
+    <a href="/trader">Trader</a>
+    <a href="/event">Event</a>
+    <a href="/trades.html">Journal</a>
+    <a href="/fundamental">Fundamental</a>
+    <a href="/technical" class="active">Technical</a>
+    <button class="theme-btn" onclick="toggleTheme()"><span id="theme-label">Light</span></button>
+  </div>
+</nav>
+
+<!-- ── Page Header ──────────────────────────────────────────────────────── -->
+<header>
+  <div>
+    <h1>📊 Technical Analysis</h1>
+    <p>Multi-timeframe scoring · Indicators · Patterns · Support/Resistance</p>
+  </div>
+</header>
+
+<!-- ── Tabs ──────────────────────────────────────────────────────────────── -->
+<div class="page-tabs">
+  <div class="page-tab active" id="tab-portfolio" onclick="switchTab('portfolio')">My Portfolio</div>
+  <div class="page-tab" id="tab-search" onclick="switchTab('search')">Search Any Stock</div>
+</div>
+
+<!-- ── Portfolio Tab ─────────────────────────────────────────────────────── -->
+<div id="pane-portfolio">
+  <div class="container">
+    <div class="sort-bar">
+      <span>Sort by:</span>
+      <button class="sort-btn active" id="sort-score" onclick="sortBy('score')">TA Score ↓</button>
+      <button class="sort-btn" id="sort-daychange" onclick="sortBy('daychange')">Day Change</button>
+      <button class="sort-btn" id="sort-rs" onclick="sortBy('rs')">RS vs Nifty</button>
+    </div>
+    <div id="portfolio-grid" class="stock-grid"></div>
+    <div id="portfolio-empty" class="empty-state" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ── Search Tab ────────────────────────────────────────────────────────── -->
+<div id="pane-search" style="display:none">
+  <div class="container">
+    <div class="search-wrap">
+      <input class="search-input" id="search-input" type="text" placeholder="Search stock (e.g. Reliance, HDFC Bank)…"
+        oninput="onSearchInput(this.value)" onkeydown="onSearchKeydown(event)" autocomplete="off"/>
+      <div class="search-sugg" id="search-sugg"></div>
+    </div>
+
+    <!-- Detail view -->
+    <div id="detail-wrap" class="detail-wrap">
+
+      <!-- Row 1: Header -->
+      <div class="detail-header" id="detail-header"></div>
+
+      <!-- Row 2: MTF Signal bar -->
+      <div class="mtf-row" id="detail-mtf"></div>
+
+      <!-- Row 3: Main Chart -->
+      <div class="chart-section">
+        <div class="chart-controls">
+          <div class="chart-tf-tabs">
+            <button class="chart-tf-tab active" id="ctf-daily"   onclick="setChartTF('daily')">Daily</button>
+            <button class="chart-tf-tab"        id="ctf-weekly"  onclick="setChartTF('weekly')">Weekly</button>
+            <button class="chart-tf-tab"        id="ctf-monthly" onclick="setChartTF('monthly')">Monthly</button>
+          </div>
+          <div class="chart-period-tabs">
+            <button class="chart-period-tab" id="cp-1m"  onclick="setChartPeriod('1m')">1M</button>
+            <button class="chart-period-tab" id="cp-3m"  onclick="setChartPeriod('3m')">3M</button>
+            <button class="chart-period-tab active" id="cp-6m" onclick="setChartPeriod('6m')">6M</button>
+            <button class="chart-period-tab" id="cp-1y"  onclick="setChartPeriod('1y')">1Y</button>
+            <button class="chart-period-tab" id="cp-2y"  onclick="setChartPeriod('2y')">2Y</button>
+          </div>
+        </div>
+        <div class="overlay-toggles">
+          <label class="overlay-toggle"><input type="checkbox" id="ov-ema20"  checked onchange="updateOverlays()"> EMA 20</label>
+          <label class="overlay-toggle"><input type="checkbox" id="ov-ema50"  checked onchange="updateOverlays()"> EMA 50</label>
+          <label class="overlay-toggle"><input type="checkbox" id="ov-ema200" checked onchange="updateOverlays()"> EMA 200</label>
+          <label class="overlay-toggle"><input type="checkbox" id="ov-bb"           onchange="updateOverlays()"> Bollinger Upper/Lower</label>
+          <label class="overlay-toggle"><input type="checkbox" id="ov-st"           onchange="updateOverlays()"> Supertrend</label>
+        </div>
+        <div class="chart-main-wrap"><canvas id="chart-main"></canvas></div>
+        <div class="chart-vol-wrap"><canvas id="chart-vol"></canvas></div>
+      </div>
+
+      <!-- Row 4: Indicator Panels -->
+      <div class="indicator-panels">
+        <div class="ind-panel" id="panel-oscillators">
+          <h3>Oscillators</h3>
+          <div id="osc-content"></div>
+        </div>
+        <div class="ind-panel" id="panel-trend">
+          <h3>Trend &amp; Volume</h3>
+          <div id="trend-content"></div>
+        </div>
+      </div>
+
+      <!-- Row 5: S/R Table -->
+      <div class="sr-section">
+        <h3>Support &amp; Resistance</h3>
+        <div id="sr-table-wrap"></div>
+      </div>
+
+      <!-- Row 6: Patterns -->
+      <div class="pattern-section">
+        <h3>Pattern Recognition</h3>
+        <div id="pattern-wrap"></div>
+      </div>
+
+      <!-- Row 7: Signals -->
+      <div class="signal-section">
+        <h3>Key Signals</h3>
+        <div class="signal-cards" id="signals-wrap"></div>
+      </div>
+
+    </div><!-- /detail-wrap -->
+  </div>
+</div>
+
+<footer>Technical Analysis · ZPI · Powered by Zerodha Kite API</footer>
+
+<!-- ── ES Module Block ───────────────────────────────────────────────────── -->
+<script type="module">
+import { rsi14, rsiSignal, ema, macd, bollingerBands, supertrend, emaCross, pivotPoints, candlestickPatterns, atr14 } from '/dashboard/lib/indicators.js';
+import { adx14, stochastic, williamsR, roc14, obv, mfi14, keltnerChannels, fibonacciLevels, ichimoku, volumeProfile, relativeStrength, computeTechnicalScore, generateSignals, detectChartPatterns, computeMTFAlignment, pivotCamarilla } from '/dashboard/lib/technicalplus.js';
+import { fetchTAData } from '/dashboard/lib/screener.js';
+
+// ── Globals ───────────────────────────────────────────────────────────────
+let _mainChart = null, _volChart = null, _macdChart = null, _obvChart = null, _vpChart = null;
+let _currentData = null;   // { dCandles, wCandles, mCandles, dInd, wInd, mInd, dScore, wScore, mScore, mtf, signals, niftyD }
+let _chartTF = 'daily';
+let _chartPeriod = '6m';
+let _sortMode = 'score';
+let _portfolioData = [];   // [{ symbol, ltp, dayChgPct, dScore, wScore, mScore, dInd, niftyD }]
+let _searchTimer = null;
+
+// Expose switch helpers to global scope (used by inline onclick)
+window._setChartTF = setChartTF;
+window._setChartPeriod = setChartPeriod;
+window._updateOverlays = updateOverlays;
+
+// ── Utility ───────────────────────────────────────────────────────────────
+function fmt(n)   { return '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+function fmtN(n)  { return Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+function sign(n)  { return n >= 0 ? '+' : '−'; }
+function clsVal(n){ return n >= 0 ? 'green' : 'red'; }
+
+function scoreClass(score) {
+  if (score >= 70) return 'strong-bullish';
+  if (score >= 55) return 'bullish';
+  if (score >= 45) return 'neutral';
+  if (score >= 30) return 'bearish';
+  return 'strong-bearish';
+}
+function scoreColor(score) {
+  if (score >= 70) return 'var(--positive-text)';
+  if (score >= 55) return 'var(--accent)';
+  if (score >= 45) return 'var(--warning-text)';
+  if (score >= 30) return 'oklch(68% 0.18 20)';
+  return 'var(--negative-text)';
+}
+function signalClass(signal) {
+  if (!signal) return 'neutral';
+  const s = signal.toLowerCase();
+  if (s.includes('strong bull')) return 'bullish';
+  if (s.includes('bull'))        return 'bullish';
+  if (s.includes('strong bear')) return 'bearish';
+  if (s.includes('bear'))        return 'bearish';
+  return 'neutral';
+}
+function mtfClass(signal) { return signalClass(signal); }
+function periodToBars(period, tf) {
+  const map = { daily: { '1m':22, '3m':66, '6m':130, '1y':252, '2y':504 },
+                weekly: { '1m':5,  '3m':13, '6m':26,  '1y':52,  '2y':104 },
+                monthly:{ '1m':1,  '3m':3,  '6m':6,   '1y':12,  '2y':24  } };
+  return map[tf]?.[period] || 130;
+}
+
+// ── Indicator computation ─────────────────────────────────────────────────
+function computeAllIndicators(candles, niftyCandles) {
+  if (!candles || candles.length < 5) return {};
+  const close = candles[candles.length-1]?.close;
+  const prevClose = candles[candles.length-2]?.close;
+  const vols = candles.slice(-11,-1).map(c=>c.volume||0).filter(v=>v>0);
+  const avgVol = vols.length ? vols.reduce((a,b)=>a+b,0)/vols.length : 0;
+  try {
+    return {
+      rsi:       rsi14(candles),
+      macdObj:   macd(candles),
+      bb:        bollingerBands(candles),
+      st:        supertrend(candles),
+      ema20:     ema(candles, 20),
+      ema50:     ema(candles, 50),
+      ema200:    ema(candles, 200),
+      adxObj:    adx14(candles),
+      ichimokuObj: ichimoku(candles),
+      stochObj:  stochastic(candles),
+      rocObj:    roc14(candles),
+      obvObj:    obv(candles),
+      mfiObj:    mfi14(candles),
+      fibLevels: fibonacciLevels(candles),
+      rsObj:     relativeStrength(candles, niftyCandles),
+      pivots:    pivotPoints(candles),
+      camarilla: pivotCamarilla(candles),
+      patterns:  candlestickPatterns(candles),
+      chartPatterns: detectChartPatterns(candles),
+      keltner:   keltnerChannels(candles),
+      williamsRObj: williamsR ? williamsR(candles) : null,
+      close, prevClose, avgVol,
+      volume: candles[candles.length-1]?.volume || 0,
+    };
+  } catch(e) { console.warn('indicator error', e); return { close, prevClose, avgVol, volume: candles[candles.length-1]?.volume||0 }; }
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  document.getElementById('tab-portfolio').classList.toggle('active', tab==='portfolio');
+  document.getElementById('tab-search').classList.toggle('active', tab==='search');
+  document.getElementById('pane-portfolio').style.display = tab==='portfolio' ? '' : 'none';
+  document.getElementById('pane-search').style.display    = tab==='search'    ? '' : 'none';
+};
+
+// ── Sort ──────────────────────────────────────────────────────────────────
+window.sortBy = function(mode) {
+  _sortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sort-'+mode)?.classList.add('active');
+  renderPortfolioGrid();
+};
+
+// ── Portfolio Loading ─────────────────────────────────────────────────────
+async function loadPortfolio() {
+  const enc = localStorage.getItem('kite_enctoken');
+  const grid = document.getElementById('portfolio-grid');
+  const empty = document.getElementById('portfolio-empty');
+
+  if (!enc) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+    empty.innerHTML = '<p>Connect Kite to view portfolio technical analysis.<br><a href="/connect">→ Connect Kite</a></p>';
+    return;
+  }
+
+  grid.innerHTML = '<div class="loading-msg"><span class="spinner"></span> Loading holdings…</div>';
+  empty.style.display = 'none';
+
+  let holdings = [];
+  try {
+    const res = await fetch('/api/kite?action=holdings', { headers: { 'X-Kite-Enctoken': enc } });
+    const json = await res.json();
+    holdings = json.data || [];
+  } catch(e) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+    empty.innerHTML = '<p>Failed to load holdings. Is Kite connected?<br><a href="/connect">→ Connect Kite</a></p>';
+    return;
+  }
+
+  if (!holdings.length) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+    empty.innerHTML = '<p>No holdings found in your Kite account.</p>';
+    return;
+  }
+
+  grid.innerHTML = '<div class="loading-msg"><span class="spinner"></span> Fetching TA data for ' + holdings.length + ' holdings…</div>';
+
+  // Fetch TA data for each holding (batched to avoid hammering)
+  const results = await Promise.allSettled(holdings.map(h => loadSymbolTA(h.tradingsymbol, enc)));
+
+  _portfolioData = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value) {
+      _portfolioData.push({
+        ...r.value,
+        ltp: holdings[i].last_price,
+        dayChgPct: holdings[i].day_change_percentage || 0,
+        symbol: holdings[i].tradingsymbol,
+      });
+    }
+  });
+
+  renderPortfolioGrid();
+}
+
+async function loadSymbolTA(symbol, enc) {
+  try {
+    const [daily, nifty] = await Promise.allSettled([
+      fetchTAData(symbol, 'daily', enc),
+      fetchTAData('NIFTY 50', 'daily', enc),
+    ]);
+    const dCandles = daily.value?.candles || [];
+    const niftyD   = nifty.value?.candles  || [];
+    if (!dCandles.length) return null;
+    const [weekly, monthly] = await Promise.allSettled([
+      fetchTAData(symbol, 'weekly', enc),
+      fetchTAData(symbol, 'monthly', enc),
+    ]);
+    const wCandles = weekly.value?.candles || [];
+    const mCandles = monthly.value?.candles || [];
+    const dInd = computeAllIndicators(dCandles, niftyD);
+    const wInd = computeAllIndicators(wCandles, weekly.value?.niftyCandles  || []);
+    const mInd = computeAllIndicators(mCandles, monthly.value?.niftyCandles || []);
+    const dScore = computeTechnicalScore(dInd, 'daily');
+    const wScore = computeTechnicalScore(wInd, 'weekly');
+    const mScore = computeTechnicalScore(mInd, 'monthly');
+    return { symbol, dCandles, wCandles, mCandles, dInd, wInd, mInd, dScore, wScore, mScore, niftyD };
+  } catch(e) { console.warn('TA load failed for', symbol, e); return null; }
+}
+
+function renderPortfolioGrid() {
+  const grid = document.getElementById('portfolio-grid');
+  const empty = document.getElementById('portfolio-empty');
+  if (!_portfolioData.length) {
+    grid.innerHTML = '';
+    empty.style.display = '';
+    empty.textContent = 'No TA data available.';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let sorted = [..._portfolioData];
+  if (_sortMode === 'score')     sorted.sort((a,b) => (b.dScore?.score||0) - (a.dScore?.score||0));
+  if (_sortMode === 'daychange') sorted.sort((a,b) => (b.dayChgPct||0) - (a.dayChgPct||0));
+  if (_sortMode === 'rs')        sorted.sort((a,b) => (b.dInd?.rsObj?.rs||1) - (a.dInd?.rsObj?.rs||1));
+
+  grid.innerHTML = sorted.map(d => renderStockCard(d)).join('');
+
+  // Add click to open detail
+  sorted.forEach(d => {
+    const el = document.getElementById('card-' + d.symbol);
+    if (el) el.addEventListener('click', () => openDetailFromPortfolio(d));
+  });
+}
+
+function renderStockCard(d) {
+  const sc = d.dScore || {};
+  const wi = d.wScore || {};
+  const mi = d.mScore || {};
+  const score = sc.score || 0;
+  const signal = sc.signal || 'Neutral';
+  const scCls = scoreClass(score);
+  const dayChg = d.dayChgPct || 0;
+
+  // Build signals bullets (top 3)
+  const signals = [];
+  const di = d.dInd || {};
+  if (di.macdObj?.cross === 'bullish') signals.push('MACD bullish crossover');
+  else if (di.macdObj?.cross === 'bearish') signals.push('MACD bearish crossover');
+  if (di.ema200 && di.close) {
+    if (di.close > di.ema200) signals.push('Above EMA 200');
+    else signals.push('Below EMA 200');
+  }
+  if (di.obvObj?.trend === 'rising') signals.push('OBV rising');
+  else if (di.obvObj?.trend === 'falling') signals.push('OBV falling');
+  if (di.rsi) {
+    if (di.rsi > 70) signals.push('RSI overbought (' + di.rsi.toFixed(0) + ')');
+    else if (di.rsi < 30) signals.push('RSI oversold (' + di.rsi.toFixed(0) + ')');
+  }
+  if (di.adxObj?.adx > 25) signals.push('ADX strong trend (' + di.adxObj.adx.toFixed(0) + ')');
+  const bullets = signals.slice(0, 3).map(s => '<li>' + s + '</li>').join('');
+
+  return `<div class="stock-card" id="card-${d.symbol}">
+    <div class="stock-card-header">
+      <div class="stock-card-sym">${d.symbol}</div>
+      <div class="stock-card-price">
+        ${d.ltp ? '<div class="stock-card-ltp">' + fmt(d.ltp) + '</div>' : ''}
+        <div class="stock-card-chg ${clsVal(dayChg)}">${sign(dayChg)}${Math.abs(dayChg).toFixed(2)}%</div>
+      </div>
+    </div>
+    <div class="stock-card-tf">
+      <span class="tf-badge ${mtfClass(sc.signal)}">D: ${sc.signal||'—'}</span>
+      <span class="tf-badge ${mtfClass(wi.signal)}">W: ${wi.signal||'—'}</span>
+      <span class="tf-badge ${mtfClass(mi.signal)}">M: ${mi.signal||'—'}</span>
+    </div>
+    <div class="stock-card-body">
+      <div class="ta-score-circle ${scCls}">${score}</div>
+      <div class="stock-card-signals">
+        <div class="stock-card-verdict" style="color:${scoreColor(score)}">${signal}</div>
+        <ul class="stock-card-bullets">${bullets || '<li>Loading signals…</li>'}</ul>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openDetailFromPortfolio(d) {
+  switchTab('search');
+  document.getElementById('search-input').value = d.symbol;
+  _currentData = { ...d, signals: generateSignals(d.dInd, { close: d.dInd.close, prevClose: d.dInd.prevClose, volume: d.dInd.volume, avgVolume10d: d.dInd.avgVol }) };
+  const mtf = computeMTFAlignment(d.dScore.signal, d.wScore.signal, d.mScore.signal);
+  _currentData.mtf = mtf;
+  renderDetail(d.symbol, _currentData);
+}
+
+// ── Search ────────────────────────────────────────────────────────────────
+window.onSearchInput = function(val) {
+  clearTimeout(_searchTimer);
+  const sugg = document.getElementById('search-sugg');
+  if (val.trim().length < 2) { sugg.classList.remove('visible'); return; }
+  _searchTimer = setTimeout(() => fetchSuggestions(val.trim()), 300);
+};
+
+window.onSearchKeydown = function(e) {
+  if (e.key === 'Enter') {
+    document.getElementById('search-sugg').classList.remove('visible');
+    const val = document.getElementById('search-input').value.trim();
+    if (val) doSearch(val.toUpperCase());
+  }
+  if (e.key === 'Escape') document.getElementById('search-sugg').classList.remove('visible');
+};
+
+async function fetchSuggestions(query) {
+  try {
+    const res = await fetch('/api/research?action=symbol', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    renderSuggestions(data.suggestions || data.results || []);
+  } catch(e) {}
+}
+
+function renderSuggestions(items) {
+  const sugg = document.getElementById('search-sugg');
+  if (!items.length) { sugg.classList.remove('visible'); return; }
+  sugg.innerHTML = items.slice(0, 8).map(s => `
+    <div class="sugg-item" onclick="window._selectSymbol('${s.symbol}')">
+      <div>
+        <div class="sugg-sym">${s.symbol}</div>
+        <div class="sugg-name">${s.name || s.tradingsymbol || ''}</div>
+      </div>
+    </div>`).join('');
+  sugg.classList.add('visible');
+}
+
+window._selectSymbol = function(sym) {
+  document.getElementById('search-input').value = sym;
+  document.getElementById('search-sugg').classList.remove('visible');
+  doSearch(sym);
+};
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) document.getElementById('search-sugg').classList.remove('visible');
+});
+
+async function doSearch(symbol) {
+  const enc = localStorage.getItem('kite_enctoken');
+  const wrap = document.getElementById('detail-wrap');
+  wrap.classList.add('visible');
+  document.getElementById('detail-header').innerHTML = '<div class="loading-msg"><span class="spinner"></span> Loading TA data for ' + symbol + '…</div>';
+  document.getElementById('detail-mtf').innerHTML = '';
+  document.getElementById('osc-content').innerHTML  = '';
+  document.getElementById('trend-content').innerHTML = '';
+  document.getElementById('sr-table-wrap').innerHTML = '';
+  document.getElementById('pattern-wrap').innerHTML  = '';
+  document.getElementById('signals-wrap').innerHTML  = '';
+  destroyCharts();
+
+  try {
+    const [daily, weekly, monthly] = await Promise.allSettled([
+      fetchTAData(symbol, 'daily', enc),
+      fetchTAData(symbol, 'weekly', enc),
+      fetchTAData(symbol, 'monthly', enc),
+    ]);
+    const dCandles = daily.value?.candles  || [];
+    const wCandles = weekly.value?.candles || [];
+    const mCandles = monthly.value?.candles|| [];
+    const niftyD   = daily.value?.niftyCandles || [];
+
+    if (!dCandles.length) {
+      document.getElementById('detail-header').innerHTML = '<div class="empty-state">Historical data unavailable for <strong>' + symbol + '</strong></div>';
+      return;
+    }
+
+    const dInd = computeAllIndicators(dCandles, niftyD);
+    const wInd = computeAllIndicators(wCandles, weekly.value?.niftyCandles  || []);
+    const mInd = computeAllIndicators(mCandles, monthly.value?.niftyCandles || []);
+    const dScore = computeTechnicalScore(dInd, 'daily');
+    const wScore = computeTechnicalScore(wInd, 'weekly');
+    const mScore = computeTechnicalScore(mInd, 'monthly');
+    const mtf = computeMTFAlignment(dScore.signal, wScore.signal, mScore.signal);
+    const signals = generateSignals(dInd, { close: dInd.close, prevClose: dInd.prevClose, volume: dInd.volume, avgVolume10d: dInd.avgVol });
+
+    _currentData = { dCandles, wCandles, mCandles, dInd, wInd, mInd, dScore, wScore, mScore, mtf, signals, niftyD, symbol };
+    renderDetail(symbol, _currentData);
+  } catch(e) {
+    document.getElementById('detail-header').innerHTML = '<div class="empty-state" style="color:var(--negative-text)">Error loading data: ' + e.message + '</div>';
+  }
+}
+
+// ── Render Detail ─────────────────────────────────────────────────────────
+function renderDetail(symbol, d) {
+  const { dCandles, wCandles, mCandles, dInd, wInd, mInd, dScore, wScore, mScore, mtf, signals } = d;
+  const last = dCandles[dCandles.length-1] || {};
+  const prev = dCandles[dCandles.length-2] || {};
+  const close   = last.close || dInd.close || 0;
+  const prevCls = prev.close || close;
+  const chg     = close - prevCls;
+  const chgPct  = prevCls ? chg/prevCls*100 : 0;
+  const high    = last.high || 0;
+  const low     = last.low  || 0;
+  const highs   = dCandles.map(c=>c.high||0);
+  const lows    = dCandles.map(c=>c.low||0);
+  const hi52    = Math.max(...highs);
+  const lo52    = Math.min(...lows.filter(v=>v>0));
+
+  // Row 1: Header
+  document.getElementById('detail-header').innerHTML = `
+    <div class="detail-title">
+      <span class="detail-sym">${symbol}</span>
+      <span class="detail-name">${d.name || ''}</span>
+      <span class="detail-exchange">NSE</span>
+      <span class="detail-ltp">${fmt(close)}</span>
+      <span class="detail-chg ${clsVal(chg)}">${sign(chg)}${fmt(Math.abs(chg))} (${sign(chgPct)}${Math.abs(chgPct).toFixed(2)}%)</span>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:var(--text-sm);color:var(--text-secondary)">
+      <span>H: <strong style="color:var(--text-primary)">${fmt(high)}</strong></span>
+      <span>L: <strong style="color:var(--text-primary)">${fmt(low)}</strong></span>
+      <span>52W: <strong style="color:var(--text-primary)">${fmt(lo52)} – ${fmt(hi52)}</strong></span>
+      <span>Vol: <strong style="color:var(--text-primary)">${(last.volume||0).toLocaleString('en-IN')}</strong></span>
+    </div>`;
+
+  // Row 2: MTF
+  const mtfText = mtf?.alignment || '—';
+  document.getElementById('detail-mtf').innerHTML = `
+    <div class="mtf-badge ${mtfClass(dScore.signal)}"><span class="tf-label">Daily</span>${dScore.score} — ${dScore.signal||'—'}</div>
+    <div class="mtf-badge ${mtfClass(wScore.signal)}"><span class="tf-label">Weekly</span>${wScore.score} — ${wScore.signal||'—'}</div>
+    <div class="mtf-badge ${mtfClass(mScore.signal)}"><span class="tf-label">Monthly</span>${mScore.score} — ${mScore.signal||'—'}</div>
+    <div class="mtf-align">MTF Alignment: <strong>${mtfText}</strong></div>`;
+
+  // Charts
+  _chartTF = 'daily';
+  _chartPeriod = '6m';
+  ['daily','weekly','monthly'].forEach(tf => document.getElementById('ctf-'+tf).classList.toggle('active', tf==='daily'));
+  ['1m','3m','6m','1y','2y'].forEach(p => document.getElementById('cp-'+p).classList.toggle('active', p==='6m'));
+  buildMainChart();
+  renderOscillators(dInd);
+  renderTrendVolume(dInd);
+  renderSRTable(dInd, close);
+  renderPatterns(dInd);
+  renderSignals(signals);
+}
+
+// ── Chart Building ────────────────────────────────────────────────────────
+function destroyCharts() {
+  [_mainChart, _volChart, _macdChart, _obvChart, _vpChart].forEach(c => { try { c?.destroy(); } catch(e){} });
+  _mainChart = _volChart = _macdChart = _obvChart = _vpChart = null;
+}
+
+function getActiveCandles() {
+  if (!_currentData) return [];
+  const map = { daily: _currentData.dCandles, weekly: _currentData.wCandles, monthly: _currentData.mCandles };
+  const candles = map[_chartTF] || _currentData.dCandles || [];
+  const n = periodToBars(_chartPeriod, _chartTF);
+  return candles.slice(-n);
+}
+
+function getActiveInd() {
+  if (!_currentData) return {};
+  const map = { daily: _currentData.dInd, weekly: _currentData.wInd, monthly: _currentData.mInd };
+  return map[_chartTF] || _currentData.dInd || {};
+}
+
+function buildMainChart() {
+  destroyCharts();
+  const candles = getActiveCandles();
+  if (!candles.length) return;
+  const ind = getActiveInd();
+
+  const labels = candles.map(c => {
+    const d = new Date(c.date || c.timestamp);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  });
+  const closes = candles.map(c => c.close);
+  const volumes = candles.map(c => c.volume || 0);
+
+  const cs = getComputedStyle(document.documentElement);
+  const clrAccent   = cs.getPropertyValue('--accent').trim();
+  const clrGrid     = 'rgba(255,255,255,0.05)';
+  const clrTertiary = cs.getPropertyValue('--text-tertiary').trim();
+
+  // Build EMA datasets
+  const datasets = [
+    { label: 'Close', data: closes, borderColor: clrAccent, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' }
+  ];
+
+  const ov20   = document.getElementById('ov-ema20')?.checked;
+  const ov50   = document.getElementById('ov-ema50')?.checked;
+  const ov200  = document.getElementById('ov-ema200')?.checked;
+  const ovBB   = document.getElementById('ov-bb')?.checked;
+
+  function buildEMADataset(candles, period, color) {
+    const vals = [];
+    for (let i = 0; i < candles.length; i++) {
+      try { vals.push(ema(candles.slice(0, i+1), period)); } catch(e) { vals.push(null); }
+    }
+    return vals;
+  }
+
+  if (ov20 && candles.length >= 20) {
+    datasets.push({ label: 'EMA 20', data: buildEMADataset(candles,20), borderColor: '#f59e0b', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y', borderDash: [] });
+  }
+  if (ov50 && candles.length >= 50) {
+    datasets.push({ label: 'EMA 50', data: buildEMADataset(candles,50), borderColor: '#a78bfa', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
+  }
+  if (ov200 && candles.length >= 200) {
+    datasets.push({ label: 'EMA 200', data: buildEMADataset(candles,200), borderColor: '#f87171', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
+  }
+  if (ovBB) {
+    try {
+      const bbArr = candles.map((_,i) => { try { return bollingerBands(candles.slice(0,i+1)); } catch(e) { return null; } });
+      datasets.push({ label: 'BB Upper', data: bbArr.map(b => b?.upper || null), borderColor: 'rgba(148,163,184,0.5)', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y', borderDash: [4,4] });
+      datasets.push({ label: 'BB Lower', data: bbArr.map(b => b?.lower || null), borderColor: 'rgba(148,163,184,0.5)', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y', borderDash: [4,4] });
+    } catch(e) {}
+  }
+
+  const mainCtx = document.getElementById('chart-main').getContext('2d');
+  _mainChart = new Chart(mainCtx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: datasets.length > 1, labels: { color: clrTertiary, font: { size: 10 }, boxWidth: 16 } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { color: clrGrid }, ticks: { color: clrTertiary, maxTicksLimit: 10, font: { size: 10 } } },
+        y: { grid: { color: clrGrid }, ticks: { color: clrTertiary, font: { size: 10 }, callback: v => '₹' + v.toLocaleString('en-IN') }, position: 'right' }
+      }
+    }
+  });
+
+  // Volume chart
+  const volCtx = document.getElementById('chart-vol').getContext('2d');
+  const avgVol = volumes.filter(v=>v>0).reduce((a,b,_,arr)=>a+b/arr.length,0);
+  _volChart = new Chart(volCtx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Volume', data: volumes,
+        backgroundColor: volumes.map(v => v > avgVol ? 'rgba(52,211,153,0.5)' : 'rgba(148,163,184,0.25)'),
+        borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { color: clrGrid }, ticks: { color: clrTertiary, maxTicksLimit: 8, font: { size: 9 } } },
+        y: { grid: { color: clrGrid }, ticks: { color: clrTertiary, font: { size: 9 }, callback: v => (v/1e6).toFixed(1)+'M' } }
+      }
+    }
+  });
+}
+
+window.setChartTF = function(tf) {
+  _chartTF = tf;
+  ['daily','weekly','monthly'].forEach(t => document.getElementById('ctf-'+t).classList.toggle('active', t===tf));
+  if (_currentData) buildMainChart();
+};
+window.setChartPeriod = function(p) {
+  _chartPeriod = p;
+  ['1m','3m','6m','1y','2y'].forEach(x => document.getElementById('cp-'+x).classList.toggle('active', x===p));
+  if (_currentData) buildMainChart();
+};
+window.updateOverlays = function() {
+  if (_currentData) buildMainChart();
+};
+
+// ── Oscillators Panel ─────────────────────────────────────────────────────
+function renderOscillators(ind) {
+  const rsi = ind.rsi || 50;
+  const macdObj = ind.macdObj || {};
+  const stoch = ind.stochObj || {};
+  const wR = ind.williamsRObj;
+  const mfi = ind.mfiObj;
+  const roc = ind.rocObj;
+
+  const rsiColor = rsi > 70 ? 'var(--negative-text)' : rsi < 30 ? 'var(--positive-text)' : 'var(--accent)';
+  const rsiDesc  = rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral';
+
+  // Gauge arc via SVG
+  const angle = ((rsi / 100) * 180) - 90; // -90=left, +90=right
+  const rad = angle * Math.PI / 180;
+  const cx = 70, cy = 70, r = 55;
+  const nx = cx + r * Math.cos(rad - Math.PI/2 + Math.PI);
+  const ny = cy + r * Math.sin(rad - Math.PI/2 + Math.PI);
+  // Actually draw a simpler semicircle gauge
+  const gaugeEl = `
+    <div class="rsi-gauge">
+      <div class="rsi-gauge-arc">
+        <svg class="rsi-gauge-svg" viewBox="0 0 140 70">
+          <path d="M 10 70 A 60 60 0 0 1 130 70" fill="none" stroke="var(--border-subtle)" stroke-width="8" stroke-linecap="round"/>
+          <path d="M 10 70 A 60 60 0 0 1 130 70" fill="none" stroke="${rsiColor}" stroke-width="8" stroke-linecap="round"
+            stroke-dasharray="${(rsi/100)*188} 188" />
+        </svg>
+        <span class="rsi-gauge-val" style="color:${rsiColor}">${rsi.toFixed(0)}</span>
+      </div>
+      <div class="rsi-gauge-zones">
+        <span style="color:var(--positive-text)">Oversold &lt;30</span>
+        <span style="color:var(--text-tertiary)">${rsiDesc}</span>
+        <span style="color:var(--negative-text)">&gt;70 Overbought</span>
+      </div>
+    </div>`;
+
+  const macdVal  = macdObj.macd    != null ? macdObj.macd.toFixed(2)   : '—';
+  const sigVal   = macdObj.signal  != null ? macdObj.signal.toFixed(2) : '—';
+  const histVal  = macdObj.histogram != null ? macdObj.histogram.toFixed(2) : '—';
+  const macdCross= macdObj.cross || (macdObj.macd > macdObj.signal ? 'Bullish' : 'Bearish');
+
+  const stochK  = stoch.k != null ? stoch.k.toFixed(1) : '—';
+  const stochD  = stoch.d != null ? stoch.d.toFixed(1) : '—';
+  const stochSig= stoch.k > 80 ? 'Overbought' : stoch.k < 20 ? 'Oversold' : 'Neutral';
+
+  const wrVal  = wR != null ? (typeof wR === 'object' ? (wR.value ?? wR.wr ?? '—') : wR) : '—';
+  const wrNum  = parseFloat(wrVal);
+  const wrSig  = !isNaN(wrNum) ? (wrNum < -80 ? 'Oversold' : wrNum > -20 ? 'Overbought' : 'Neutral') : '—';
+  const mfiVal = mfi != null ? (typeof mfi === 'object' ? (mfi.value?.toFixed(1) || '—') : parseFloat(mfi).toFixed(1)) : '—';
+  const mfiNum = parseFloat(mfiVal);
+  const mfiSig = !isNaN(mfiNum) ? (mfiNum > 80 ? 'Overbought' : mfiNum < 20 ? 'Oversold' : 'Neutral') : '—';
+  const rocVal = roc != null ? (typeof roc === 'object' ? (roc.value?.toFixed(2) || roc.roc?.toFixed(2) || '—') : parseFloat(roc).toFixed(2)) : '—';
+  const rocNum = parseFloat(rocVal);
+  const rocSig = !isNaN(rocNum) ? (rocNum > 0 ? 'Positive' : 'Negative') : '—';
+
+  document.getElementById('osc-content').innerHTML = `
+    ${gaugeEl}
+    <div class="ind-row">
+      <div class="ind-label">MACD Histogram (30d)</div>
+      <div class="macd-chart-wrap"><canvas id="chart-macd"></canvas></div>
+      <div class="macd-vals">MACD: <span class="${clsVal(parseFloat(macdVal))}">${macdVal}</span> | Signal: ${sigVal} | Cross: <span class="${macdCross.toLowerCase().includes('bull') ? 'green' : 'red'}">${macdCross}</span></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Stochastic</div>
+      <div class="ind-values">%K: <span class="${parseFloat(stochK)>80?'red':parseFloat(stochK)<20?'green':''}">${stochK}</span>  %D: ${stochD} — <span class="${stochSig==='Overbought'?'red':stochSig==='Oversold'?'green':'warn'}">${stochSig}</span></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Williams %R</div>
+      <div class="ind-values">%R: ${isNaN(wrNum)?'—':wrNum.toFixed(1)} — <span class="${wrSig==='Overbought'?'red':wrSig==='Oversold'?'green':'warn'}">${wrSig}</span></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Money Flow Index</div>
+      <div class="ind-values">MFI: <span class="${mfiNum>80?'red':mfiNum<20?'green':''}">${mfiVal}</span> — <span class="${mfiSig==='Overbought'?'red':mfiSig==='Oversold'?'green':'warn'}">${mfiSig}</span></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Rate of Change</div>
+      <div class="ind-values">ROC: <span class="${clsVal(rocNum)}">${rocNum>=0?'+':''}${rocVal}%</span> — <span class="${rocSig==='Positive'?'green':'red'}">${rocSig}</span></div>
+    </div>`;
+
+  // MACD histogram mini chart
+  const macdHistArr = ind.macdHistSeries || (macdObj.histogramSeries ? macdObj.histogramSeries.slice(-30) : []);
+  if (macdHistArr.length) {
+    const macdCtx = document.getElementById('chart-macd').getContext('2d');
+    const cs = getComputedStyle(document.documentElement);
+    _macdChart = new Chart(macdCtx, {
+      type: 'bar',
+      data: {
+        labels: macdHistArr.map((_,i) => i),
+        datasets: [{ data: macdHistArr, backgroundColor: macdHistArr.map(v => v >= 0 ? 'rgba(52,211,153,0.7)' : 'rgba(248,113,113,0.7)'), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } }
+      }
+    });
+  }
+}
+
+// ── Trend & Volume Panel ──────────────────────────────────────────────────
+function renderTrendVolume(ind) {
+  const adx = ind.adxObj || {};
+  const obvObj = ind.obvObj || {};
+  const bb = ind.bb || {};
+  const rs = ind.rsObj || {};
+  const vp = ind.volumeProfile || null;
+
+  const adxVal  = adx.adx  != null ? adx.adx.toFixed(1)  : '—';
+  const diPlus  = adx.diPlus  != null ? adx.diPlus.toFixed(1)  : '—';
+  const diMinus = adx.diMinus != null ? adx.diMinus.toFixed(1) : '—';
+  const adxNum  = parseFloat(adxVal);
+  const adxSig  = adxNum > 40 ? 'Very Strong' : adxNum > 25 ? 'Strong Trend' : adxNum > 20 ? 'Moderate' : 'Weak/Ranging';
+  const adxPct  = Math.min((adxNum / 50) * 100, 100).toFixed(0);
+
+  const obvTrend = obvObj.trend || (obvObj.rising ? 'Rising' : 'Falling') || '—';
+  const obvSlope = obvObj.slope != null ? (obvObj.slope > 0 ? '+' : '') + Math.round(obvObj.slope).toLocaleString('en-IN') : '—';
+  const obvSeries = obvObj.series || [];
+
+  const bbUpper = bb.upper != null ? fmt(bb.upper) : '—';
+  const bbMid   = bb.middle != null ? fmt(bb.middle) : bb.basis != null ? fmt(bb.basis) : '—';
+  const bbLower = bb.lower != null ? fmt(bb.lower) : '—';
+  const close   = ind.close || 0;
+  const bbWidth = (bb.upper && bb.lower) ? ((bb.upper - bb.lower) / (bb.middle || bb.basis || 1) * 100).toFixed(1) : '—';
+  const bbPos   = (bb.upper && bb.lower && close) ? (((close - bb.lower) / (bb.upper - bb.lower)) * 100).toFixed(0) : '—';
+
+  const rsVal   = rs.rs != null ? rs.rs.toFixed(2) : '—';
+  const rsNum   = parseFloat(rsVal);
+  const rsSig   = !isNaN(rsNum) ? (rsNum > 1.05 ? 'Outperforming' : rsNum < 0.95 ? 'Underperforming' : 'In-line') : '—';
+  const rsTrend = rs.trend || '—';
+
+  document.getElementById('trend-content').innerHTML = `
+    <div class="ind-row">
+      <div class="ind-label">ADX (Average Directional Index)</div>
+      <div class="ind-values">ADX: <strong>${adxVal}</strong> — <span class="${adxNum>25?'green':'warn'}">${adxSig}</span></div>
+      <div style="display:flex;gap:10px;font-family:var(--font-mono);font-size:var(--text-sm);color:var(--text-secondary);margin:4px 0;">
+        <span class="green">DI+: ${diPlus}</span> <span class="red">DI-: ${diMinus}</span>
+      </div>
+      <div class="adx-bar"><div class="adx-fill" style="width:${adxPct}%"></div></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">OBV (On-Balance Volume)</div>
+      <div class="ind-values">OBV: <span class="${obvTrend.toLowerCase().includes('ris') ? 'green' : 'red'}">${obvTrend} ${obvTrend.toLowerCase().includes('ris') ? '↑' : '↓'}</span></div>
+      <div class="ind-desc">10d slope: <span style="font-family:var(--font-mono)">${obvSlope}</span></div>
+      <div class="obv-chart-wrap" style="margin-top:6px"><canvas id="chart-obv"></canvas></div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Bollinger Bands</div>
+      <div class="ind-values" style="font-size:var(--text-sm)">Upper: ${bbUpper} | Mid: ${bbMid} | Lower: ${bbLower}</div>
+      <div class="ind-desc">Price position: ${bbPos}% of band · Width: ${bbWidth}%</div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Relative Strength vs Nifty</div>
+      <div class="ind-values">RS (20d): <strong>${rsVal}</strong> — <span class="${rsSig==='Outperforming'?'green':'red'}">${rsSig}</span></div>
+      <div class="ind-desc">Trend: ${rsTrend} ${rsTrend.toLowerCase().includes('improv') ? '↑' : rsTrend.toLowerCase().includes('deterio') ? '↓' : ''}</div>
+    </div>
+    <div class="ind-row">
+      <div class="ind-label">Volume Profile</div>
+      <div class="vp-chart-wrap"><canvas id="chart-vp"></canvas></div>
+    </div>`;
+
+  // OBV sparkline
+  if (obvSeries.length) {
+    const s = obvSeries.slice(-20);
+    const obvCtx = document.getElementById('chart-obv').getContext('2d');
+    _obvChart = new Chart(obvCtx, {
+      type: 'line',
+      data: { labels: s.map((_,i)=>i), datasets: [{ data: s, borderColor: 'var(--accent)', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+    });
+  }
+
+  // Volume profile chart
+  const vpData = ind.volumeProfile || null;
+  if (vpData && vpData.buckets && vpData.buckets.length) {
+    const { buckets, poc, vah, val } = vpData;
+    const vpCtx = document.getElementById('chart-vp').getContext('2d');
+    _vpChart = new Chart(vpCtx, {
+      type: 'bar',
+      data: {
+        labels: buckets.map(b => fmt(b.price)),
+        datasets: [{
+          data: buckets.map(b => b.volume),
+          backgroundColor: buckets.map(b => {
+            if (Math.abs(b.price - poc) < (buckets[1]?.price - buckets[0]?.price || 1)) return 'rgba(52,211,153,0.8)';
+            if (b.price >= val && b.price <= vah) return 'rgba(52,211,153,0.35)';
+            return 'rgba(148,163,184,0.25)';
+          }),
+          borderWidth: 0,
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'Vol: ' + ctx.raw.toLocaleString('en-IN') } } },
+        scales: { x: { display: false }, y: { ticks: { color: 'var(--text-tertiary)', font: { size: 9 } } } }
+      }
+    });
+  } else {
+    // Fallback: build from candles
+    buildVolProfileFromCandles(_currentData?.dCandles || []);
+  }
+}
+
+function buildVolProfileFromCandles(candles) {
+  const recent = candles.slice(-60);
+  if (!recent.length) return;
+  const high = Math.max(...recent.map(c=>c.high||c.close));
+  const low  = Math.min(...recent.map(c=>c.low||c.close).filter(v=>v>0));
+  const bucketCount = 15;
+  const bucketSize = (high - low) / bucketCount;
+  const buckets = Array.from({length: bucketCount}, (_,i) => ({ price: low + i * bucketSize + bucketSize/2, volume: 0 }));
+  recent.forEach(c => {
+    const idx = Math.min(Math.floor((c.close - low) / bucketSize), bucketCount-1);
+    if (idx >= 0) buckets[idx].volume += c.volume || 0;
+  });
+  const pocIdx = buckets.reduce((mi,b,i,arr) => b.volume > arr[mi].volume ? i : mi, 0);
+  const poc = buckets[pocIdx].price;
+  const sortedByVol = [...buckets].sort((a,b) => b.volume - a.volume);
+  const totalVol = buckets.reduce((s,b)=>s+b.volume,0);
+  let cumVol = 0, valPrice = poc, vahPrice = poc;
+  for (const b of sortedByVol) {
+    cumVol += b.volume;
+    if (b.price < poc) valPrice = Math.min(valPrice, b.price);
+    if (b.price > poc) vahPrice = Math.max(vahPrice, b.price);
+    if (cumVol >= totalVol * 0.7) break;
+  }
+
+  const vpCtx = document.getElementById('chart-vp').getContext('2d');
+  if (!vpCtx) return;
+  _vpChart = new Chart(vpCtx, {
+    type: 'bar',
+    data: {
+      labels: buckets.map(b => fmt(b.price)),
+      datasets: [{
+        data: buckets.map(b => b.volume),
+        backgroundColor: buckets.map(b => {
+          if (Math.abs(b.price - poc) < bucketSize * 0.5) return 'rgba(52,211,153,0.8)';
+          if (b.price >= valPrice && b.price <= vahPrice) return 'rgba(52,211,153,0.35)';
+          return 'rgba(148,163,184,0.25)';
+        }),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { ticks: { color: 'var(--text-tertiary)', font: { size: 9 } } } }
+    }
+  });
+}
+
+// ── S/R Table ─────────────────────────────────────────────────────────────
+function renderSRTable(ind, close) {
+  const pivots = ind.pivots || {};
+  const bb = ind.bb || {};
+  const fib = ind.fibLevels || {};
+  const cam = ind.camarilla || {};
+  const ema20v = ind.ema20;
+  const ema50v = ind.ema50;
+  const ema200v = ind.ema200;
+
+  const levels = [];
+  function addLevel(type, level, source) {
+    if (level == null || isNaN(level) || level <= 0) return;
+    const vs = ((level - close) / close * 100);
+    levels.push({ type, level, source, vs });
+  }
+
+  addLevel('Resistance', pivots.r3, 'R3 Pivot');
+  addLevel('Resistance', pivots.r2, 'R2 Pivot');
+  addLevel('Resistance', pivots.r1, 'R1 Pivot');
+  addLevel('Resistance', bb.upper, 'BB Upper');
+  addLevel('Resistance', fib?.['61.8'] || fib?.level618, 'Fib 61.8%');
+  addLevel('Resistance', fib?.['78.6'] || fib?.level786, 'Fib 78.6%');
+  addLevel('Resistance', cam.r1, 'Cam R1');
+  addLevel('Resistance', cam.r2, 'Cam R2');
+  addLevel('Support', pivots.s1, 'S1 Pivot');
+  addLevel('Support', pivots.s2, 'S2 Pivot');
+  addLevel('Support', pivots.s3, 'S3 Pivot');
+  addLevel('Support', bb.lower, 'BB Lower');
+  addLevel('Support', bb.middle || bb.basis, 'BB Middle');
+  addLevel('Support', fib?.['38.2'] || fib?.level382, 'Fib 38.2%');
+  addLevel('Support', fib?.['23.6'] || fib?.level236, 'Fib 23.6%');
+  addLevel('Support', fib?.['50.0'] || fib?.level500, 'Fib 50%');
+  if (ema20v) addLevel(close > ema20v ? 'Support' : 'Resistance', ema20v, 'EMA 20 (dynamic)');
+  if (ema50v) addLevel(close > ema50v ? 'Support' : 'Resistance', ema50v, 'EMA 50 (dynamic)');
+  if (ema200v) addLevel(close > ema200v ? 'Support' : 'Resistance', ema200v, 'EMA 200 (dynamic)');
+  addLevel('Support', cam.s1, 'Cam S1');
+  addLevel('Support', cam.s2, 'Cam S2');
+
+  const resistances = levels.filter(l => l.type === 'Resistance' && l.level > close).sort((a,b) => a.level - b.level).slice(0,5);
+  const supports    = levels.filter(l => l.type === 'Support'    && l.level < close).sort((a,b) => b.level - a.level).slice(0,5);
+
+  let rows = '';
+  resistances.forEach(l => {
+    rows += `<tr class="sr-row-resistance"><td class="label-col">${l.type}</td><td>${fmt(l.level)}</td><td class="label-col">${l.source}</td><td class="${clsVal(l.vs)}">${l.vs >= 0 ? '+' : ''}${l.vs.toFixed(2)}%</td></tr>`;
+  });
+  rows += `<tr class="sr-row-current"><td class="label-col">Current Price</td><td>${fmt(close)}</td><td class="label-col">—</td><td>—</td></tr>`;
+  supports.forEach(l => {
+    rows += `<tr class="sr-row-support"><td class="label-col">${l.type}</td><td>${fmt(l.level)}</td><td class="label-col">${l.source}</td><td class="${clsVal(l.vs)}">${l.vs.toFixed(2)}%</td></tr>`;
+  });
+
+  document.getElementById('sr-table-wrap').innerHTML = `
+    <table class="sr-table">
+      <thead><tr><th>Type</th><th>Level (₹)</th><th>Source</th><th>vs Price</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" style="color:var(--text-tertiary);text-align:center;padding:16px">No levels computed</td></tr>'}</tbody>
+    </table>`;
+}
+
+// ── Patterns ──────────────────────────────────────────────────────────────
+function renderPatterns(ind) {
+  const candle = ind.patterns;
+  const chart  = ind.chartPatterns;
+  let html = '';
+
+  if (candle && candle.name) {
+    const isBull = candle.type === 'bullish' || candle.direction === 'bullish';
+    html += `
+      <div class="pattern-item">
+        <div class="pattern-icon">${isBull ? '↑' : '↓'}</div>
+        <div>
+          <div class="pattern-name">${candle.name}</div>
+          <div class="pattern-meta">${candle.daysAgo ? candle.daysAgo + ' days ago' : 'Recent'}</div>
+          <div class="pattern-desc">${candle.description || ''}</div>
+        </div>
+      </div>`;
+  }
+
+  if (Array.isArray(chart)) {
+    chart.slice(0,3).forEach(p => {
+      const isBull = p.type === 'bullish' || p.direction === 'bullish';
+      html += `
+        <div class="pattern-item">
+          <div class="pattern-icon">${isBull ? '↑' : '↓'}</div>
+          <div>
+            <div class="pattern-name">${p.name || p.pattern}</div>
+            <div class="pattern-meta">Confidence: ${p.confidence ? p.confidence + '%' : '—'}</div>
+            <div class="pattern-desc">${p.description || ''}</div>
+          </div>
+        </div>`;
+    });
+  } else if (chart && chart.name) {
+    const isBull = chart.type === 'bullish' || chart.direction === 'bullish';
+    html += `
+      <div class="pattern-item">
+        <div class="pattern-icon">${isBull ? '↑' : '↓'}</div>
+        <div>
+          <div class="pattern-name">${chart.name || chart.pattern}</div>
+          <div class="pattern-meta">Confidence: ${chart.confidence ? chart.confidence + '%' : '—'}</div>
+          <div class="pattern-desc">${chart.description || ''}</div>
+        </div>
+      </div>`;
+  }
+
+  if (!html) html = '<div style="color:var(--text-tertiary);font-size:var(--text-md);padding:12px 0">No significant patterns detected in recent candles</div>';
+  document.getElementById('pattern-wrap').innerHTML = html;
+}
+
+// ── Signals ───────────────────────────────────────────────────────────────
+function renderSignals(signals) {
+  if (!signals || !signals.length) {
+    document.getElementById('signals-wrap').innerHTML = '<div style="color:var(--text-tertiary)">No significant signals detected</div>';
+    return;
+  }
+  const iconMap = { bullish: '↑', bearish: '↓', warning: '⚠', neutral: '●' };
+  document.getElementById('signals-wrap').innerHTML = signals.slice(0,6).map(s => {
+    const type = s.type || (s.text?.toLowerCase().includes('bull') ? 'bullish' : s.text?.toLowerCase().includes('bear') ? 'bearish' : 'neutral');
+    return `<div class="signal-card ${type}">
+      <div class="signal-icon">${iconMap[type] || '●'}</div>
+      <div class="signal-text">${s.text || s.message || s}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+async function boot() {
+  // Check for ?symbol= query param
+  const params = new URLSearchParams(location.search);
+  const sym = params.get('symbol');
+  if (sym) {
+    switchTab('search');
+    document.getElementById('search-input').value = sym;
+    await doSearch(sym.toUpperCase());
+    return;
+  }
+  loadPortfolio();
+}
+
+boot();
+</script>
+
+</body>
+</html>

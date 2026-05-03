@@ -137,6 +137,44 @@ alter table brain_outcomes      add column if not exists time_bucket text defaul
 alter table brain_source_stats  add column if not exists vix_bucket  text;
 alter table brain_source_stats  add column if not exists time_bucket text;
 
+-- FA snapshots: track composite FA score changes over time per symbol
+CREATE TABLE IF NOT EXISTS fa_snapshots (
+  id                uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  symbol            text        NOT NULL,
+  composite_score   integer,
+  quality_score     integer,
+  growth_score      integer,
+  valuation_score   integer,
+  health_score      integer,
+  piotroski_score   integer,
+  verdict           text,
+  red_flag_count    integer,
+  pe                numeric,
+  pb                numeric,
+  roe               numeric,
+  roce              numeric,
+  promoter_holding  numeric,
+  data              jsonb,
+  created_at        timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_fa_snapshots_symbol_time ON fa_snapshots (symbol, created_at DESC);
+
+-- TA snapshots: track composite TA score changes over time per symbol+timeframe
+CREATE TABLE IF NOT EXISTS ta_snapshots (
+  id              uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  symbol          text        NOT NULL,
+  timeframe       text        NOT NULL,
+  composite_score integer,
+  trend_score     integer,
+  momentum_score  integer,
+  volume_score    integer,
+  structure_score integer,
+  signal          text,
+  key_signals     jsonb,
+  created_at      timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ta_snapshots_symbol_tf_time ON ta_snapshots (symbol, timeframe, created_at DESC);
+
 -- Index for common calibration queries
 create index if not exists brain_source_stats_source_id  on brain_source_stats(source_id);
 create index if not exists brain_source_stats_updated_at on brain_source_stats(updated_at desc);

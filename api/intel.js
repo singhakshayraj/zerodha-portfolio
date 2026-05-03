@@ -276,7 +276,105 @@ export default async function handler(req, res) {
       });
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel' });
+    // ── FA Narrative (LLM-generated fundamental analysis narrative) ─────────────
+    // POST /api/intel?action=fa_narrative
+    // Body: { symbol, faData: { companyName, sector, pe, pb, roe, roce, netMargin,
+    //         revenueCagr3yr, epsCagr3yr, debtEquity, promoterHolding, promoterPledge,
+    //         revenueGrowth, earningsGrowth, marketCap, dividendYield, beta,
+    //         high52w, low52w, freeCashflow, currentRatio } }
+    if (action === 'fa_narrative') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+      const { symbol, faData } = req.body ?? {};
+      if (!symbol || !faData) { res.status(400).json({ error: 'symbol and faData required' }); return; }
+
+      const { redisGet, redisSet } = await import('../dashboard/lib/redis.js');
+      const cacheKey = `fa:narrative:${symbol}`;
+      const cached = await redisGet(cacheKey);
+      if (cached && cached.generatedAt) {
+        const ageMs = Date.now() - new Date(cached.generatedAt).getTime();
+        if (ageMs < 4 * 60 * 60 * 1000) return res.status(200).json({ ...cached, _cached: true });
+      }
+
+      const { config: appConfig } = await import('../dashboard/config.js');
+
+      const FA_NARRATIVE_SYSTEM = `You are a fundamental analyst at a top-tier Indian institutional fund. You write precise, jargon-light analysis. You never pad. Every sentence must contain a specific data point or observable fact. You do not assign buy/sell ratings. You never make up numbers not given to you.`;
+
+      const FA_NARRATIVE_PROMPT = (sym, d) => `Analyze ${sym} (${d.companyName || sym}), sector: ${d.sector || 'Unknown'}.
+
+Key metrics:
+- Market Cap: ${d.marketCap ? '₹' + (d.marketCap/1e7).toFixed(0) + ' Cr' : 'N/A'}
+- PE: ${d.pe ?? 'N/A'} | Forward PE: ${d.forwardPE ?? 'N/A'} | PB: ${d.pb ?? 'N/A'}
+- ROE: ${d.roe?.toFixed(1) ?? 'N/A'}% | ROCE: ${d.roce?.toFixed(1) ?? 'N/A'}% | Net Margin: ${d.netMargin?.toFixed(1) ?? 'N/A'}%
+- Revenue CAGR 3yr: ${d.revenueCagr3yr?.toFixed(1) ?? 'N/A'}% | EPS CAGR 3yr: ${d.epsCagr3yr?.toFixed(1) ?? 'N/A'}%
+- D/E: ${d.debtEquity?.toFixed(2) ?? 'N/A'} | Current Ratio: ${d.currentRatio?.toFixed(2) ?? 'N/A'}
+- Promoter Holding: ${d.promoterHolding?.toFixed(1) ?? 'N/A'}% | Pledge: ${d.promoterPledge?.toFixed(1) ?? 'N/A'}%
+- Dividend Yield: ${d.dividendYield?.toFixed(2) ?? 'N/A'}% | Beta: ${d.beta?.toFixed(2) ?? 'N/A'}
+- 52W Range: ₹${d.low52w ?? 'N/A'} – ₹${d.high52w ?? 'N/A'}
+
+Return ONLY raw JSON (no markdown):
+{
+  "business_summary": "<one paragraph: what this company does, its competitive moat if any, and dominant revenue driver — cite specific % or ₹ figures from the data above>",
+  "bull_case": ["<specific data-backed point>", "<specific point>", "<specific point>"],
+  "bear_case": ["<specific risk tied to data>", "<specific risk>", "<specific risk>"],
+  "watch_next_quarter": "<one sentence: the single most important metric to monitor>",
+  "management_quality": "<one sentence: observation on promoter holding trend, pledge level, or capital allocation based on the data provided>"
+}`;
+
+      async function callGroq(sym, d) {
+        const { default: Groq } = await import('groq-sdk');
+        const client = new Groq({ apiKey: appConfig.llm.groqApiKey });
+        const msg = await client.chat.completions.create({
+          model: appConfig.llm.groqModel,
+          max_tokens: 1024,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: FA_NARRATIVE_SYSTEM },
+            { role: 'user', content: FA_NARRATIVE_PROMPT(sym, d) }
+          ],
+        });
+        return JSON.parse(msg.choices[0].message.content.trim());
+      }
+
+      async function callGemini(sym, d) {
+        const apiKey = appConfig.llm.googleApiKey;
+        if (!apiKey) throw new Error('GOOGLE_API_KEY not set');
+        const model = appConfig.llm.geminiModel || 'gemini-2.0-flash';
+        const prompt = FA_NARRATIVE_SYSTEM + '\n\n' + FA_NARRATIVE_PROMPT(sym, d);
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 1024, responseMimeType: 'application/json' } }) }
+        );
+        if (!r.ok) throw new Error(`Gemini ${r.status}`);
+        const data = await r.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        return JSON.parse(text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim());
+      }
+
+      let narrative;
+      try {
+        const provider = appConfig.llm.provider;
+        if (provider === 'gemini') {
+          narrative = await callGemini(symbol, faData);
+        } else {
+          narrative = await callGroq(symbol, faData);
+        }
+      } catch (err) {
+        const isRateLimit = err.message?.includes('429') || err.status === 429;
+        if (isRateLimit && appConfig.llm.googleApiKey) {
+          narrative = await callGemini(symbol, faData);
+        } else {
+          throw err;
+        }
+      }
+
+      const result = { ...narrative, symbol, generatedAt: new Date().toISOString() };
+      redisSet(cacheKey, result, 4 * 60 * 60).catch(() => {});
+      return res.status(200).json(result);
+    }
+
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel | fa_narrative' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

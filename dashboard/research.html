@@ -317,6 +317,8 @@ document.addEventListener('DOMContentLoaded',function(){
     <a href="/alpha">Alpha Finder</a>
     <a href="/research.html" class="active">Research Desk</a>
     <a href="/connect">Connect Kite</a>
+    <a href="/fundamental">Fundamental</a>
+    <a href="/technical">Technical</a>
   </div>
     <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">
       <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1343,6 +1345,8 @@ document.addEventListener('DOMContentLoaded',function(){
         <span class="verdict-label">Verdict</span>
         <span class="verdict-text ${verdictClass}">${d.verdict}</span>
         <button class="expand-btn" onclick="toggleDetails(this)">Details ↓</button>
+        <a href="/fundamental?symbol=${d.symbol || ''}" class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px;text-decoration:none">Deep FA →</a>
+        <a href="/technical?symbol=${d.symbol || ''}" class="btn btn-sm btn-ghost" style="font-size:11px;padding:3px 8px;text-decoration:none">TA →</a>
         <div class="trade-row">
           <input type="number" class="qty-input" value="1" min="1" title="Quantity">
           <button class="buy-btn" onclick="placeOrder('${d.symbol}','BUY',this)">Buy</button>
