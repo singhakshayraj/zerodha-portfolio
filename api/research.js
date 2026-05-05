@@ -282,7 +282,7 @@ export default async function handler(req, res) {
       try {
         const { crumb, cookie } = await getYahooCrumb();
         const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend';
-        const yUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
+        const yUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
         const yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
         if (yRes.ok) {
           const yData = await yRes.json();
@@ -437,7 +437,7 @@ export default async function handler(req, res) {
       try {
         const { crumb, cookie } = await getYahooCrumb();
         const r = await fetch(
-          `https://query1.finance.yahoo.com/v10/finance/quoteSummary/INFY.NS?modules=financialData&crumb=${encodeURIComponent(crumb)}`,
+          `https://query2.finance.yahoo.com/v10/finance/quoteSummary/INFY.NS?modules=financialData&crumb=${encodeURIComponent(crumb)}`,
           { headers: { 'User-Agent': UA, 'Cookie': cookie }, signal: AbortSignal.timeout(5000) }
         );
         const d = await r.json();
