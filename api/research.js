@@ -283,7 +283,16 @@ export default async function handler(req, res) {
         const { crumb, cookie } = await getYahooCrumb();
         const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend';
         const yUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
-        const yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
+        let yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
+        // Retry once if rate limited (bust crumb cache and try fresh)
+        if (yRes.status === 429 || yRes.status === 401) {
+          _yahooCrumb = null; // force refresh
+          const { crumb: c2, cookie: co2 } = await getYahooCrumb();
+          yRes = await fetchWithTimeout(
+            `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(c2)}`,
+            { headers: { 'User-Agent': UA, 'Cookie': co2 } }
+          );
+        }
         if (yRes.ok) {
           const yData = await yRes.json();
           const s = yData?.quoteSummary?.result?.[0];
@@ -428,21 +437,28 @@ export default async function handler(req, res) {
     // GET /api/research?action=health
     if (action === 'health') {
       const checks = {};
-      // Yahoo Finance crumb
-      try {
-        const { crumb } = await getYahooCrumb();
-        checks.yahoo_crumb = crumb && crumb.length > 0 ? 'ok' : 'empty';
-      } catch (e) { checks.yahoo_crumb = `error: ${e.message}`; }
-      // Yahoo Finance data fetch (INFY as canary)
+      let crumbOk = false;
+      // Yahoo crumb + single data fetch (reuse same crumb/cookie — don't double-hit)
       try {
         const { crumb, cookie } = await getYahooCrumb();
-        const r = await fetch(
-          `https://query2.finance.yahoo.com/v10/finance/quoteSummary/INFY.NS?modules=financialData&crumb=${encodeURIComponent(crumb)}`,
-          { headers: { 'User-Agent': UA, 'Cookie': cookie }, signal: AbortSignal.timeout(5000) }
-        );
-        const d = await r.json();
-        checks.yahoo_data = d?.quoteSummary?.result?.[0] ? 'ok' : `bad: ${JSON.stringify(d?.finance?.error || d?.quoteSummary?.error || 'empty')}`;
-      } catch (e) { checks.yahoo_data = `error: ${e.message}`; }
+        crumbOk = crumb && crumb.length > 0;
+        checks.yahoo_crumb = crumbOk ? 'ok' : 'empty';
+        if (crumbOk) {
+          const r = await fetch(
+            `https://query2.finance.yahoo.com/v10/finance/quoteSummary/INFY.NS?modules=financialData&crumb=${encodeURIComponent(crumb)}`,
+            { headers: { 'User-Agent': UA, 'Cookie': cookie }, signal: AbortSignal.timeout(6000) }
+          );
+          const txt = await r.text();
+          let d;
+          try { d = JSON.parse(txt); } catch { checks.yahoo_data = `not-json (HTTP ${r.status}): ${txt.slice(0, 80)}`; d = null; }
+          if (d) checks.yahoo_data = d?.quoteSummary?.result?.[0] ? 'ok' : `bad: ${JSON.stringify(d?.finance?.error || d?.quoteSummary?.error || 'empty')}`;
+        } else {
+          checks.yahoo_data = 'skipped (no crumb)';
+        }
+      } catch (e) {
+        if (!checks.yahoo_crumb) checks.yahoo_crumb = `error: ${e.message}`;
+        checks.yahoo_data = `error: ${e.message}`;
+      }
       // Redis
       try {
         await redisSet('health:ping', { ts: Date.now() }, 60);
