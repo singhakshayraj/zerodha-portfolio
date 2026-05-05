@@ -348,12 +348,36 @@ export default async function handler(req, res) {
       // --- Tickertape (fallback for pe/pb/roe/sector/marketCap when Yahoo fails) ---
       if (!result.sources.includes('yahoo')) {
         try {
-          const ttRes = await fetchWithTimeout(
+          // Tickertape uses internal slugs — try direct ticker, then search if not found
+          let ttData = null;
+          let ttRes = await fetchWithTimeout(
             `https://api.tickertape.in/stocks/info/${symbol}`,
             { headers: { 'User-Agent': UA } }
           );
           if (ttRes.ok) {
-            const ttData = await ttRes.json();
+            const j = await ttRes.json();
+            if (j.success !== false) ttData = j;
+          }
+          if (!ttData) {
+            // Look up slug via search
+            const srRes = await fetchWithTimeout(
+              `https://api.tickertape.in/search?text=${encodeURIComponent(symbol)}`,
+              { headers: { 'User-Agent': UA } }
+            );
+            if (srRes.ok) {
+              const sr = await srRes.json();
+              const slug = sr?.data?.stocks?.find(s => s.ticker === symbol)?.slug;
+              if (slug) {
+                const slugId = slug.split('-').pop(); // e.g. /stocks/rail-vikas-nigam-RAIV → RAIV
+                const tt2 = await fetchWithTimeout(
+                  `https://api.tickertape.in/stocks/info/${slugId}`,
+                  { headers: { 'User-Agent': UA } }
+                );
+                if (tt2.ok) { const j = await tt2.json(); if (j.success !== false) ttData = j; }
+              }
+            }
+          }
+          if (ttData) {
             const r = ttData?.data?.ratios || {};
             const info = ttData?.data?.info || {};
             const gic = ttData?.data?.gic || {};
