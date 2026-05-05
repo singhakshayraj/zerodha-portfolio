@@ -79,6 +79,21 @@ async function getNSESession() {
   return _nseSess;
 }
 
+// ── Yahoo Finance crumb helper ────────────────────────────────────────────────
+let _yahooCrumb = null, _yahooCookie = null, _yahooCrumbAt = 0;
+async function getYahooCrumb() {
+  if (_yahooCrumb && Date.now() - _yahooCrumbAt < 30 * 60 * 1000) return { crumb: _yahooCrumb, cookie: _yahooCookie };
+  const consentRes = await fetch('https://fc.yahoo.com', { headers: { 'User-Agent': UA }, redirect: 'follow' });
+  const rawCookies = consentRes.headers.getSetCookie?.() ?? [];
+  _yahooCookie = rawCookies.map(c => c.split(';')[0]).join('; ');
+  const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+    headers: { 'User-Agent': UA, 'Cookie': _yahooCookie },
+  });
+  _yahooCrumb = await crumbRes.text();
+  _yahooCrumbAt = Date.now();
+  return { crumb: _yahooCrumb, cookie: _yahooCookie };
+}
+
 const INDEX_MAP = {
   'NSE:NIFTY 50': 'NIFTY 50', 'NSE:NIFTY BANK': 'NIFTY BANK',
   'NSE:NIFTY MIDCAP 50': 'NIFTY MIDCAP 50', 'NSE:INDIA VIX': 'INDIA VIX',
@@ -265,9 +280,10 @@ export default async function handler(req, res) {
 
       // --- Yahoo Finance ---
       try {
+        const { crumb, cookie } = await getYahooCrumb();
         const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend';
-        const yUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}`;
-        const yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const yUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
+        const yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
         if (yRes.ok) {
           const yData = await yRes.json();
           const s = yData?.quoteSummary?.result?.[0];
@@ -408,7 +424,36 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers | fundamental | technical_full' });
+    // ── Health check ─────────────────────────────────────────────────────────────
+    // GET /api/research?action=health
+    if (action === 'health') {
+      const checks = {};
+      // Yahoo Finance crumb
+      try {
+        const { crumb } = await getYahooCrumb();
+        checks.yahoo_crumb = crumb && crumb.length > 0 ? 'ok' : 'empty';
+      } catch (e) { checks.yahoo_crumb = `error: ${e.message}`; }
+      // Yahoo Finance data fetch (INFY as canary)
+      try {
+        const { crumb, cookie } = await getYahooCrumb();
+        const r = await fetch(
+          `https://query1.finance.yahoo.com/v10/finance/quoteSummary/INFY.NS?modules=financialData&crumb=${encodeURIComponent(crumb)}`,
+          { headers: { 'User-Agent': UA, 'Cookie': cookie }, signal: AbortSignal.timeout(5000) }
+        );
+        const d = await r.json();
+        checks.yahoo_data = d?.quoteSummary?.result?.[0] ? 'ok' : `bad: ${JSON.stringify(d?.finance?.error || d?.quoteSummary?.error || 'empty')}`;
+      } catch (e) { checks.yahoo_data = `error: ${e.message}`; }
+      // Redis
+      try {
+        await redisSet('health:ping', { ts: Date.now() }, 60);
+        const v = await redisGet('health:ping');
+        checks.redis = v?.ts ? 'ok' : 'empty';
+      } catch (e) { checks.redis = `error: ${e.message}`; }
+      const allOk = Object.values(checks).every(v => v === 'ok');
+      return res.status(allOk ? 200 : 207).json({ status: allOk ? 'ok' : 'degraded', checks, ts: new Date().toISOString() });
+    }
+
+    res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers | fundamental | technical_full | health' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
