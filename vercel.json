@@ -1,6 +1,12 @@
 {
   "version": 2,
   "installCommand": "npm install",
+  "functions": {
+    "api/intel.js":     { "maxDuration": 30 },
+    "api/research.js":  { "maxDuration": 30 },
+    "api/kite.js":      { "maxDuration": 15 },
+    "api/orders.js":    { "maxDuration": 15 }
+  },
   "rewrites": [
     { "source": "/api/market-brain",   "destination": "/api/intel?action=brain" },
     { "source": "/api/trade-plan",     "destination": "/api/intel?action=plan" },
