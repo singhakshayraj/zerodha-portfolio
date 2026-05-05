@@ -79,6 +79,26 @@ async function getNSESession() {
   return _nseSess;
 }
 
+// ── Tickertape slug map (NSE ticker → Tickertape internal ID) ─────────────────
+// Tickertape search API is blocked on Vercel IPs; use static map for common symbols
+const TT_SLUGS = {
+  'RVNL': 'RAIV', 'IRCTC': 'INIR', 'HAL': 'HIAE', 'BEL': 'BAJE',
+  'COCHINSHIP': 'COCH', 'SBIN': 'SBI', 'PNB': 'PNBK', 'BANKBARODA': 'BOB',
+  'POWERGRID': 'PGRD', 'RECLTD': 'RECM', 'PFC': 'PWFC',
+  'HDFCBANK': 'HDBK', 'ICICIBANK': 'ICBK', 'AXISBANK': 'AXBK', 'KOTAKBANK': 'KTKM',
+  'HINDUNILVR': 'HLL', 'NESTLEIND': 'NEST', 'BRITANNIA': 'BRIT',
+  'WIPRO': 'WIPR', 'HCLTECH': 'HCLT', 'RELIANCE': 'RELI',
+  'TATAMOTORS': 'TAMO', 'TATASTEEL': 'TISC', 'MARUTI': 'MRTI',
+  'BAJFINANCE': 'BJFN', 'BAJAJFINSV': 'BJFS', 'ASIANPAINT': 'ASPN',
+  'SUNPHARMA': 'SUN', 'DRREDDY': 'REDY', 'CIPLA': 'CIPL', 'DIVISLAB': 'DIVI',
+  'ADANIENT': 'ADEL', 'ADANIPORTS': 'APSE', 'ULTRACEMCO': 'ULTC', 'TITAN': 'TITN',
+  'HINDPETRO': 'HPCL', 'COALINDIA': 'COAL', 'ONGC': 'ONGC',
+  'LT': 'LART', 'TECHM': 'TECHM', 'BAJAJ-AUTO': 'BAJA', 'HEROMOTOCO': 'HMOT',
+  'APOLLOHOSP': 'APHS', 'DABUR': 'DABU', 'MARICO': 'MRIC', 'PIDILITIND': 'PIDI',
+  'SIEMENS': 'SIEM', 'ABB': 'ABBI', 'HAVELLS': 'HAVL', 'DIXON': 'DIXN',
+  'TRENT': 'TREN', 'VMART': 'VMAR', 'ZOMATO': 'ZOMA', 'PAYTM': 'PAYT',
+};
+
 // ── Yahoo Finance crumb helper ────────────────────────────────────────────────
 let _yahooCrumb = null, _yahooCookie = null, _yahooCrumbAt = 0;
 async function getYahooCrumb() {
@@ -359,22 +379,14 @@ export default async function handler(req, res) {
             if (j.success !== false) ttData = j;
           }
           if (!ttData) {
-            // Look up slug via search
-            const srRes = await fetchWithTimeout(
-              `https://api.tickertape.in/search?text=${encodeURIComponent(symbol)}`,
-              { headers: { 'User-Agent': UA } }
-            );
-            if (srRes.ok) {
-              const sr = await srRes.json();
-              const slug = sr?.data?.stocks?.find(s => s.ticker === symbol)?.slug;
-              if (slug) {
-                const slugId = slug.split('-').pop(); // e.g. /stocks/rail-vikas-nigam-RAIV → RAIV
-                const tt2 = await fetchWithTimeout(
-                  `https://api.tickertape.in/stocks/info/${slugId}`,
-                  { headers: { 'User-Agent': UA } }
-                );
-                if (tt2.ok) { const j = await tt2.json(); if (j.success !== false) ttData = j; }
-              }
+            // Use static slug map (Tickertape search is blocked on Vercel IPs)
+            const slugId = TT_SLUGS[symbol];
+            if (slugId) {
+              const tt2 = await fetchWithTimeout(
+                `https://api.tickertape.in/stocks/info/${slugId}`,
+                { headers: { 'User-Agent': UA } }
+              );
+              if (tt2.ok) { const j = await tt2.json(); if (j.success !== false) ttData = j; }
             }
           }
           if (ttData) {
