@@ -286,7 +286,7 @@ export default async function handler(req, res) {
       const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
       if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
 
-      const cacheKey = `fa:${symbol}`;
+      const cacheKey = `fa2:${symbol}`;
       const cached = await redisGet(cacheKey);
       if (cached && cached.lastUpdated) {
         const ageMs = Date.now() - new Date(cached.lastUpdated).getTime();
@@ -301,7 +301,7 @@ export default async function handler(req, res) {
       // --- Yahoo Finance ---
       try {
         const { crumb, cookie } = await getYahooCrumb();
-        const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend';
+        const modules = 'financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,incomeStatementHistoryQuarterly,balanceSheetHistory,cashflowStatementHistory,cashflowStatementHistoryQuarterly,earningsTrend';
         const yUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${symbol}.NS?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
         let yRes = await fetchWithTimeout(yUrl, { headers: { 'User-Agent': UA, 'Cookie': cookie } });
         // Retry once if rate limited (bust crumb cache and try fresh)
@@ -321,8 +321,10 @@ export default async function handler(req, res) {
             const ks = s.defaultKeyStatistics || {};
             const sd = s.summaryDetail || {};
             const income = s.incomeStatementHistory?.incomeStatementHistory || [];
+            const incomeQ = s.incomeStatementHistoryQuarterly?.incomeStatementHistory || [];
             const balance = s.balanceSheetHistory?.balanceSheetStatements || [];
             const cashflow = s.cashflowStatementHistory?.cashflowStatements || [];
+            const cashflowQ = s.cashflowStatementHistoryQuarterly?.cashflowStatements || [];
 
             result.companyName = ks.shortName || symbol;
             result.pe = sd.trailingPE?.raw ?? null;
@@ -346,20 +348,93 @@ export default async function handler(req, res) {
             result.low52w = sd.fiftyTwoWeekLow?.raw ?? null;
             result.marketCap = sd.marketCap?.raw ?? null;
             result.sharesOutstanding = ks.sharesOutstanding?.raw ?? null;
-            // FCF positive years from last 3 cashflow statements
+
+            // FCF positive years from last 3 annual cashflow statements
             const fcfYears = cashflow.slice(0, 3).filter(c => (c.totalCashFromOperatingActivities?.raw || 0) > (c.capitalExpenditures?.raw || 0) * -1).length;
             result.fcfPositiveYears3yr = fcfYears;
-            // Revenue CAGR 3yr from income statements
+
+            // Revenue + profit CAGR 3yr from annual income statements
             if (income.length >= 4) {
               const revNow = income[0]?.totalRevenue?.raw;
               const rev3yr = income[3]?.totalRevenue?.raw;
               if (revNow && rev3yr && rev3yr > 0) result.revenueCagr3yr = +((Math.pow(revNow/rev3yr, 1/3)-1)*100).toFixed(1);
-            }
-            if (income.length >= 4) {
               const epsNow = income[0]?.dilutedEPS?.raw ?? income[0]?.basicEPS?.raw;
               const eps3yr = income[3]?.dilutedEPS?.raw ?? income[3]?.basicEPS?.raw;
               if (epsNow && eps3yr && eps3yr > 0) result.epsCagr3yr = +((Math.pow(Math.abs(epsNow/eps3yr), 1/3)-1)*100).toFixed(1);
+              const pnow = income[0]?.netIncome?.raw;
+              const p3yr = income[3]?.netIncome?.raw;
+              if (pnow && p3yr && p3yr > 0) result.profitCagr3yr = +((Math.pow(pnow/p3yr, 1/3)-1)*100).toFixed(1);
             }
+
+            // ROCE = EBIT / (Total Assets - Current Liabilities) × 100
+            const ebit0 = income[0]?.ebit?.raw ?? null;
+            const totalAssets0 = balance[0]?.totalAssets?.raw ?? null;
+            const currLiab0 = balance[0]?.totalCurrentLiabilities?.raw ?? null;
+            result.totalAssets = totalAssets0;
+            if (ebit0 != null && totalAssets0 != null && currLiab0 != null) {
+              const capEmployed = totalAssets0 - currLiab0;
+              if (capEmployed > 0) result.roce = +((ebit0 / capEmployed) * 100).toFixed(1);
+            }
+
+            // Interest coverage = EBIT / |interest expense|
+            const intExp0 = income[0]?.interestExpense?.raw ?? null;
+            if (ebit0 != null && intExp0 != null && intExp0 !== 0) {
+              result.interestCoverage = +(ebit0 / Math.abs(intExp0)).toFixed(1);
+            }
+
+            // ROA = net income / total assets (for Piotroski)
+            const netInc0 = income[0]?.netIncome?.raw ?? null;
+            const netInc1 = income[1]?.netIncome?.raw ?? null;
+            const totalAssets1 = balance[1]?.totalAssets?.raw ?? null;
+            if (netInc0 != null && totalAssets0 != null && totalAssets0 > 0) result.roa = +((netInc0 / totalAssets0) * 100).toFixed(2);
+            if (netInc1 != null && totalAssets1 != null && totalAssets1 > 0) result.roa_prev = +((netInc1 / totalAssets1) * 100).toFixed(2);
+
+            // Piotroski prev-year comparatives
+            const equity1 = balance[1]?.totalStockholderEquity?.raw ?? null;
+            const totalDebt1 = (balance[1]?.longTermDebt?.raw ?? 0) + (balance[1]?.shortLongTermDebt?.raw ?? 0);
+            if (equity1 && equity1 > 0) result.debtEquity_prev = +(totalDebt1 / equity1).toFixed(2);
+            const currAssets1 = balance[1]?.totalCurrentAssets?.raw ?? null;
+            const currLiab1 = balance[1]?.totalCurrentLiabilities?.raw ?? null;
+            if (currAssets1 && currLiab1 && currLiab1 > 0) result.currentRatio_prev = +(currAssets1 / currLiab1).toFixed(2);
+            result.sharesOutstanding_prev = balance[1]?.commonStockSharesOutstanding?.raw ?? null;
+            const gm1 = income[1]?.grossProfit?.raw ?? null;
+            const rev1 = income[1]?.totalRevenue?.raw ?? null;
+            if (gm1 != null && rev1 != null && rev1 > 0) result.grossMargin_prev = +((gm1 / rev1) * 100).toFixed(1);
+            const rev0 = income[0]?.totalRevenue?.raw ?? null;
+            if (rev0 && totalAssets0 && totalAssets0 > 0) result.assetTurnover = +(rev0 / totalAssets0).toFixed(3);
+            if (rev1 && totalAssets1 && totalAssets1 > 0) result.assetTurnover_prev = +(rev1 / totalAssets1).toFixed(3);
+
+            // Revenue QoQ from quarterly income
+            if (incomeQ.length >= 2) {
+              const rq0 = incomeQ[0]?.totalRevenue?.raw;
+              const rq1 = incomeQ[1]?.totalRevenue?.raw;
+              if (rq0 && rq1 && rq1 > 0) result.revenueQoQ = +((rq0 - rq1) / rq1 * 100).toFixed(1);
+            }
+
+            // Debt CAGR 3yr from annual balance sheets
+            const totalDebt0 = (balance[0]?.longTermDebt?.raw ?? 0) + (balance[0]?.shortLongTermDebt?.raw ?? 0);
+            if (balance.length >= 4) {
+              const td3 = (balance[3]?.longTermDebt?.raw ?? 0) + (balance[3]?.shortLongTermDebt?.raw ?? 0);
+              if (totalDebt0 > 0 && td3 > 0) result.debtCagr3yr = +((Math.pow(totalDebt0/td3, 1/3)-1)*100).toFixed(1);
+            }
+
+            // Consecutive negative CFO quarters (most recent first)
+            let negCFO = 0;
+            for (const q of cashflowQ) {
+              if ((q.totalCashFromOperatingActivities?.raw ?? 1) < 0) negCFO++;
+              else break;
+            }
+            result.negativeCFOQuarters = negCFO;
+
+            // Quarterly chart data (values in Crores, reversed to chronological order)
+            if (incomeQ.length > 0) {
+              result.quarterly = incomeQ.slice(0, 8).reverse().map(q => ({
+                label: q.endDate?.fmt || '',
+                revenue: q.totalRevenue?.raw != null ? +(q.totalRevenue.raw / 1e7).toFixed(1) : null,
+                netProfit: q.netIncome?.raw != null ? +(q.netIncome.raw / 1e7).toFixed(1) : null,
+              }));
+            }
+
             result.sources.push('yahoo');
           }
         }
@@ -458,6 +533,19 @@ export default async function handler(req, res) {
       // Fallback defaults for missing fields
       result.exchange = result.exchange || 'NSE';
       if (!result.companyName) result.companyName = symbol;
+      result.name = result.companyName;
+
+      // Build nested ownership object for client
+      if (result.promoterHolding != null || result.fiiHolding != null) {
+        const pub = Math.max(0, +(100 - (result.promoterHolding||0) - (result.fiiHolding||0) - (result.diiHolding||0)).toFixed(1));
+        result.ownership = {
+          promoter: result.promoterHolding ?? null,
+          fii: result.fiiHolding ?? null,
+          dii: result.diiHolding ?? null,
+          public: pub,
+          pledge: result.promoterPledge ?? null,
+        };
+      }
 
       // Cache if we got useful data
       if (result.sources.length > 0 && (result.pe != null || result.roe != null)) {

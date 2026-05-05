@@ -328,7 +328,7 @@ export function detectRedFlags(faData) {
     promoterPledge,
     promoterTrendDelta4q,
     revenueGrowth,
-    profitGrowth,
+    earningsGrowth: profitGrowth,
     debtCagr3yr,
     revenueCagr3yr,
     negativeCFOQuarters,

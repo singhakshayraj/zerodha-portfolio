@@ -477,7 +477,7 @@ function renderDetailView(d, standalone=true){
     ['Forward PE', fmt(d.forwardPE), '—', '', '—', ''],
     ['PB', fmt(d.pb), '—', '', d.pb?(d.pb<3?'✓ Fair':'~ High'):'—', d.pb?(d.pb<3?'good':'warn'):''],
     ['EV/EBITDA', fmt(d.evEbitda), '—', '', d.evEbitda?(d.evEbitda<12?'✓ Good':'~ Check'):'—', d.evEbitda?(d.evEbitda<12?'good':''):''],
-    ['Div Yield', d.divYield!=null?fmt(d.divYield,2)+'%':'—', '—', '', '—', ''],
+    ['Div Yield', d.dividendYield!=null?fmt(d.dividendYield,2)+'%':'—', '—', '', '—', ''],
     ['52W High', d.high52w?'₹'+Number(d.high52w).toLocaleString('en-IN'):'—', '—', '', '—', ''],
     ['52W Low', d.low52w?'₹'+Number(d.low52w).toLocaleString('en-IN'):'—', '—', '', '—', ''],
   ];
@@ -497,15 +497,15 @@ function renderDetailView(d, standalone=true){
     <div class="metric-item"><div class="metric-key">ROE</div><div class="metric-val">${d.roe!=null?fmt(d.roe)+'%':'—'}</div>${d.roeYoy!=null?`<div class="metric-yoy ${d.roeYoy>=0?'pos':'neg'}">${d.roeYoy>=0?'+':''}${fmt(d.roeYoy)}% YoY</div>`:''}</div>
     <div class="metric-item"><div class="metric-key">ROCE</div><div class="metric-val">${d.roce!=null?fmt(d.roce)+'%':'—'}</div>${d.roceYoy!=null?`<div class="metric-yoy ${d.roceYoy>=0?'pos':'neg'}">${d.roceYoy>=0?'+':''}${fmt(d.roceYoy)}% YoY</div>`:''}</div>
     <div class="metric-item"><div class="metric-key">Net Margin</div><div class="metric-val">${d.netMargin!=null?fmt(d.netMargin)+'%':'—'}</div></div>
-    <div class="metric-item"><div class="metric-key">Oper. Margin</div><div class="metric-val">${d.operMargin!=null?fmt(d.operMargin)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Oper. Margin</div><div class="metric-val">${d.operatingMargin!=null?fmt(d.operatingMargin)+'%':'—'}</div></div>
   </div>`;
 
   // Growth
   const growthHtml = `<div class="metrics-grid">
-    <div class="metric-item"><div class="metric-key">Rev CAGR 3yr</div><div class="metric-val ${d.revCagr3>=0?'c-pos':'c-neg'}">${d.revCagr3!=null?(d.revCagr3>=0?'+':'')+fmt(d.revCagr3)+'%':'—'}</div></div>
-    <div class="metric-item"><div class="metric-key">Profit CAGR 3yr</div><div class="metric-val ${d.profitCagr3>=0?'c-pos':'c-neg'}">${d.profitCagr3!=null?(d.profitCagr3>=0?'+':'')+fmt(d.profitCagr3)+'%':'—'}</div></div>
-    <div class="metric-item"><div class="metric-key">EPS CAGR 3yr</div><div class="metric-val ${d.epsCagr3>=0?'c-pos':'c-neg'}">${d.epsCagr3!=null?(d.epsCagr3>=0?'+':'')+fmt(d.epsCagr3)+'%':'—'}</div></div>
-    <div class="metric-item"><div class="metric-key">Revenue QoQ</div><div class="metric-val ${d.revQoQ>=0?'c-pos':'c-neg'}">${d.revQoQ!=null?(d.revQoQ>=0?'+':'')+fmt(d.revQoQ)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Rev CAGR 3yr</div><div class="metric-val ${d.revenueCagr3yr>=0?'c-pos':'c-neg'}">${d.revenueCagr3yr!=null?(d.revenueCagr3yr>=0?'+':'')+fmt(d.revenueCagr3yr)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Profit CAGR 3yr</div><div class="metric-val ${d.profitCagr3yr>=0?'c-pos':'c-neg'}">${d.profitCagr3yr!=null?(d.profitCagr3yr>=0?'+':'')+fmt(d.profitCagr3yr)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">EPS CAGR 3yr</div><div class="metric-val ${d.epsCagr3yr>=0?'c-pos':'c-neg'}">${d.epsCagr3yr!=null?(d.epsCagr3yr>=0?'+':'')+fmt(d.epsCagr3yr)+'%':'—'}</div></div>
+    <div class="metric-item"><div class="metric-key">Revenue QoQ</div><div class="metric-val ${d.revenueQoQ>=0?'c-pos':'c-neg'}">${d.revenueQoQ!=null?(d.revenueQoQ>=0?'+':'')+fmt(d.revenueQoQ)+'%':'—'}</div></div>
   </div>`;
 
   // Health
