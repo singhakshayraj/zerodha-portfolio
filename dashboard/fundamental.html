@@ -878,7 +878,7 @@ document.addEventListener('click',function(e){
 
 async function doSearch(q){
   try{
-    const res = await fetch('/api/research?action=symbol',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
+    const res = await fetch('/api/intel?action=symbol',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})});
     const data = await res.json();
     const items = Array.isArray(data)?data:(data.results||data.data||[]);
     if(!items.length){ searchDropdown.innerHTML='<div class="search-item"><span class="c-dim">No results</span></div>'; searchDropdown.classList.add('visible'); return; }
