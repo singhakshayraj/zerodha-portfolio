@@ -345,6 +345,53 @@ export default async function handler(req, res) {
         }
       } catch (e) { /* Yahoo failed — continue */ }
 
+      // --- Tickertape (fallback for pe/pb/roe/sector/marketCap when Yahoo fails) ---
+      if (!result.sources.includes('yahoo')) {
+        try {
+          const ttRes = await fetchWithTimeout(
+            `https://api.tickertape.in/stocks/info/${symbol}`,
+            { headers: { 'User-Agent': UA } }
+          );
+          if (ttRes.ok) {
+            const ttData = await ttRes.json();
+            const r = ttData?.data?.ratios || {};
+            const info = ttData?.data?.info || {};
+            const gic = ttData?.data?.gic || {};
+            if (r.pe != null || r.roe != null) {
+              result.companyName = result.companyName || info.name || symbol;
+              result.sector = result.sector || gic.industry || info.sector || null;
+              result.pe = result.pe ?? r.pe ?? null;
+              result.pb = result.pb ?? r.pb ?? null;
+              result.roe = result.roe ?? r.roe ?? null;
+              result.eps = result.eps ?? r.eps ?? null;
+              result.beta = result.beta ?? r.beta ?? null;
+              result.dividendYield = result.dividendYield ?? r.divYield ?? null;
+              result.marketCap = result.marketCap ?? (r.marketCap ? r.marketCap * 1e7 : null); // Tickertape in crores
+              result.high52w = result.high52w ?? r['52wHigh'] ?? null;
+              result.low52w = result.low52w ?? r['52wLow'] ?? null;
+              result.sources.push('tickertape');
+            }
+          }
+        } catch (e) { /* Tickertape failed — continue */ }
+      }
+
+      // --- NSE quote-equity (sector PE cross-reference) ---
+      try {
+        const nseQRes = await fetchWithTimeout(
+          `https://www.nseindia.com/api/quote-equity?symbol=${encodeURIComponent(symbol)}`,
+          { headers: { 'User-Agent': UA, 'Referer': `https://www.nseindia.com/get-quotes/equity?symbol=${symbol}`, 'Accept': 'application/json' } }
+        );
+        if (nseQRes.ok) {
+          const nseQ = await nseQRes.json();
+          const md = nseQ?.metadata || {};
+          const ii = nseQ?.industryInfo || {};
+          result.pe = result.pe ?? md.pdSymbolPe ?? null;
+          result.sector = result.sector || ii.industry || ii.sector || null;
+          result.exchange = 'NSE';
+          result.sources.push('nse_quote');
+        }
+      } catch (e) { /* NSE quote failed — continue */ }
+
       // --- NSE shareholding ---
       try {
         const nseHdrs = { 'User-Agent': UA, 'Referer': 'https://www.nseindia.com/', 'Accept': 'application/json' };
@@ -376,8 +423,8 @@ export default async function handler(req, res) {
       result.exchange = result.exchange || 'NSE';
       if (!result.companyName) result.companyName = symbol;
 
-      // Cache if we got at least one source
-      if (result.sources.length > 0) {
+      // Cache if we got useful data
+      if (result.sources.length > 0 && (result.pe != null || result.roe != null)) {
         redisSet(cacheKey, result, 4 * 60 * 60).catch(() => {});
       }
 
