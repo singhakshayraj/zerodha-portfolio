@@ -7,7 +7,8 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getBrainResult }  from '../dashboard/lib/brain.js';
-import { getTradePlan }    from '../dashboard/lib/plan.js';
+// plan.js uses Node 'https' module — lazy-imported inside the handler to avoid
+// Vercel ncc bundling conflict that silently drops the function at deploy time.
 import { analyzeStock, analyzeEventStocks, analyzeEventScenario } from '../dashboard/lib/llm.js';
 import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
@@ -221,6 +222,7 @@ export default async function handler(req, res) {
       if (req.method !== 'POST') { res.status(405).end(); return; }
       const { symbol, ltp } = req.body ?? {};
       if (!symbol || !ltp) { res.status(400).json({ error: 'symbol and ltp required' }); return; }
+      const { getTradePlan } = await import('../dashboard/lib/plan.js');
       const plan = await getTradePlan(req.body);
       return res.status(200).json(plan);
     }
