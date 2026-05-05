@@ -45,7 +45,21 @@ export async function analyzeFA(symbol) {
   const scores = computeComposite(faData);
   const piotroski = computePiotroski(faData);
   const flags = detectRedFlags(faData);
-  return { faData, scores, piotroski, flags };
+  return {
+    ...faData,
+    quality: scores.quality.total,
+    growth: scores.growth.total,
+    valuation: scores.valuation.total,
+    health: scores.health.total,
+    composite: scores.total,
+    verdict: scores.verdict,
+    verdictColor: scores.verdictColor,
+    scores,
+    piotroski: piotroski.score,
+    piotroskiFlags: piotroski.signals.map(f => f.pass),
+    flags,
+    faData,
+  };
 }
 
 /**
@@ -69,8 +83,8 @@ export async function analyzePortfolio(enctoken) {
       batch.map(async h => {
         const symbol = h.tradingsymbol || h.symbol;
         try {
-          const { faData, scores, piotroski, flags } = await analyzeFA(symbol);
-          return { symbol, holding: h, faData, scores, piotroski, flags };
+          const analyzed = await analyzeFA(symbol);
+          return { symbol, holding: h, ...analyzed };
         } catch (e) {
           return { symbol, holding: h, faData: null, scores: null, piotroski: null, flags: [], error: e.message };
         }
