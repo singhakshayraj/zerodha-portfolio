@@ -2,7 +2,6 @@
  * Intelligence + Research domain router
  * Merged from api/research.js to keep function count within Vercel Hobby limits.
  */
-export const config = { maxDuration: 10 };
 
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
