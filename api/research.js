@@ -378,7 +378,7 @@ export default async function handler(req, res) {
             const j = await ttRes.json();
             if (j.success !== false) ttData = j;
           }
-          if (!ttData) {
+          if (!ttData || !ttData?.data?.ratios?.pe) {
             // Use static slug map (Tickertape search is blocked on Vercel IPs)
             const slugId = TT_SLUGS[symbol];
             if (slugId) {
