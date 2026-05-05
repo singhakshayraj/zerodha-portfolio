@@ -507,13 +507,23 @@ export default async function handler(req, res) {
         checks.yahoo_data = `error: ${e.message}`;
       }
       // Redis
-      try {
-        await redisSet('health:ping', { ts: Date.now() }, 60);
-        const v = await redisGet('health:ping');
-        checks.redis = v?.ts ? 'ok' : 'empty';
-      } catch (e) { checks.redis = `error: ${e.message}`; }
-      const allOk = Object.values(checks).every(v => v === 'ok');
-      return res.status(allOk ? 200 : 207).json({ status: allOk ? 'ok' : 'degraded', checks, ts: new Date().toISOString() });
+      if (!process.env.UPSTASH_REDIS_URL || !process.env.UPSTASH_REDIS_TOKEN) {
+        checks.redis = 'not_configured';
+      } else {
+        try {
+          await redisSet('health:ping', { ts: Date.now() }, 60);
+          const v = await redisGet('health:ping');
+          checks.redis = v?.ts ? 'ok' : 'empty';
+        } catch (e) { checks.redis = `error: ${e.message}`; }
+      }
+      // yahoo_data 429 = IP blocked but Tickertape fallback active → warn not fail
+      // redis not_configured → warn not fail
+      const warnings = new Set(['not_configured']);
+      const critical = Object.entries(checks).filter(([k, v]) => v !== 'ok' && !warnings.has(v) && !(k === 'yahoo_data' && v.includes('429')));
+      const status = critical.length === 0 ? 'ok' : 'degraded';
+      // Add notes
+      if (checks.yahoo_data?.includes('429')) checks._note = 'Yahoo IP-blocked on Vercel; Tickertape fallback active';
+      return res.status(status === 'ok' ? 200 : 207).json({ status, checks, ts: new Date().toISOString() });
     }
 
     res.status(400).json({ error: 'action must be quotes | symbol | alpha | triggers | fundamental | technical_full | health' });
