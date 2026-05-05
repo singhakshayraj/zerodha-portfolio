@@ -14,7 +14,7 @@ const BASE = '';  // same-origin
  * @returns {Promise<object>} faData
  */
 export async function fetchFAData(symbol) {
-  const res = await fetch(`${BASE}/api/research?action=fundamental&symbol=${encodeURIComponent(symbol)}`);
+  const res = await fetch(`${BASE}/api/intel?action=fundamental&symbol=${encodeURIComponent(symbol)}`);
   if (!res.ok) throw new Error(`FA data fetch failed: ${res.status}`);
   return res.json();
 }
@@ -105,7 +105,7 @@ export async function analyzePortfolio(enctoken) {
  */
 export async function fetchTAData(symbol, timeframe, enctoken) {
   const res = await fetch(
-    `/api/research?action=technical_full&symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`,
+    `/api/intel?action=technical_full&symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`,
     { headers: { 'X-Kite-Enctoken': enctoken } }
   );
   if (!res.ok) throw new Error(`TA data fetch failed: ${res.status}`);
