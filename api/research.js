@@ -530,6 +530,20 @@ export default async function handler(req, res) {
         if (!checks.yahoo_crumb) checks.yahoo_crumb = `error: ${e.message}`;
         checks.yahoo_data = `error: ${e.message}`;
       }
+      // Tickertape (direct + search slug)
+      try {
+        const ttDirect = await fetch('https://api.tickertape.in/stocks/info/INFY', { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(5000) });
+        checks.tickertape_direct = ttDirect.ok ? 'ok' : `http_${ttDirect.status}`;
+        // Test search slug flow for a stock that needs it (RVNL)
+        const ttSearch = await fetch('https://api.tickertape.in/search?text=RVNL', { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(5000) });
+        if (ttSearch.ok) {
+          const sr = await ttSearch.json();
+          const slug = sr?.data?.stocks?.find(s => s.ticker === 'RVNL')?.slug;
+          checks.tickertape_search = slug ? `ok (slug=${slug})` : `no_slug (keys=${Object.keys(sr?.data||{})})`;
+        } else {
+          checks.tickertape_search = `http_${ttSearch.status}`;
+        }
+      } catch (e) { checks.tickertape_direct = `error: ${e.message}`; checks.tickertape_search = 'skipped'; }
       // Redis
       if (!process.env.UPSTASH_REDIS_URL || !process.env.UPSTASH_REDIS_TOKEN) {
         checks.redis = 'not_configured';
