@@ -275,6 +275,10 @@
     </div>
     <div id="portfolio-grid" class="stock-grid"></div>
     <div id="portfolio-empty" class="empty-state" style="display:none"></div>
+    <!-- Detail overlay within portfolio pane (detail-wrap moved here on card click) -->
+    <div id="portfolio-detail" style="display:none">
+      <button onclick="closePortfolioDetail()" style="margin-bottom:12px;padding:6px 14px;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);cursor:pointer;font-family:var(--font-ui);font-size:var(--text-sm)">← Back to Portfolio</button>
+    </div>
   </div>
 </div>
 
@@ -621,13 +625,34 @@ function renderStockCard(d) {
 }
 
 function openDetailFromPortfolio(d) {
-  switchTab('search');
-  document.getElementById('search-input').value = d.symbol;
+  if (!d.dInd) return;  // no TA data loaded yet
+  const grid   = document.getElementById('portfolio-grid');
+  const empty  = document.getElementById('portfolio-empty');
+  const detail = document.getElementById('portfolio-detail');
+  const sortBar = document.querySelector('#pane-portfolio .sort-bar');
+  // Move detail-wrap into portfolio pane
+  const detailWrap = document.getElementById('detail-wrap');
+  detail.appendChild(detailWrap);
+  grid.style.display    = 'none';
+  empty.style.display   = 'none';
+  if (sortBar) sortBar.style.display = 'none';
+  detail.style.display  = '';
   _currentData = { ...d, signals: generateSignals(d.dInd, { close: d.dInd.close, prevClose: d.dInd.prevClose, volume: d.dInd.volume, avgVolume10d: d.dInd.avgVol }) };
-  const mtf = computeMTFAlignment(d.dScore.signal, d.wScore.signal, d.mScore.signal);
-  _currentData.mtf = mtf;
+  _currentData.mtf = computeMTFAlignment(d.dScore?.signal, d.wScore?.signal, d.mScore?.signal);
   renderDetail(d.symbol, _currentData);
 }
+
+window.closePortfolioDetail = function() {
+  const grid   = document.getElementById('portfolio-grid');
+  const detail = document.getElementById('portfolio-detail');
+  const sortBar = document.querySelector('#pane-portfolio .sort-bar');
+  // Move detail-wrap back to search pane
+  const detailWrap = document.getElementById('detail-wrap');
+  document.querySelector('#pane-search .container').appendChild(detailWrap);
+  detail.style.display  = 'none';
+  grid.style.display    = '';
+  if (sortBar) sortBar.style.display = '';
+};
 
 // ── Search ────────────────────────────────────────────────────────────────
 window.onSearchInput = function(val) {
