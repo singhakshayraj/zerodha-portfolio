@@ -16,7 +16,44 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BUILD_TIME = '2026-05-07T23:00:00Z'; // updated each deploy — check /api/research?action=version
+const BUILD_TIME = '2026-05-07T23:30:00Z'; // updated each deploy — check /api/research?action=version
+
+// ── Kite historical data (for technical_full) ─────────────────────────────────
+let _instrCache = null;
+async function fetchKiteHistory(symbol, interval, count, enctoken) {
+  const defaultCounts = { day: 200, week: 104, month: 60 };
+  const n = count || defaultCounts[interval] || 200;
+  let token;
+  if (symbol === 'NIFTY 50' || symbol === 'NIFTY50') {
+    token = '256265';
+  } else {
+    if (!_instrCache) {
+      const r = await fetch('https://api.kite.trade/instruments/NSE', { headers: { 'X-Kite-Version': '3' } });
+      const csv = await r.text();
+      const lines = csv.trim().split('\n');
+      const h = lines[0].split(',');
+      const ti = h.indexOf('instrument_token'), si = h.indexOf('tradingsymbol');
+      _instrCache = {};
+      for (let i = 1; i < lines.length; i++) {
+        const c = lines[i].split(',');
+        if (c[si]) _instrCache[c[si].trim()] = c[ti].trim();
+      }
+    }
+    token = _instrCache[symbol.toUpperCase()];
+    if (!token) throw new Error(`Token not found for ${symbol}`);
+  }
+  const to = new Date(), from = new Date(to);
+  if (interval === 'day') from.setDate(from.getDate() - Math.ceil(n * 1.5));
+  else if (interval === 'week') from.setDate(from.getDate() - n * 7 + 7);
+  else if (interval === 'month') { from.setMonth(from.getMonth() - n + 1); from.setDate(1); }
+  const fmt = d => d.toISOString().slice(0, 10);
+  const url = `https://kite.zerodha.com/oms/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
+  const r = await fetch(url, { headers: { Authorization: `enctoken ${enctoken}`, 'X-Kite-Version': '3' } });
+  const data = await r.json();
+  return (data?.data?.candles || data?.candles || [])
+    .map(c => ({ date: c[0], open: c[1], high: c[2], low: c[3], close: c[4], volume: c[5] || 0 }))
+    .slice(-n);
+}
 
 // ── Redis (Upstash HTTP — no persistent connection) ───────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_URL;
@@ -587,7 +624,35 @@ Return ONLY raw JSON: {"summary":"<1 para>","bullCase":["<point>","<point>","<po
       return res.status(200).json({ version: BUILD_TIME, buildTime: BUILD_TIME });
     }
 
-    res.status(400).json({ error: 'action must be symbol | fundamental | fa_narrative | version' });
+    if (action === 'technical_full') {
+      if (req.method !== 'GET') { res.status(405).end(); return; }
+      const symbol = (url.searchParams.get('symbol') || '').trim().toUpperCase();
+      const timeframe = url.searchParams.get('timeframe') || 'daily';
+      if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
+      const enctoken = req.headers['x-kite-enctoken'] || '';
+      if (!enctoken) { res.status(401).json({ error: 'X-Kite-Enctoken header required' }); return; }
+      const cacheKey = `ta:${symbol}:${timeframe}`;
+      const cached = await redisGet(cacheKey);
+      if (cached?.fetchedAt && Date.now() - new Date(cached.fetchedAt).getTime() < 15 * 60 * 1000) {
+        return res.status(200).json({ ...cached, _cached: true });
+      }
+      const intervalMap = { daily: 'day', weekly: 'week', monthly: 'month' };
+      const countMap = { daily: 200, weekly: 104, monthly: 60 };
+      const kiteInterval = intervalMap[timeframe] || 'day';
+      const count = countMap[timeframe] || 200;
+      const [candles, niftyCandles] = await Promise.allSettled([
+        fetchKiteHistory(symbol, kiteInterval, count, enctoken),
+        fetchKiteHistory('NIFTY 50', kiteInterval, count, enctoken).catch(() => []),
+      ]);
+      const stockCandles = candles.status === 'fulfilled' ? candles.value : [];
+      const nifty = niftyCandles.status === 'fulfilled' ? niftyCandles.value : [];
+      if (!stockCandles.length) return res.status(502).json({ error: `No candle data for ${symbol}` });
+      const taResult = { symbol, timeframe, candles: stockCandles, niftyCandles: nifty, fetchedAt: new Date().toISOString(), count: stockCandles.length };
+      redisSet(cacheKey, taResult, 15 * 60).catch(() => {});
+      return res.status(200).json(taResult);
+    }
+
+    res.status(400).json({ error: 'action must be symbol | fundamental | fa_narrative | version | technical_full' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
