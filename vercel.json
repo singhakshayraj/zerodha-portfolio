@@ -11,7 +11,7 @@
     { "source": "/api/fa-data",        "destination": "/api/research?action=fundamental" },
     { "source": "/api/version",        "destination": "/api/research?action=version" },
     { "source": "/api/fa-narrative",   "destination": "/api/research?action=fa_narrative" },
-    { "source": "/api/ta-data",        "destination": "/api/intel?action=technical_full" },
+    { "source": "/api/ta-data",        "destination": "/api/research?action=technical_full" },
     { "source": "/api/holdings",       "destination": "/api/kite?action=holdings" },
     { "source": "/api/quotes",         "destination": "/api/kite?action=quotes" },
     { "source": "/api/historical",     "destination": "/api/kite?action=historical" },

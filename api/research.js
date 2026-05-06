@@ -16,7 +16,7 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BUILD_TIME = '2026-05-07T23:30:00Z'; // updated each deploy — check /api/research?action=version
+const BUILD_TIME = '2026-05-07T23:45:00Z'; // updated each deploy — check /api/research?action=version
 
 // ── Kite historical data (for technical_full) ─────────────────────────────────
 let _instrCache = null;
