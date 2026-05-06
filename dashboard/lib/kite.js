@@ -188,7 +188,7 @@ export async function getHistory(symbol, interval = 'day', count, clientEnctoken
   }
 
   const fmt = d => d.toISOString().slice(0, 10);
-  const path = `/oms/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
+  const path = `/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
 
   const raw = await kiteRequest(path, enctoken, 'oms');
   // Kite returns { candles: [[timestamp, o, h, l, c, volume], ...] }
