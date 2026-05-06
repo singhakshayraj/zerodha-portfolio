@@ -6,7 +6,7 @@
     { "source": "/api/trade-plan",     "destination": "/api/intel?action=plan" },
     { "source": "/analyze",            "destination": "/api/intel?action=analyze" },
     { "source": "/api/yahoo-quotes",   "destination": "/api/intel?action=quotes" },
-    { "source": "/symbol-search",      "destination": "/api/intel?action=symbol" },
+    { "source": "/symbol-search",      "destination": "/api/research?action=symbol" },
     { "source": "/alpha-score",        "destination": "/api/intel?action=alpha" },
     { "source": "/api/fa-data",        "destination": "/api/research?action=fundamental" },
     { "source": "/api/version",        "destination": "/api/research?action=version" },
