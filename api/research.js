@@ -294,12 +294,16 @@ export default async function handler(req, res) {
       if (ttRes.status === 'fulfilled' && ttRes.value) {
         const ttData = ttRes.value;
         const r = ttData?.data?.ratios || {}, info = ttData?.data?.info || {}, gic = ttData?.data?.gic || {};
-        if (r.pe != null || r.roe != null) {
+        if (r.pe != null || r.roe != null || r.pb != null || r.roce != null) {
           result.companyName   = result.companyName   || info.name  || symbol;
           result.sector        = result.sector        || gic.industry || info.sector || null;
           result.pe            = result.pe            ?? r.pe       ?? null;
           result.pb            = result.pb            ?? r.pb       ?? null;
           result.roe           = result.roe           ?? r.roe      ?? null;
+          result.roce          = result.roce          ?? r.roce     ?? null;
+          result.netMargin     = result.netMargin     ?? r.npm      ?? r.netProfitMargin ?? null;
+          result.debtEquity    = result.debtEquity    ?? r.deRatio  ?? null;
+          result.currentRatio  = result.currentRatio  ?? r.currentRatio ?? null;
           result.beta          = result.beta          ?? r.beta     ?? null;
           result.dividendYield = result.dividendYield ?? r.divYield ?? null;
           result.marketCap     = result.marketCap     ?? (r.marketCap ? r.marketCap * 1e7 : null);
