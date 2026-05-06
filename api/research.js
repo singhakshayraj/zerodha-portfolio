@@ -16,7 +16,7 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BUILD_TIME = '2026-05-07T21:45:00Z'; // updated each deploy — check /api/research?action=version
+const BUILD_TIME = '2026-05-07T22:00:00Z'; // updated each deploy — check /api/research?action=version
 
 // ── Redis (Upstash HTTP — no persistent connection) ───────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_URL;
@@ -75,6 +75,11 @@ const TT_SLUGS = {
   'APOLLOHOSP': 'APHS', 'DABUR': 'DABU', 'MARICO': 'MRIC', 'PIDILITIND': 'PIDI',
   'SIEMENS': 'SIEM', 'ABB': 'ABBI', 'HAVELLS': 'HAVL', 'DIXON': 'DIXN',
   'TRENT': 'TREN', 'VMART': 'VMAR', 'ZOMATO': 'ZOMA', 'PAYTM': 'PAYT',
+  // user portfolio
+  'AARTIIND': 'ARTI', 'BANKINDIA': 'BOI', 'BHEL': 'BHEL', 'ATGL': 'ATGL',
+  'NMDC': 'NMDC', 'RVNL': 'RAIV', 'SAIL': 'SAIL', 'NTPC': 'NTPC',
+  'GAIL': 'GAIL', 'BPCL': 'BPCL', 'IOC': 'IOC', 'NHPC': 'NHPC',
+  'SJVN': 'SJVN', 'IRFC': 'IRFC', 'HUDCO': 'HUDC', 'NBCC': 'NBCC',
 };
 
 const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
@@ -149,27 +154,18 @@ export default async function handler(req, res) {
           if (!r.ok) throw new Error(`yahoo ${r.status}`);
           return r.json();
         })(),
-        // Tickertape — resolve sid via direct lookup, TT_SLUGS map, or search API
+        // Tickertape — resolve sid via TT_SLUGS, direct lookup, or search fallback
         (async () => {
           const ttHeaders = { 'User-Agent': UA };
-          // 1. Try direct symbol
-          let r = await fetchT(`https://api.tickertape.in/stocks/info/${symbol}`, { headers: ttHeaders }, 4000);
-          if (r.ok) { const j = await r.json(); if (j.success !== false && j.data?.ratios) return j; }
-          // 2. Try known slug override
-          let slugId = TT_SLUGS[symbol];
-          // 3. If no slug, search by ticker
-          if (!slugId) {
-            const sr = await fetchT(`https://api.tickertape.in/search?text=${encodeURIComponent(symbol)}`, { headers: ttHeaders }, 4000);
-            if (sr.ok) {
-              const sj = await sr.json();
-              const match = (sj.data?.stocks || []).find(s => s.ticker === symbol);
-              if (match?.sid) slugId = match.sid;
-            }
+          const knownSlug = TT_SLUGS[symbol];
+          // 1. Known slug — go direct, skip wasted direct-symbol call
+          if (knownSlug) {
+            const r = await fetchT(`https://api.tickertape.in/stocks/info/${knownSlug}`, { headers: ttHeaders }, 5000);
+            if (r.ok) { const j = await r.json(); if (j.success !== false && j.data?.ratios) return j; }
           }
-          if (slugId) {
-            r = await fetchT(`https://api.tickertape.in/stocks/info/${slugId}`, { headers: ttHeaders }, 4000);
-            if (r.ok) { const j = await r.json(); if (j.success !== false) return j; }
-          }
+          // 2. Direct symbol (works when NSE ticker == TT sid e.g. NMDC, BHEL)
+          const r2 = await fetchT(`https://api.tickertape.in/stocks/info/${symbol}`, { headers: ttHeaders }, 4000);
+          if (r2.ok) { const j = await r2.json(); if (j.success !== false && j.data?.ratios) return j; }
           return null;
         })(),
         // NSE quote
@@ -221,10 +217,10 @@ export default async function handler(req, res) {
             const rows = [...plM[1].matchAll(/<td[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/td>([\s\S]*?)<\/tr>/g)];
             let sales = null, netProfit = null;
             for (const [, label, rest] of rows) {
-              const lbl = label.replace(/<[^>]+>/g,'').trim();
+              const lbl = label.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').trim();
               const nums = [...rest.matchAll(/<td[^>]*>\s*([\d,\.]+)\s*<\/td>/g)].map(m => parseFloat(m[1].replace(/,/g,'')));
-              if (/^sales$/i.test(lbl) && nums.length) sales = nums[0];
-              if (/net profit$/i.test(lbl) && nums.length) netProfit = nums[0];
+              if (/^sales/i.test(lbl) && nums.length) sales = nums[0];
+              if (/^net profit/i.test(lbl) && nums.length) netProfit = nums[0];
             }
             if (sales && netProfit && sales > 0) out.netMargin = +((netProfit / sales) * 100).toFixed(1);
           }
