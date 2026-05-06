@@ -444,7 +444,7 @@ window.toggleCard = async function(symbol, cardId, detailId){
     const data = await analyzeFA(symbol);
     detail.innerHTML = renderDetailView(data, false);
     initDetailCharts(data, symbol.replace(/[^A-Z0-9]/g,'_'));
-    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'), data);
     loadPeers(data.sector, symbol, 'peers-'+symbol.replace(/[^A-Z0-9]/g,'_'));
   } catch(e){
     detail.innerHTML = `<div class="error-card" style="margin-top:12px">Failed to load FA data: ${e.message}</div>`;
@@ -743,11 +743,11 @@ window.toggleQChart = function(sfx, mode){
 };
 
 // ── Load AI Narrative
-async function loadNarrative(symbol, containerId){
+async function loadNarrative(symbol, containerId, faData){
   const el = document.getElementById(containerId);
   if(!el) return;
   try{
-    const narr = await fetchFANarrative(symbol);
+    const narr = await fetchFANarrative(symbol, faData);
     if(!narr){ el.innerHTML=`<div class="narrative-section-title">AI Narrative</div><p class="c-dim" style="font-size:12px">Narrative unavailable.</p>`; return; }
     const bulls = Array.isArray(narr.bullCase)?narr.bullCase:[];
     const bears = Array.isArray(narr.bearCase)?narr.bearCase:[];
@@ -845,7 +845,7 @@ async function loadSymbol(symbol){
     const data = await analyzeFA(symbol);
     wrap.innerHTML = renderDetailView(data, true);
     initDetailCharts(data, symbol.replace(/[^A-Z0-9]/g,'_'));
-    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'));
+    loadNarrative(symbol, 'narr-'+symbol.replace(/[^A-Z0-9]/g,'_'), data);
     loadPeers(data.sector, symbol, 'peers-'+symbol.replace(/[^A-Z0-9]/g,'_'));
   } catch(e){
     wrap.innerHTML=`<div class="error-card">Could not load data for <strong>${symbol}</strong>: ${e.message}</div>`;

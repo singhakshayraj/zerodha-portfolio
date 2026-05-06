@@ -365,7 +365,8 @@ export default async function handler(req, res) {
     if (action === 'fa_narrative') {
       if (req.method !== 'POST') { res.status(405).end(); return; }
       const { symbol, faData } = req.body ?? {};
-      if (!symbol || !faData) { res.status(400).json({ error: 'symbol and faData required' }); return; }
+      if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
+      const d = faData || {};
 
       const cacheKey = `fa:narrative:${symbol}`;
       const cached = await redisGet(cacheKey);
@@ -375,7 +376,7 @@ export default async function handler(req, res) {
       }
 
       const SYSTEM = `You are a fundamental analyst at a top-tier Indian institutional fund. Write precise, jargon-light analysis. Every sentence must contain a specific data point. Never pad. Never make up numbers.`;
-      const buildPrompt = (sym, d) => `Analyze ${sym} (${d.companyName || sym}), sector: ${d.sector || 'Unknown'}.
+      const buildPrompt = (sym, d) => `Analyze ${sym} (${d.companyName || d.name || sym}), sector: ${d.sector || 'Unknown'}.
 Key metrics: PE ${d.pe ?? 'N/A'} | PB ${d.pb ?? 'N/A'} | ROE ${d.roe?.toFixed(1) ?? 'N/A'}% | ROCE ${d.roce?.toFixed(1) ?? 'N/A'}% | Net Margin ${d.netMargin?.toFixed(1) ?? 'N/A'}%
 Rev CAGR 3yr: ${d.revenueCagr3yr?.toFixed(1) ?? 'N/A'}% | EPS CAGR: ${d.epsCagr3yr?.toFixed(1) ?? 'N/A'}% | D/E: ${d.debtEquity?.toFixed(2) ?? 'N/A'} | Promoter: ${d.promoterHolding?.toFixed(1) ?? 'N/A'}% | Pledge: ${d.promoterPledge?.toFixed(1) ?? 'N/A'}%
 Return ONLY raw JSON: {"summary":"<1 para>","bullCase":["<point>","<point>","<point>"],"bearCase":["<point>","<point>","<point>"],"watchQuestion":"<1 sentence>","management":"<1 sentence>"}`;
@@ -385,7 +386,7 @@ Return ONLY raw JSON: {"summary":"<1 para>","bullCase":["<point>","<point>","<po
       if (provider === 'gemini' || !GROQ_API_KEY) {
         if (!GOOGLE_API_KEY) throw new Error('No LLM API key configured');
         const model = GEMINI_MODEL;
-        const prompt = SYSTEM + '\n\n' + buildPrompt(symbol, faData);
+        const prompt = SYSTEM + '\n\n' + buildPrompt(symbol, d);
         const r = await fetchT(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API_KEY}`,
           { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -405,7 +406,7 @@ Return ONLY raw JSON: {"summary":"<1 para>","bullCase":["<point>","<point>","<po
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: SYSTEM },
-            { role: 'user', content: buildPrompt(symbol, faData) },
+            { role: 'user', content: buildPrompt(symbol, d) },
           ],
         });
         narrative = JSON.parse(msg.choices[0].message.content.trim());
