@@ -16,7 +16,7 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BUILD_TIME = '2026-05-07T22:00:00Z'; // updated each deploy — check /api/research?action=version
+const BUILD_TIME = '2026-05-07T22:20:00Z'; // updated each deploy — check /api/research?action=version
 
 // ── Redis (Upstash HTTP — no persistent connection) ───────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_URL;
@@ -211,19 +211,74 @@ export default async function handler(req, res) {
               else if (n === 'Book Value') out.bvps = v;
             }
           }
-          // P&L table — first data row = Sales, row with 'Net Profit' label = net profit
+          // Helper: parse table rows from a section block
+          const parseRows = (block) => {
+            const map = {};
+            for (const [, label, rest] of block.matchAll(/<td[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/td>([\s\S]*?)<\/tr>/g)) {
+              const lbl = label.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').trim().replace(/\s*\+\s*$/,'');
+              const nums = [...rest.matchAll(/<td[^>]*>\s*([\d,\.\-]+)\s*<\/td>/g)].map(m => parseFloat(m[1].replace(/,/g,'')));
+              if (lbl && nums.length) map[lbl.toLowerCase()] = nums;
+            }
+            return map;
+          };
+
+          // Quarterly P&L — revenueQoQ
+          const qplM = html.match(/id="quarters"([\s\S]*?)id="profit-loss"/);
+          if (qplM) {
+            const qrows = parseRows(qplM[1]);
+            const sales = qrows['sales'] || qrows['revenue'];
+            if (sales && sales.length >= 2 && sales[1] > 0) out.revenueQoQ = +((sales[0] - sales[1]) / sales[1] * 100).toFixed(1);
+          }
+
+          // Annual P&L — netMargin, revCagr3yr
           const plM = html.match(/id="profit-loss"([\s\S]*?)id="balance-sheet"/);
           if (plM) {
-            const rows = [...plM[1].matchAll(/<td[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/td>([\s\S]*?)<\/tr>/g)];
-            let sales = null, netProfit = null;
-            for (const [, label, rest] of rows) {
-              const lbl = label.replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').trim();
-              const nums = [...rest.matchAll(/<td[^>]*>\s*([\d,\.]+)\s*<\/td>/g)].map(m => parseFloat(m[1].replace(/,/g,'')));
-              if (/^sales/i.test(lbl) && nums.length) sales = nums[0];
-              if (/^net profit/i.test(lbl) && nums.length) netProfit = nums[0];
-            }
-            if (sales && netProfit && sales > 0) out.netMargin = +((netProfit / sales) * 100).toFixed(1);
+            const rows = parseRows(plM[1]);
+            const sales = rows['sales'] || rows['revenue'];
+            const np = rows['net profit'];
+            if (sales && np && sales[0] > 0) out.netMargin = +((np[0] / sales[0]) * 100).toFixed(1);
+            // Screener shows most-recent first; index 0=latest, 3=3yrs ago
+            if (sales && sales.length >= 4 && sales[3] > 0) out.revenueCagr3yr = +((Math.pow(sales[0]/sales[3], 1/3)-1)*100).toFixed(1);
+            if (np && np.length >= 4 && np[3] > 0) out.epsCagr3yr = +((Math.pow(Math.abs(np[0]/np[3]), 1/3)-1)*100).toFixed(1);
           }
+
+          // Balance sheet — debtEquity, currentRatio
+          const bsM = html.match(/id="balance-sheet"([\s\S]*?)id="cash-flow"/);
+          if (bsM) {
+            const rows = parseRows(bsM[1]);
+            const equity = (rows['equity capital']?.[0] ?? 0) + (rows['reserves']?.[0] ?? 0);
+            const debt = rows['borrowings']?.[0] ?? null;
+            if (debt != null && equity > 0) out.debtEquity = +(debt / equity).toFixed(2);
+            // currentRatio = other assets / other liabilities (approximate from screener structure)
+            const totalAssets = rows['total assets']?.[0];
+            const fixedAssets = rows['fixed assets']?.[0] ?? 0;
+            const cwip = rows['cwip']?.[0] ?? 0;
+            const inv = rows['investments']?.[0] ?? 0;
+            if (totalAssets) {
+              const currentAssets = totalAssets - fixedAssets - cwip - inv;
+              const totalLiab = rows['total liabilities']?.[0] ?? totalAssets;
+              const longTermLiab = equity + (debt ?? 0);
+              const currentLiab = Math.max(1, totalLiab - longTermLiab);
+              out.currentRatio = +(currentAssets / currentLiab).toFixed(2);
+            }
+          }
+
+          // Shareholding — promoter %
+          const shM = html.match(/id="shareholding"([\s\S]*?)(?:id="|<\/section>)/);
+          if (shM) {
+            const tds = [...shM[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => m[1].replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').trim());
+            const pIdx = tds.findIndex(t => /^promoters?/i.test(t));
+            if (pIdx >= 0 && tds[pIdx+1]) {
+              const pct = parseFloat(tds[pIdx+1].replace('%',''));
+              if (!isNaN(pct)) out.promoterHolding = pct;
+            }
+            const fIdx = tds.findIndex(t => /^fi+s?/i.test(t));
+            if (fIdx >= 0 && tds[fIdx+1]) {
+              const pct = parseFloat(tds[fIdx+1].replace('%',''));
+              if (!isNaN(pct)) out.fiiHolding = pct;
+            }
+          }
+
           return Object.keys(out).length > 0 ? out : null;
         })(),
       ]);
@@ -392,13 +447,20 @@ export default async function handler(req, res) {
         } catch (_) {}
       }
 
-      // Parse Screener.in (fill critical gaps: ROCE, netMargin)
+      // Parse Screener.in (fills ROCE, netMargin, CAGR, D/E, currentRatio, promoter)
       if (screenerRes.status === 'fulfilled' && screenerRes.value) {
         const sc = screenerRes.value;
-        result.roce      = result.roce      ?? sc.roce      ?? null;
-        result.roe       = result.roe       ?? sc.roe       ?? null;
-        result.netMargin = result.netMargin ?? sc.netMargin ?? null;
-        result.pe        = result.pe        ?? sc.pe        ?? null;
+        result.roce            = result.roce            ?? sc.roce            ?? null;
+        result.roe             = result.roe             ?? sc.roe             ?? null;
+        result.netMargin       = result.netMargin       ?? sc.netMargin       ?? null;
+        result.pe              = result.pe              ?? sc.pe              ?? null;
+        result.revenueCagr3yr  = result.revenueCagr3yr  ?? sc.revenueCagr3yr  ?? null;
+        result.epsCagr3yr      = result.epsCagr3yr      ?? sc.epsCagr3yr      ?? null;
+        result.revenueQoQ      = result.revenueQoQ      ?? sc.revenueQoQ      ?? null;
+        result.debtEquity      = result.debtEquity      ?? sc.debtEquity      ?? null;
+        result.currentRatio    = result.currentRatio    ?? sc.currentRatio    ?? null;
+        result.promoterHolding = result.promoterHolding ?? sc.promoterHolding ?? null;
+        result.fiiHolding      = result.fiiHolding      ?? sc.fiiHolding      ?? null;
         result.sources.push('screener');
       }
 
