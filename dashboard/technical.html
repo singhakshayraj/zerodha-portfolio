@@ -651,7 +651,7 @@ window.onSearchKeydown = function(e) {
 
 async function fetchSuggestions(query) {
   try {
-    const res = await fetch('/api/research?action=symbol', {
+    const res = await fetch('/symbol-search', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query })
     });
