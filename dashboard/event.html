@@ -30,11 +30,11 @@
     .page-header p{color:var(--text-secondary);margin-top:4px;font-size:13px}
 
     /* CARDS */
-    .card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:16px}
+    .card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:16px}
     .card-title{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
 
     /* EVENT HEADER */
-    .event-header{background:linear-gradient(135deg,var(--bg-elevated) 0%,var(--bg-card) 100%);border:1px solid var(--border-subtle);border-radius:8px;padding:20px;margin-bottom:20px}
+    .event-header{background:linear-gradient(135deg,var(--bg-elevated) 0%,var(--bg-card) 100%);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
     .event-name{font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:6px}
     .event-meta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
     .event-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-hover);border:1px solid var(--border-subtle);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text-secondary)}
@@ -83,7 +83,7 @@
     .sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
     @media(max-width:900px){.sector-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:540px){.sector-grid{grid-template-columns:1fr}}
-    .sector-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:8px;padding:14px;cursor:default}
+    .sector-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:14px;cursor:default}
     .sector-card.high{border-color:oklch(65% 0.18 165 / 0.3)}
     .sector-card.medium{border-color:oklch(75% 0.16 75 / 0.3)}
     .sector-card.low{border-color:var(--border-subtle)}
@@ -172,7 +172,7 @@
     .live-sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     @media(max-width:900px){.live-sector-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:540px){.live-sector-grid{grid-template-columns:1fr}}
-    .live-sector-card{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:8px;padding:14px}
+    .live-sector-card{background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:14px}
     .live-sector-card.bullish{border-color:oklch(65% 0.18 165 / 0.3)}
     .live-sector-card.bearish{border-color:oklch(62% 0.20 20 / 0.3)}
     .live-sector-card.neutral{border-color:var(--border-subtle)}

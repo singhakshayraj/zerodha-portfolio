@@ -41,9 +41,9 @@
     .hero h2 span { color: var(--gold); }
     .hero p { font-family: var(--font-ui); font-size: 14px; color: var(--text-muted); margin-top: 6px; }
     .search-bar { display: flex; gap: 12px; margin-top: 24px; max-width: 600px; }
-    .search-bar input { flex: 1; padding: 12px 18px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
+    .search-bar input { flex: 1; padding: 12px 18px; border: 1.5px solid var(--border); border-radius: var(--radius-lg); font-size: 14px; background: var(--bg-base); color: var(--text-primary); outline: none; transition: border-color 0.2s; }
     .search-bar input:focus { border-color: var(--gold); background: var(--bg-base); }
-    .search-bar button { padding: 12px 24px; background: var(--gold); color: var(--bg-base); border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
+    .search-bar button { padding: 12px 24px; background: var(--gold); color: var(--bg-base); border: none; border-radius: var(--radius-lg); font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.03em; transition: background 0.2s; }
     .search-bar button:hover { background: var(--gold-light); }
 
     /* FILTERS */
@@ -58,7 +58,7 @@
     .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
 
     /* STOCK CARD */
-    .stock-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.25s; cursor: pointer; }
+    .stock-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; transition: all 0.25s; cursor: pointer; }
     .stock-card:hover { border-color: var(--gold-border); box-shadow: var(--shadow-hover); transform: translateY(-2px); }
     .stock-card.expanded { grid-column: 1 / -1; }
 
@@ -66,7 +66,7 @@
     .card-header-left { display: flex; flex-direction: column; gap: 4px; }
     .stock-symbol { font-size: 18px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
     .stock-name { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); }
-    .stock-sector { display: inline-block; padding: 3px 10px; background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: 12px; font-family: var(--font-ui); font-size: 11px; color: var(--gold); margin-top: 2px; }
+    .stock-sector { display: inline-block; padding: 3px 10px; background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: var(--radius-xl); font-family: var(--font-ui); font-size: 11px; color: var(--gold); margin-top: 2px; }
     .card-header-right { text-align: right; }
     .ai-score { font-size: 32px; font-weight: 700; line-height: 1; }
     .ai-score-label { font-family: var(--font-ui); font-size: 10px; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
@@ -85,7 +85,7 @@
 
     /* BULL BEAR */
     .bull-bear { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-    .bull-box, .bear-box { padding: 12px 14px; border-radius: 8px; }
+    .bull-box, .bear-box { padding: 12px 14px; border-radius: var(--radius-lg); }
     .bull-box { background: var(--green-bg); border: 1px solid var(--positive); }
     .bear-box { background: var(--red-bg); border: 1px solid var(--negative); }
     .bb-title { font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
@@ -102,14 +102,14 @@
     .ratio-pill span { color: var(--text-primary); font-weight: 600; }
 
     /* RED FLAGS */
-    .red-flags { background: var(--red-bg); border: 1px solid var(--negative); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+    .red-flags { background: var(--red-bg); border: 1px solid var(--negative); border-radius: var(--radius-lg); padding: 12px 14px; margin-bottom: 16px; }
     .red-flags-title { font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
     .red-flags ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
     .red-flags ul li { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); padding-left: 14px; position: relative; }
     .red-flags ul li::before { content: '⚠'; position: absolute; left: 0; font-size: 9px; top: 1px; }
 
     /* PORTFOLIO CONTEXT */
-    .portfolio-context { background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: 8px; padding: 12px 14px; }
+    .portfolio-context { background: var(--gold-pale); border: 1px solid var(--gold-border); border-radius: var(--radius-lg); padding: 12px 14px; }
     .portfolio-context-title { font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
     .portfolio-context p { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
     .portfolio-context .pnl-line { font-weight: 600; margin-top: 4px; font-size: 13px; }
@@ -197,7 +197,7 @@
 
     /* SUGGESTIONS DROPDOWN */
     .suggest-wrap { position: relative; flex: 1; }
-    .suggest-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1.5px solid var(--gold-border); border-radius: 8px; margin-top: 4px; z-index: 200; overflow: hidden; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+    .suggest-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--white); border: 1.5px solid var(--gold-border); border-radius: var(--radius-lg); margin-top: 4px; z-index: 200; overflow: hidden; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
     .suggest-list.visible { display: block; }
     .suggest-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .suggest-item:last-child { border-bottom: none; }
@@ -228,12 +228,12 @@
     /* CONFIRMATION MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+    .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 28px 32px; max-width: 380px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
     .modal h3 { font-size: 18px; margin-bottom: 8px; }
     .modal p { font-family: var(--font-ui); font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .modal-cancel { padding: 8px 20px; background: none; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-ui); font-size: 13px; cursor: pointer; }
-    .modal-confirm { padding: 8px 20px; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; }
+    .modal-cancel { padding: 8px 20px; background: none; border: 1px solid var(--border); border-radius: var(--radius-lg); font-family: var(--font-ui); font-size: 13px; cursor: pointer; }
+    .modal-confirm { padding: 8px 20px; border: none; border-radius: var(--radius-lg); font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; }
     .modal-confirm.buy { background: var(--green); }
     .modal-confirm.sell { background: var(--red); }
 

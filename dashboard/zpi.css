@@ -73,6 +73,7 @@
   --radius-sm: 3px;
   --radius-md: 5px;
   --radius-lg: 8px;
+  --radius-xl: 12px;
 
   /* Transitions */
   --t-bg:    background-color 180ms ease;
@@ -720,6 +721,36 @@ body.light .zpi-select {
 .mb-4 { margin-bottom: var(--sp-4); }
 .mb-5 { margin-bottom: var(--sp-5); }
 .p-0 { padding: 0; }
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+  color: var(--text-tertiary);
+  font-size: var(--text-md);
+}
+.empty-state h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-3);
+}
+.empty-state p {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+  margin-bottom: var(--sp-5);
+}
+.empty-state a {
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  padding: 6px 16px;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
+  display: inline-block;
+  transition: var(--t-bg);
+}
+.empty-state a:hover { background: var(--accent-dim); text-decoration: none; }
 
 /* ── Global theme transition ──────────────────────────────────────────────── */
 body, body * {

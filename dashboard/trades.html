@@ -84,12 +84,8 @@
     .ana-count { font-size: 10px; color: var(--text-disabled); min-width: 28px; text-align: right; }
     .ana-empty { font-size: 12px; color: var(--text-disabled); padding: 12px 0; text-align: center; }
 
-    /* EMPTY */
-    .empty { text-align: center; padding: 60px 20px; color: var(--text-disabled); font-size: 14px; }
-    .empty a { color: var(--accent); text-decoration: none; }
-
     /* TOAST */
-    #toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+    #toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
     #toast.show { opacity: 1; }
     #toast.ok  { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); }
     #toast.err { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative); }
@@ -189,7 +185,7 @@ document.addEventListener('DOMContentLoaded',function(){
       </thead>
       <tbody id="tradeBody"></tbody>
     </table>
-    <div class="empty" id="emptyMsg" style="display:none">
+    <div class="empty-state" id="emptyMsg" style="display:none">
       No trades yet. Head to <a href="/trader">Trader Desk</a>
     <a href="/intraday">Intraday</a> → Market Brain → place a GTT.
     </div>

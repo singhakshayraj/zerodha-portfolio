@@ -25,14 +25,14 @@
     .page-header h1 { font-size: 22px; font-weight: 700; }
     .page-header p  { font-size: 13px; color: var(--text-tertiary); margin-top: 5px; line-height: 1.6; }
 
-    .card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 24px 28px; margin-bottom: 20px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 24px 28px; margin-bottom: 20px; }
     .card-title { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 20px; }
 
     .param-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
     @media (max-width: 640px) { .param-grid { grid-template-columns: 1fr; } }
     .field { display: flex; flex-direction: column; gap: 6px; }
     .field label { font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-    .field input, .field select { padding: 11px 14px; background: var(--bg-base); border: 1.5px solid var(--border-subtle); border-radius: 8px; font-size: 14px; color: var(--text-primary); outline: none; transition: border-color 0.15s; }
+    .field input, .field select { padding: 11px 14px; background: var(--bg-base); border: 1.5px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 14px; color: var(--text-primary); outline: none; transition: border-color 0.15s; }
     .field input:focus, .field select:focus { border-color: var(--accent); }
     .field .hint { font-size: 11px; color: var(--text-disabled); }
 
@@ -41,10 +41,10 @@
     .derived-item .d-value { font-size: 16px; font-weight: 700; color: var(--text-secondary); margin-top: 2px; }
 
     .run-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
-    .btn-run { padding: 12px 32px; background: var(--accent); color: var(--bg-base); border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn-run { padding: 12px 32px; background: var(--accent); color: var(--bg-base); border: none; border-radius: var(--radius-lg); font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
     .btn-run:hover { opacity: 0.85; }
     .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-reset { padding: 12px 20px; background: none; border: 1px solid var(--border-subtle); border-radius: 8px; font-size: 13px; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
+    .btn-reset { padding: 12px 20px; background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-tertiary); cursor: pointer; transition: all 0.15s; }
     .btn-reset:hover { border-color: var(--text-disabled); color: var(--text-secondary); }
 
     .pipeline { display: flex; gap: 0; margin-bottom: 20px; flex-wrap: wrap; }
@@ -90,15 +90,15 @@
     /* CONFIRMATION MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
-    .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 28px 32px; max-width: 400px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+    .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 28px 32px; max-width: 400px; width: 92%; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
     .modal h3 { font-size: 17px; margin-bottom: 6px; }
-    .modal-detail { background: var(--bg-elevated); border-radius: 8px; padding: 14px 16px; margin: 14px 0; font-size: 12px; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .modal-detail { background: var(--bg-elevated); border-radius: var(--radius-lg); padding: 14px 16px; margin: 14px 0; font-size: 12px; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .modal-detail .md-item .md-label { font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: .05em; }
     .modal-detail .md-item .md-val   { font-size: 13px; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
     .modal-note { font-size: 12px; color: var(--text-tertiary); line-height: 1.6; margin-bottom: 20px; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .modal-cancel  { padding: 9px 22px; background: none; border: 1px solid var(--border-subtle); border-radius: 8px; font-size: 13px; color: var(--text-tertiary); cursor: pointer; }
-    .modal-confirm { padding: 9px 22px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--bg-base); cursor: pointer; }
+    .modal-cancel  { padding: 9px 22px; background: none; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-tertiary); cursor: pointer; }
+    .modal-confirm { padding: 9px 22px; border: none; border-radius: var(--radius-lg); font-size: 13px; font-weight: 700; color: var(--bg-base); cursor: pointer; }
     .modal-confirm.buy  { background: var(--positive); }
     .modal-confirm.sell { background: var(--negative); }
 
