@@ -374,10 +374,7 @@ let _sortMode = 'score';
 let _portfolioData = [];   // [{ symbol, ltp, dayChgPct, dScore, wScore, mScore, dInd, niftyD }]
 let _searchTimer = null;
 
-// Expose switch helpers to global scope (used by inline onclick)
-window._setChartTF = setChartTF;
-window._setChartPeriod = setChartPeriod;
-window._updateOverlays = updateOverlays;
+
 
 // ── Utility ───────────────────────────────────────────────────────────────
 function fmt(n)   { return '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
