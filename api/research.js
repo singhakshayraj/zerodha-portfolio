@@ -79,20 +79,6 @@ const TT_SLUGS = {
 const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
 const fetchT = (url, opts, ms = 5000) => Promise.race([fetch(url, opts), timeout(ms)]);
 
-// ── NSE session (required for shareholding API) ───────────────────────────────
-let _nseSess = null, _nseSessAt = 0;
-async function getNSESession() {
-  if (_nseSess && Date.now() - _nseSessAt < 8 * 60 * 1000) return _nseSess;
-  try {
-    const r = await fetchT('https://www.nseindia.com',
-      { headers: { 'User-Agent': UA, 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9' }, redirect: 'follow' }, 4000);
-    const raw = r.headers.getSetCookie?.() ?? [];
-    _nseSess = raw.map(c => c.split(';')[0]).join('; ');
-    _nseSessAt = Date.now();
-  } catch { _nseSess = ''; }
-  return _nseSess;
-}
-
 // ── Symbol search helper ──────────────────────────────────────────────────────
 function scoreMatch(query, target) {
   const q = query.toLowerCase(), t = target.toLowerCase();
@@ -183,14 +169,12 @@ export default async function handler(req, res) {
           if (!r.ok) throw new Error(`nse_quote ${r.status}`);
           return r.json();
         })(),
-        // NSE shareholding (needs session cookie)
+        // NSE shareholding
         (async () => {
-          const cookie = await getNSESession();
-          const hdrs = { 'User-Agent': UA, 'Referer': 'https://www.nseindia.com/', 'Accept': 'application/json' };
-          if (cookie) hdrs['Cookie'] = cookie;
           const r = await fetchT(
             `https://www.nseindia.com/api/corporate-shareholding-pattern?symbol=${encodeURIComponent(symbol)}&series=EQ`,
-            { headers: hdrs }, 4000
+            { headers: { 'User-Agent': UA, 'Referer': 'https://www.nseindia.com/', 'Accept': 'application/json' } },
+            5000
           );
           if (!r.ok) throw new Error(`nse_sh ${r.status}`);
           return r.json();
@@ -310,22 +294,17 @@ export default async function handler(req, res) {
       if (ttRes.status === 'fulfilled' && ttRes.value) {
         const ttData = ttRes.value;
         const r = ttData?.data?.ratios || {}, info = ttData?.data?.info || {}, gic = ttData?.data?.gic || {};
-        const hasAnyData = r.pe != null || r.roe != null || r.pb != null || r.roce != null;
-        if (hasAnyData) {
-          result.companyName    = result.companyName   || info.name   || symbol;
-          result.sector         = result.sector        || gic.industry || info.sector || null;
-          result.pe             = result.pe            ?? r.pe        ?? null;
-          result.pb             = result.pb            ?? r.pb        ?? null;
-          result.roe            = result.roe           ?? r.roe       ?? null;
-          result.roce           = result.roce          ?? r.roce      ?? null;
-          result.netMargin      = result.netMargin     ?? r.npm       ?? r.netProfitMargin ?? null;
-          result.debtEquity     = result.debtEquity    ?? r.deRatio   ?? r.debtEquity ?? null;
-          result.currentRatio   = result.currentRatio  ?? r.currentRatio ?? null;
-          result.beta           = result.beta          ?? r.beta      ?? null;
-          result.dividendYield  = result.dividendYield ?? r.divYield  ?? null;
-          result.marketCap      = result.marketCap     ?? (r.marketCap ? r.marketCap * 1e7 : null);
-          result.high52w        = result.high52w       ?? r['52wHigh'] ?? null;
-          result.low52w         = result.low52w        ?? r['52wLow']  ?? null;
+        if (r.pe != null || r.roe != null) {
+          result.companyName   = result.companyName   || info.name  || symbol;
+          result.sector        = result.sector        || gic.industry || info.sector || null;
+          result.pe            = result.pe            ?? r.pe       ?? null;
+          result.pb            = result.pb            ?? r.pb       ?? null;
+          result.roe           = result.roe           ?? r.roe      ?? null;
+          result.beta          = result.beta          ?? r.beta     ?? null;
+          result.dividendYield = result.dividendYield ?? r.divYield ?? null;
+          result.marketCap     = result.marketCap     ?? (r.marketCap ? r.marketCap * 1e7 : null);
+          result.high52w       = result.high52w       ?? r['52wHigh'] ?? null;
+          result.low52w        = result.low52w        ?? r['52wLow']  ?? null;
           result.sources.push('tickertape');
         }
       }
@@ -334,12 +313,9 @@ export default async function handler(req, res) {
       if (nseQRes.status === 'fulfilled') {
         try {
           const nseQ = nseQRes.value;
-          const md = nseQ?.metadata || {}, ii = nseQ?.industryInfo || {}, pi = nseQ?.priceInfo || {};
-          result.companyName = result.companyName || md.companyName || symbol;
-          result.pe     = result.pe    ?? md.pdSymbolPe              ?? null;
-          result.sector = result.sector || ii.industry || ii.sector  || null;
-          result.high52w = result.high52w ?? pi.weekHighLow?.max      ?? null;
-          result.low52w  = result.low52w  ?? pi.weekHighLow?.min      ?? null;
+          const md = nseQ?.metadata || {}, ii = nseQ?.industryInfo || {};
+          result.pe     = result.pe     ?? md.pdSymbolPe ?? null;
+          result.sector = result.sector || ii.industry  || ii.sector || null;
           result.exchange = 'NSE';
           result.sources.push('nse_quote');
         } catch (_) {}
