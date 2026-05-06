@@ -9,18 +9,18 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0d111c;
-      color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
     }
     .card {
-      background: #151b2e;
-      border: 1px solid #2d3748;
-      border-radius: 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
       padding: 48px 40px;
       width: 100%;
       max-width: 380px;
@@ -34,44 +34,64 @@
     }
     .sub {
       font-size: 13px;
-      color: #718096;
+      color: var(--text-secondary);
       margin-bottom: 36px;
     }
     input[type="password"] {
       width: 100%;
       padding: 12px 16px;
-      background: #0d111c;
-      border: 1px solid #2d3748;
-      border-radius: 8px;
-      color: #e2e8f0;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      color: var(--text-primary);
       font-size: 15px;
       outline: none;
       margin-bottom: 16px;
       transition: border-color 0.15s;
     }
-    input[type="password"]:focus { border-color: #4a9eff; }
+    input[type="password"]:focus { border-color: var(--accent); }
     button {
       width: 100%;
       padding: 12px;
-      background: #4a9eff;
+      background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-lg);
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: background 0.15s;
     }
-    button:hover { background: #3a8eef; }
+    button:hover { background: var(--accent-hover); }
     .error {
       margin-top: 14px;
       font-size: 13px;
-      color: #fc8181;
+      color: var(--negative);
       min-height: 18px;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      font-family: var(--font-ui);
+      padding: 4px 10px;
+      transition: border-color 0.15s, color 0.15s;
+      width: auto;
+    }
+    .theme-toggle:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
     }
   </style>
 </head>
 <body>
+  <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">☀ Light</button>
   <div class="card">
     <div class="brand">📈 Portfolio</div>
     <div class="sub">Enter password to continue</div>
@@ -80,6 +100,16 @@
     <div class="error" id="err"></div>
   </div>
   <script>
+    function toggleTheme() {
+      var isLight = document.body.classList.toggle('light');
+      localStorage.setItem('zpi-theme', isLight ? 'light' : 'dark');
+      document.querySelector('.theme-toggle').textContent = isLight ? '☾ Dark' : '☀ Light';
+    }
+    // Sync button label on load
+    if (document.body.classList.contains('light')) {
+      document.querySelector('.theme-toggle').textContent = '☾ Dark';
+    }
+
     // Allow pressing Enter
     document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
