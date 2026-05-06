@@ -174,25 +174,25 @@ export async function getHistory(symbol, interval = 'day', count, clientEnctoken
     if (!token) throw new Error(`Instrument token not found for ${symbol}`);
   }
 
-  // Calculate date range based on interval and count
+  // Kite OMS only supports 'day' interval — fetch daily, aggregate if needed
   const to = new Date();
   const from = new Date(to);
   if (interval === 'day') {
-    // Add buffer for weekends/holidays (~1.4x trading days)
     from.setDate(from.getDate() - Math.ceil(n * 1.5));
   } else if (interval === 'week') {
-    from.setDate(from.getDate() - n * 7 + 7);
+    // Need n weeks of daily data (with buffer)
+    from.setDate(from.getDate() - n * 7 - 14);
   } else if (interval === 'month') {
-    from.setMonth(from.getMonth() - n + 1);
+    // Need n months of daily data (with buffer)
+    from.setMonth(from.getMonth() - n - 2);
     from.setDate(1);
   }
 
   const fmt = d => d.toISOString().slice(0, 10);
-  const path = `/instruments/historical/${token}/${interval}?from=${fmt(from)}&to=${fmt(to)}`;
+  const path = `/instruments/historical/${token}/day?from=${fmt(from)}&to=${fmt(to)}`;
 
   const raw = await kiteRequest(path, enctoken, 'oms');
-  // Kite returns { candles: [[timestamp, o, h, l, c, volume], ...] }
-  const candles = (raw?.candles || []).map(c => ({
+  const daily = (raw?.candles || []).map(c => ({
     date: c[0],
     open: c[1],
     high: c[2],
@@ -200,8 +200,27 @@ export async function getHistory(symbol, interval = 'day', count, clientEnctoken
     close: c[4],
     volume: c[5] || 0,
   }));
-  // Return last n candles
-  return candles.slice(-n);
+
+  if (interval === 'day') return daily.slice(-n);
+
+  // Aggregate daily → weekly or monthly
+  const bucketKey = interval === 'week'
+    ? d => { const dt = new Date(d); const day = dt.getUTCDay(); const diff = (day === 0 ? -6 : 1) - day; dt.setUTCDate(dt.getUTCDate() + diff); return dt.toISOString().slice(0, 10); }
+    : d => d.slice(0, 7); // YYYY-MM
+
+  const buckets = new Map();
+  for (const c of daily) {
+    const key = bucketKey(c.date);
+    if (!buckets.has(key)) buckets.set(key, { date: c.date, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume });
+    else {
+      const b = buckets.get(key);
+      b.high = Math.max(b.high, c.high);
+      b.low  = Math.min(b.low,  c.low);
+      b.close = c.close;
+      b.volume += c.volume;
+    }
+  }
+  return [...buckets.values()].slice(-n);
 }
 
 /**
