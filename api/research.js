@@ -16,7 +16,7 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-const BUILD_TIME = '2026-05-07T21:15:00Z'; // updated each deploy — check /api/research?action=version
+const BUILD_TIME = '2026-05-07T21:45:00Z'; // updated each deploy — check /api/research?action=version
 
 // ── Redis (Upstash HTTP — no persistent connection) ───────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_URL;
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
       const result = { symbol, sources: [], lastUpdated: new Date().toISOString() };
 
       // Run all sources in parallel to stay within Vercel's 10s limit
-      const [yahooRes, ttRes, nseQRes, nseShRes] = await Promise.allSettled([
+      const [yahooRes, ttRes, nseQRes, nseShRes, screenerRes] = await Promise.allSettled([
         // Yahoo Finance
         (async () => {
           const { crumb, cookie } = await getYahooCrumb();
@@ -191,6 +191,44 @@ export default async function handler(req, res) {
           );
           if (!r.ok) throw new Error(`nse_sh ${r.status}`);
           return r.json();
+        })(),
+        // Screener.in — ROCE + Net Margin via HTML scrape
+        (async () => {
+          const r = await fetchT(
+            `https://www.screener.in/company/${encodeURIComponent(symbol)}/consolidated/`,
+            { headers: { 'User-Agent': UA, 'Accept': 'text/html' } },
+            6000
+          );
+          if (!r.ok) throw new Error(`screener ${r.status}`);
+          const html = await r.text();
+          const out = {};
+          // Top ratios block
+          const topM = html.match(/id="top-ratios"([\s\S]*?)<\/ul>/);
+          if (topM) {
+            const pairs = [...topM[1].matchAll(/<span class="name">\s*([\s\S]*?)\s*<\/span>[\s\S]*?<span class="number">([\d,\.]+)<\/span>/g)];
+            for (const [, name, val] of pairs) {
+              const n = name.trim().replace(/\s+/g,' ');
+              const v = parseFloat(val.replace(/,/g,''));
+              if (n === 'ROCE') out.roce = v;
+              else if (n === 'ROE') out.roe = v;
+              else if (n === 'Stock P/E') out.pe = v;
+              else if (n === 'Book Value') out.bvps = v;
+            }
+          }
+          // P&L table — first data row = Sales, row with 'Net Profit' label = net profit
+          const plM = html.match(/id="profit-loss"([\s\S]*?)id="balance-sheet"/);
+          if (plM) {
+            const rows = [...plM[1].matchAll(/<td[^>]*class="[^"]*text[^"]*"[^>]*>([\s\S]*?)<\/td>([\s\S]*?)<\/tr>/g)];
+            let sales = null, netProfit = null;
+            for (const [, label, rest] of rows) {
+              const lbl = label.replace(/<[^>]+>/g,'').trim();
+              const nums = [...rest.matchAll(/<td[^>]*>\s*([\d,\.]+)\s*<\/td>/g)].map(m => parseFloat(m[1].replace(/,/g,'')));
+              if (/^sales$/i.test(lbl) && nums.length) sales = nums[0];
+              if (/net profit$/i.test(lbl) && nums.length) netProfit = nums[0];
+            }
+            if (sales && netProfit && sales > 0) out.netMargin = +((netProfit / sales) * 100).toFixed(1);
+          }
+          return Object.keys(out).length > 0 ? out : null;
         })(),
       ]);
 
@@ -356,6 +394,16 @@ export default async function handler(req, res) {
             result.sources.push('nse_shareholding');
           }
         } catch (_) {}
+      }
+
+      // Parse Screener.in (fill critical gaps: ROCE, netMargin)
+      if (screenerRes.status === 'fulfilled' && screenerRes.value) {
+        const sc = screenerRes.value;
+        result.roce      = result.roce      ?? sc.roce      ?? null;
+        result.roe       = result.roe       ?? sc.roe       ?? null;
+        result.netMargin = result.netMargin ?? sc.netMargin ?? null;
+        result.pe        = result.pe        ?? sc.pe        ?? null;
+        result.sources.push('screener');
       }
 
       result.exchange = result.exchange || 'NSE';
