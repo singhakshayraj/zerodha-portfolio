@@ -16,6 +16,7 @@ const __dirname_r = dirname(fileURLToPath(import.meta.url));
 const nseSymbols = JSON.parse(readFileSync(join(__dirname_r, '../modules/alpha-scorer/nse_symbols.json'), 'utf8'));
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const BUILD_TIME = '2026-05-07T21:15:00Z'; // updated each deploy — check /api/research?action=version
 
 // ── Redis (Upstash HTTP — no persistent connection) ───────────────────────────
 const REDIS_URL   = process.env.UPSTASH_REDIS_URL;
@@ -148,13 +149,25 @@ export default async function handler(req, res) {
           if (!r.ok) throw new Error(`yahoo ${r.status}`);
           return r.json();
         })(),
-        // Tickertape
+        // Tickertape — resolve sid via direct lookup, TT_SLUGS map, or search API
         (async () => {
-          let r = await fetchT(`https://api.tickertape.in/stocks/info/${symbol}`, { headers: { 'User-Agent': UA } }, 5000);
-          if (r.ok) { const j = await r.json(); if (j.success !== false && j?.data?.ratios?.pe != null) return j; }
-          const slugId = TT_SLUGS[symbol];
+          const ttHeaders = { 'User-Agent': UA };
+          // 1. Try direct symbol
+          let r = await fetchT(`https://api.tickertape.in/stocks/info/${symbol}`, { headers: ttHeaders }, 4000);
+          if (r.ok) { const j = await r.json(); if (j.success !== false && j.data?.ratios) return j; }
+          // 2. Try known slug override
+          let slugId = TT_SLUGS[symbol];
+          // 3. If no slug, search by ticker
+          if (!slugId) {
+            const sr = await fetchT(`https://api.tickertape.in/search?text=${encodeURIComponent(symbol)}`, { headers: ttHeaders }, 4000);
+            if (sr.ok) {
+              const sj = await sr.json();
+              const match = (sj.data?.stocks || []).find(s => s.ticker === symbol);
+              if (match?.sid) slugId = match.sid;
+            }
+          }
           if (slugId) {
-            r = await fetchT(`https://api.tickertape.in/stocks/info/${slugId}`, { headers: { 'User-Agent': UA } }, 5000);
+            r = await fetchT(`https://api.tickertape.in/stocks/info/${slugId}`, { headers: ttHeaders }, 4000);
             if (r.ok) { const j = await r.json(); if (j.success !== false) return j; }
           }
           return null;
@@ -421,7 +434,11 @@ Return ONLY raw JSON: {"summary":"<1 para>","bullCase":["<point>","<point>","<po
       return res.status(200).json(result2);
     }
 
-    res.status(400).json({ error: 'action must be symbol | fundamental | fa_narrative' });
+    if (action === 'version') {
+      return res.status(200).json({ version: BUILD_TIME, buildTime: BUILD_TIME });
+    }
+
+    res.status(400).json({ error: 'action must be symbol | fundamental | fa_narrative | version' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
