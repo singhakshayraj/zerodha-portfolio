@@ -1298,5 +1298,12 @@ async function boot() {
 boot();
 </script>
 
+<div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:10px;opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>
+<script>
+fetch("/api/version").then(r=>r.json()).then(d=>{
+  const t=d.buildTime||d.version;
+  if(t){const dt=new Date(t);document.getElementById("build-badge").textContent="build "+dt.toISOString().slice(0,16).replace("T"," ");}
+}).catch(()=>{});
+</script>
 </body>
 </html>
