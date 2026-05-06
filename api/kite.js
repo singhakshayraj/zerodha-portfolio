@@ -6,7 +6,7 @@
  * GET  /api/kite?action=positions  — open positions
  * GET  /api/kite?action=margins    — available cash & margin
  */
-import { getHoldings, getQuotes, getHistorical, getPositions, getMargins } from '../dashboard/lib/kite.js';
+import { getHoldings, getQuotes, getHistorical, getHistory, getPositions, getMargins } from '../dashboard/lib/kite.js';
 
 function enc(req) {
   const raw = req.headers['x-kite-enctoken'] || process.env.KITE_ENCTOKEN || '';
@@ -63,7 +63,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ data });
     }
 
-    res.status(400).json({ error: 'action must be holdings | quotes | historical | positions | margins' });
+    if (action === 'ta_history') {
+      const symbol    = url.searchParams.get('symbol')?.trim().toUpperCase();
+      const timeframe = url.searchParams.get('timeframe') || 'daily';
+      if (!symbol) { res.status(400).json({ error: 'symbol required' }); return; }
+      const intervalMap = { daily: 'day', weekly: 'week', monthly: 'month' };
+      const countMap    = { daily: 200, weekly: 104, monthly: 60 };
+      const interval    = intervalMap[timeframe] || 'day';
+      const count       = countMap[timeframe] || 200;
+      const candles = await getHistory(symbol, interval, count, token);
+      return res.status(200).json({ symbol, timeframe, candles, fetchedAt: new Date().toISOString(), count: candles.length });
+    }
+
+    res.status(400).json({ error: 'action must be holdings | quotes | historical | positions | margins | ta_history' });
   } catch (e) {
     const status = e.message?.includes('[403]') ? 403 : e.message?.includes('[400]') ? 400 : 500;
     res.status(status).json({ error: e.message });
