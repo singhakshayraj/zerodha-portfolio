@@ -8,7 +8,6 @@
     { "source": "/api/yahoo-quotes",   "destination": "/api/intel?action=quotes" },
     { "source": "/symbol-search",      "destination": "/api/intel?action=symbol" },
     { "source": "/alpha-score",        "destination": "/api/intel?action=alpha" },
-    { "source": "/api/intel",           "destination": "/api/intel" },
     { "source": "/api/research",       "destination": "/api/intel" },
     { "source": "/api/fa-data",        "destination": "/api/intel?action=fundamental" },
     { "source": "/api/fa-narrative",   "destination": "/api/intel?action=fa_narrative" },
