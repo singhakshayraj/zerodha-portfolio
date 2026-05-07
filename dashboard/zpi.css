@@ -68,6 +68,13 @@
   --sp-6: 20px;
   --sp-7: 24px;
   --sp-8: 32px;
+  --sp-9: 40px;
+  --sp-10: 48px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
 
   /* Radius */
   --radius-sm: 3px;
@@ -114,6 +121,11 @@ body.light {
   /* Warning */
   --warning-dim:  oklch(60% 0.16 75 / 0.10);
   --warning-text: oklch(50% 0.16 75);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.18);
 
   /* Signal colors */
   --signal-buy:    oklch(48% 0.18 165);
@@ -328,6 +340,15 @@ a:hover { color: var(--accent-hover); text-decoration: underline; }
 }
 .topnav-links a:hover,
 .topnav-links a.active { color: var(--text-primary); text-decoration: none; }
+
+/* Active page indicator — higher specificity to override per-page rules */
+.topnav .topnav-links a.active,
+nav .topnav-links a.active {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
 .topnav-actions { display: flex; align-items: center; gap: var(--sp-3); }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
@@ -599,6 +620,25 @@ body.light .zpi-select {
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-fade {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 /* ── Divider ──────────────────────────────────────────────────────────────── */

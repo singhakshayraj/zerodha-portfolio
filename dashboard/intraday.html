@@ -13,18 +13,18 @@
     body { font-family:var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
 
     /* NAV */
-    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
+    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 var(--sp-9); display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
     .topnav-brand { font-size: 14px; font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
-    .topnav-links { display: flex; gap: 28px; }
+    .topnav-links { display: flex; gap: var(--sp-7); }
     .topnav-links a { font-size: 13px; color: var(--text-tertiary); text-decoration: none; transition: color 0.15s; }
     .topnav-links a:hover, .topnav-links a.active { color: var(--text-primary); }
     @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 14px; } }
 
     /* LAYOUT */
-    .page { max-width: 1400px; margin: 0 auto; padding: 24px 32px; display: grid; gap: 20px; }
+    .page { max-width: 1400px; margin: 0 auto; padding: 24px 32px; display: grid; gap: var(--sp-6); }
 
     /* MARKET PULSE */
-    .pulse-bar { display: flex; gap: 12px; flex-wrap: wrap; }
+    .pulse-bar { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
     .pulse-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px 20px; min-width: 160px; flex: 1; }
     .pulse-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
     .pulse-ltp { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 4px 0 2px; }
@@ -37,11 +37,11 @@
     .refresh-badge { font-size: 11px; color: var(--text-disabled); }
 
     /* WATCHLIST */
-    .watchlist-add { display: flex; gap: 8px; margin-bottom: 14px; position: relative; }
+    .watchlist-add { display: flex; gap: var(--sp-3); margin-bottom: 14px; position: relative; }
     .watchlist-add input { flex: 1; padding: 9px 14px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 13px; color: var(--text-primary); outline: none; }
     .watchlist-add input:focus { border-color: var(--accent); }
     .watchlist-add input::placeholder { color: var(--text-disabled); }
-    .watch-suggest { position: absolute; top: 100%; left: 0; right: 60px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-top: 4px; z-index: 200; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden; }
+    .watch-suggest { position: absolute; top: 100%; left: 0; right: 60px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); margin-top: 4px; z-index: 200; display: none; box-shadow: var(--shadow-md); overflow: hidden; }
     .watch-suggest.visible { display: block; }
     .watch-suggest-item { padding: 9px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-base); font-size: 13px; }
     .watch-suggest-item:last-child { border-bottom: none; }
@@ -73,10 +73,10 @@
 
     /* CHART */
     .chart-panel { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 20px; }
-    .chart-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .chart-header { display: flex; align-items: center; gap: var(--sp-5); margin-bottom: var(--sp-5); flex-wrap: wrap; }
     .chart-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
     .chart-meta { font-size: 12px; color: var(--text-tertiary); }
-    .interval-bar { display: flex; gap: 6px; margin-left: auto; }
+    .interval-bar { display: flex; gap: var(--sp-2); margin-left: auto; }
     .iv-btn { padding: 4px 10px; border: 1px solid var(--border-subtle); border-radius: 5px; font-size: 11px; color: var(--text-tertiary); background: none; cursor: pointer; }
     .iv-btn.active, .iv-btn:hover { border-color: var(--accent); color: var(--accent); }
     #chartContainer { height: 320px; }
@@ -97,8 +97,8 @@
     .modal-overlay.open { display: flex; }
     .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 28px; width: 340px; }
     .modal h3 { font-size: 16px; margin-bottom: 6px; }
-    .modal p { font-size: 13px; color: var(--text-tertiary); margin-bottom: 20px; }
-    .modal-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+    .modal p { font-size: 13px; color: var(--text-tertiary); margin-bottom: var(--sp-6); }
+    .modal-row { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-5); }
     .modal-row label { font-size: 12px; color: var(--text-tertiary); width: 70px; }
     .modal-row input { flex: 1; padding: 8px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none; }
     .modal-row select { flex: 1; padding: 8px 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 6px; color: var(--text-primary); font-size: 13px; }
@@ -127,11 +127,11 @@
     .brain-meta-item strong { color: var(--text-secondary); }
     .brain-summary { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.6; padding: 10px 14px; background: var(--bg-base); border-radius: var(--radius-lg); border-left: 3px solid var(--accent); }
     .brain-algo-note { font-size: 11px; color: var(--text-disabled); font-style: italic; margin-bottom: 14px; padding-left: 4px; }
-    .sector-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .sector-pills { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: 14px; }
     .sector-pill { font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600; }
     .sector-pill.buy { background: oklch(65% 0.18 165 / 0.15); color: var(--positive); border: 1px solid oklch(65% 0.18 165 / 0.25); }
     .sector-pill.avoid { background: oklch(62% 0.20 20 / 0.15); color: var(--negative); border: 1px solid oklch(62% 0.20 20 / 0.25); }
-    .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-4); }
     .pick-card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px; position: relative; transition: border-color 0.15s; cursor: default; }
     .pick-card:hover { border-color: var(--text-disabled); }
     .pick-card.bullish { border-left: 3px solid var(--positive); }
@@ -147,9 +147,9 @@
     .pick-card:hover .pick-detail { display: block; }
     .pick-intraday { font-size: 10px; color: var(--accent); margin-bottom: 6px; font-style: italic; }
     .pick-risk { font-size: 10px; color: var(--negative); margin-bottom: 8px; }
-    .pick-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .pick-tags { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-bottom: 8px; }
     .pick-tag { font-size: 9px; padding: 2px 6px; background: var(--accent-dim); color: var(--accent); border-radius: 4px; border: 1px solid oklch(65% 0.18 230 / 0.2); }
-    .pick-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .pick-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-1); }
     .pick-conf { font-size: 11px; color: var(--warning-text); }
     .pick-score { font-size: 10px; color: var(--text-disabled); }
     .pick-by { font-size: 10px; color: var(--text-disabled); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -158,7 +158,7 @@
     /* Trade plan panel */
     .trade-plan { margin-top: 10px; padding: 10px; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 11px; }
     .tp-loading { color: var(--text-disabled); font-style: italic; }
-    .tp-levels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .tp-levels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-2); margin-bottom: 8px; }
     .tp-cell { text-align: center; }
     .tp-label { font-size: 9px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; }
     .tp-val { font-size: 13px; font-weight: 700; margin-top: 2px; }
@@ -169,7 +169,7 @@
     .tp-stat strong { color: var(--text-secondary); }
     .tp-factors { font-size: 9px; color: var(--text-disabled); line-height: 1.7; margin-bottom: 8px; }
     .tp-warn { font-size: 9px; color: var(--warning-text); margin-bottom: 6px; }
-    .tp-btn-row { display: flex; gap: 6px; }
+    .tp-btn-row { display: flex; gap: var(--sp-2); }
     .tp-btn { flex: 1; padding: 7px 0; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
     .tp-btn:hover { opacity: 0.85; }
     .tp-btn-buy  { background: var(--positive); color: var(--bg-base); }
@@ -192,7 +192,7 @@
     /* SOURCE SELECTOR */
     .source-bar { display: flex; align-items: center; gap: 10px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 10px 18px; }
     .source-label { font-size: 12px; color: var(--text-tertiary); white-space: nowrap; }
-    .source-btns { display: flex; gap: 6px; }
+    .source-btns { display: flex; gap: var(--sp-2); }
     .src-btn { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-subtle); background: none; color: var(--text-tertiary); transition: all 0.15s; }
     .src-btn.active { background: var(--bg-active); color: var(--text-primary); border-color: var(--accent); }
     .src-btn:hover:not(.active) { border-color: var(--text-disabled); color: var(--text-secondary); }
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="sec-title">🧠 AI Market Brain</div>
         <span id="brainSentimentBadge" style="display:none;font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px"></span>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:var(--sp-3);align-items:center">
         <span class="brain-status" id="brainStatus">Loading picks from expert investors…</span>
         <button class="btn-sm btn-ai" onclick="loadBrain(true)">↻ Refresh</button>
       </div>
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 
   <!-- WATCHLIST + CHART side by side -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-6);">
 
     <!-- WATCHLIST -->
     <div class="card">
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <button class="btn-add" onclick="addToWatchlist()">+ Add</button>
       </div>
       <div style="overflow-x:auto">
-        <table>
+        <table class="zpi-table">
           <thead><tr>
             <th>Symbol</th><th>LTP</th><th>Chg %</th><th>Open</th><th>High</th><th>Low</th><th>Vol</th><th></th>
           </tr></thead>
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div id="chartContainer" style="height:420px">
         <div class="chart-empty">No stock selected — click a symbol in the watchlist</div>
       </div>
-      <div id="chartLevels" style="display:none;padding:8px 14px;background:#0f1117;border-top:1px solid #2d3748;font-size:11px;display:flex;gap:20px;flex-wrap:wrap"></div>
+      <div id="chartLevels" style="display:none;padding:8px 14px;background:#0f1117;border-top:1px solid #2d3748;font-size:11px;display:flex;gap:var(--sp-6);flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -664,7 +664,7 @@ async function loadAI(symbol) {
     const buyLabel  = verdict.includes('sell') ? 'Re-entry at' : verdict.includes('hold') ? 'Accumulate at' : 'Buy at';
     const sellLabel = verdict.includes('sell') ? 'Exit at'     : 'Target';
     const priceRow = (data.buy_price || data.sell_price)
-      ? `<div style="display:flex;gap:16px;margin:10px 0;font-size:13px">
+      ? `<div style="display:flex;gap:var(--sp-5);margin:10px 0;font-size:13px">
            ${data.buy_price  ? `<span>${buyLabel} <strong style="color:#68d391">₹${data.buy_price}</strong></span>`  : ''}
            ${data.sell_price ? `<span>${sellLabel} <strong style="color:#76e4f7">₹${data.sell_price}</strong></span>` : ''}
          </div>`
@@ -698,7 +698,7 @@ async function loadPositions() {
     const day = (data.day || []).filter(p => p.quantity !== 0);
     if (!day.length) { area.innerHTML = '<div class="empty-state pos-empty">No open intraday positions today</div>'; return; }
 
-    area.innerHTML = `<div style="overflow-x:auto"><table>
+    area.innerHTML = `<div style="overflow-x:auto"><table class="zpi-table">
       <thead><tr><th>Symbol</th><th>Qty</th><th>Avg</th><th>LTP</th><th>P&L</th><th>Chg%</th><th></th></tr></thead>
       <tbody>
         ${day.map(p => {
@@ -995,7 +995,7 @@ function renderTradePlan(i, pick, plan, enc) {
     (plan.patterns.bearish||[]).forEach(p => pillsArr.push(`<span style="color:#fc8181;font-size:8px">${p}</span>`));
   }
   const pillsHtml = pillsArr.length
-    ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${pillsArr.join('')}</div>`
+    ? `<div style="display:flex;flex-wrap:wrap;gap:var(--sp-1);margin-bottom:6px">${pillsArr.join('')}</div>`
     : '';
 
   // Trigger badge (Layer 2 — price + volume confirmation)
