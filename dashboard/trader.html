@@ -44,9 +44,9 @@
     .step { display: flex; align-items: center; gap: var(--sp-2); padding: 7px 14px; font-size: var(--text-sm); font-weight: 600; border: 1px solid var(--border-subtle); border-right: none; background: var(--bg-card); color: var(--text-disabled); transition: all 0.2s; }
     .step:first-child { border-radius: 8px 0 0 8px; }
     .step:last-child  { border-radius: 0 8px 8px 0; border-right: 1px solid var(--border-subtle); }
-    .step.active { background: var(--accent-dim); border-color: oklch(65% 0.18 230 / 0.3); color: var(--accent); }
-    .step.done   { background: var(--positive-dim); border-color: oklch(65% 0.18 165 / 0.25); color: var(--positive); }
-    .step.error  { background: var(--negative-dim); border-color: oklch(62% 0.20 20 / 0.25); color: var(--negative); }
+    .step.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
+    .step.done   { background: var(--positive-dim); border-color: var(--accent-border); color: var(--positive); }
+    .step.error  { background: var(--negative-dim); border-color: var(--negative-border); color: var(--negative); }
     .step-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .step.active .step-dot { animation: blink 1s infinite; }
     
@@ -64,9 +64,9 @@
     td { padding: 10px 12px; border-bottom: 1px solid var(--border-dim); white-space: nowrap; vertical-align: middle; }
     tr:hover td { background: var(--bg-hover); }
     .tag { display: inline-block; padding: 2px 8px; border-radius: var(--radius-lg); font-size: var(--text-xs); font-weight: 700; }
-    .tag-long  { background: var(--positive-dim); color: var(--positive); border: 1px solid oklch(65% 0.18 165 / 0.25); }
-    .tag-short { background: var(--negative-dim); color: var(--negative); border: 1px solid oklch(62% 0.20 20 / 0.25); }
-    .tag-high  { background: var(--accent-dim); color: var(--accent); border: 1px solid oklch(65% 0.18 230 / 0.25); }
+    .tag-long  { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--accent-border); }
+    .tag-short { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative-border); }
+    .tag-high  { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
     .c-entry  { color: var(--accent); font-weight: 600; }
     .c-target { color: var(--positive); font-weight: 600; }
     .c-sl     { color: var(--negative); font-weight: 600; }
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="run-row">
       <button class="btn btn-run" id="runBtn" onclick="buildPlan()">▶ Build Plan</button>
       <button class="btn btn-reset" onclick="resetAll()">Reset</button>
-      <span id="runStatus" style="font-size:12px;color:#4a5568;"></span>
+      <span id="runStatus" style="font-size:12px;color:var(--text-tertiary);"></span>
     </div>
   </div>
 
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="ctx-item"><div class="c-label">Gift Nifty</div><div class="c-val" id="outGift">—</div></div>
         <div class="ctx-item"><div class="c-label">VIX</div><div class="c-val" id="outVix">—</div></div>
         <div class="ctx-item"><div class="c-label">Brain Picks</div><div class="c-val" id="outPickCount">—</div></div>
-        <div class="ctx-item"><div class="c-label">Powered By</div><div class="c-val" id="outPoweredBy" style="font-size:11px;color:#718096;">—</div></div>
+        <div class="ctx-item"><div class="c-label">Powered By</div><div class="c-val" id="outPoweredBy" style="font-size:11px;color:var(--text-tertiary);">—</div></div>
       </div>
       <div class="ctx-summary" id="outSummary"></div>
     </div>
@@ -286,27 +286,27 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="session-grid" id="sessionStats" style="display:none;">
       <div class="stat-card">
         <div class="stat-label">Trades</div>
-        <div class="stat-value" id="sTrades" style="color:#e2e8f0;">—</div>
+        <div class="stat-value" id="sTrades" style="color:var(--text-primary);">—</div>
         <div class="stat-sub"  id="sTradesSub"></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Capital Deployed</div>
-        <div class="stat-value" id="sDeployed" style="color:#63b3ed;">—</div>
+        <div class="stat-value" id="sDeployed" style="color:var(--accent);">—</div>
         <div class="stat-sub"  id="sDeployedSub"></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Risk Used</div>
-        <div class="stat-value" id="sRisk" style="color:#fc8181;">—</div>
+        <div class="stat-value" id="sRisk" style="color:var(--negative-text);">—</div>
         <div class="stat-sub"  id="sRiskSub"></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Expected P&L</div>
-        <div class="stat-value" id="sExpected" style="color:#68d391;">—</div>
+        <div class="stat-value" id="sExpected" style="color:var(--positive-text);">—</div>
         <div class="stat-sub"  id="sExpectedSub"></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Session Mode</div>
-        <div class="stat-value" id="sMode" style="color:#a0aec0;font-size:14px;">—</div>
+        <div class="stat-value" id="sMode" style="color:var(--text-tertiary);font-size:14px;">—</div>
         <div class="stat-sub"  id="sModeSub"></div>
       </div>
     </div>
@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded',function(){
   function renderContext(brain) {
     const mood = brain.market_sentiment || '—';
     document.getElementById('outMood').textContent      = mood;
-    document.getElementById('outMood').style.color      = mood === 'bullish' ? '#68d391' : mood === 'bearish' ? '#fc8181' : '#a0aec0';
+    document.getElementById('outMood').style.color      = mood === 'bullish' ? 'var(--positive-text)' : mood === 'bearish' ? 'var(--negative-text)' : 'var(--text-tertiary)';
     document.getElementById('outRegime').textContent    = brain.regime || '—';
     document.getElementById('outGift').textContent      = brain.gift_nifty_bias || '—';
     document.getElementById('outVix').textContent       = brain.vix_state || '—';
@@ -453,9 +453,9 @@ document.addEventListener('DOMContentLoaded',function(){
                 <td class="c-sl">₹${fmt(t.sl)}</td>
                 <td>${qty}</td>
                 <td>₹${fmt(t.capital || t.capitalAllocated)}</td>
-                <td style="color:#fc8181;">₹${fmt(t.risk_rs || t.riskRs)}</td>
+                <td style="color:var(--negative-text);">₹${fmt(t.risk_rs || t.riskRs)}</td>
                 <td class="c-rr">${rr}</td>
-                <td style="color:#4a5568;font-size:11px;">${(t.setup_type||'').replace(/_/g,' ')}</td>
+                <td style="color:var(--text-tertiary);font-size:11px;">${(t.setup_type||'').replace(/_/g,' ')}</td>
                 <td>
                   <button class="btn-exec ${dir === 'long' ? 'buy' : 'sell'}"
                     id="execBtn-${i}"
@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded',function(){
           </tbody>
         </table>
       </div>
-      ${!hasKite ? '<div style="padding:10px 12px;font-size:11px;color:#4a5568;">Connect Kite to enable order execution.</div>' : ''}`;
+      ${!hasKite ? '<div style="padding:10px 12px;font-size:11px;color:var(--text-tertiary);">Connect Kite to enable order execution.</div>' : ''}`;
   }
 
   function renderSkipped(skipped) {
@@ -498,13 +498,13 @@ document.addEventListener('DOMContentLoaded',function(){
         const cls  = bias === 'long' || bias === 'bullish' ? 'long' : bias === 'short' || bias === 'bearish' ? 'short' : '';
         const sc   = p.score >= 7 ? '#68d391' : p.score >= 5 ? '#63b3ed' : '#a0aec0';
         return `<tr>
-          <td style="color:#4a5568;">${i+1}</td>
+          <td style="color:var(--text-tertiary);">${i+1}</td>
           <td style="font-weight:700;">${p.symbol}</td>
           <td>${cls ? `<span class="tag tag-${cls}">${bias.toUpperCase()}</span>` : bias}</td>
           <td style="font-weight:700;color:${sc}">${(p.score||0).toFixed(2)}</td>
-          <td style="color:#718096;font-size:11px;">${(p.event_type||'').replace(/_/g,' ')}</td>
-          <td style="color:#4a5568;font-size:11px;">${p.sector||'—'}</td>
-          <td style="color:#718096;font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.reason||''}">${p.reason||'—'}</td>
+          <td style="color:var(--text-tertiary);font-size:11px;">${(p.event_type||'').replace(/_/g,' ')}</td>
+          <td style="color:var(--text-tertiary);font-size:11px;">${p.sector||'—'}</td>
+          <td style="color:var(--text-tertiary);font-size:11px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.reason||''}">${p.reason||'—'}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
   }
@@ -528,9 +528,9 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="md-item"><div class="md-label">Symbol</div><div class="md-val">${symbol} · ${exchange}</div></div>
       <div class="md-item"><div class="md-label">Side</div><div class="md-val" style="color:${side==='BUY'?'#68d391':'#fc8181'}">${side}</div></div>
       <div class="md-item"><div class="md-label">Quantity</div><div class="md-val">${qty} shares</div></div>
-      <div class="md-item"><div class="md-label">Plan Entry</div><div class="md-val" style="color:#63b3ed">₹${fmt(entry)}</div></div>
-      <div class="md-item"><div class="md-label">Target</div><div class="md-val" style="color:#68d391">₹${fmt(target)}</div></div>
-      <div class="md-item"><div class="md-label">Stop Loss</div><div class="md-val" style="color:#fc8181">₹${fmt(sl)}</div></div>`;
+      <div class="md-item"><div class="md-label">Plan Entry</div><div class="md-val" style="color:var(--accent)">₹${fmt(entry)}</div></div>
+      <div class="md-item"><div class="md-label">Target</div><div class="md-val" style="color:var(--positive-text)">₹${fmt(target)}</div></div>
+      <div class="md-item"><div class="md-label">Stop Loss</div><div class="md-val" style="color:var(--negative-text)">₹${fmt(sl)}</div></div>`;
     const btn = document.getElementById('modalConfirmBtn');
     btn.className = `modal-confirm ${side === 'BUY' ? 'buy' : 'sell'}`;
     btn.textContent = `Place ${side} Order`;

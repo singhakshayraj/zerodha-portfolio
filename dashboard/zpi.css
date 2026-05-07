@@ -40,10 +40,29 @@
   --negative-text: oklch(68% 0.18 20);
 
   /* Semantic dims */
-  --positive-dim:  oklch(65% 0.18 165 / 0.12);
-  --negative-dim:  oklch(62% 0.20 20  / 0.12);
-  --warning-dim:   oklch(75% 0.16 75  / 0.12);
-  --warning-text:  oklch(78% 0.16 75);
+  --positive-dim:    oklch(65% 0.18 165 / 0.12);
+  --negative-dim:    oklch(62% 0.20 20  / 0.12);
+  --warning-dim:     oklch(75% 0.16 75  / 0.12);
+  --warning-text:    oklch(78% 0.16 75);
+  /* Semantic borders (alpha variants for card/chip borders) */
+  --positive-border: oklch(65% 0.18 165 / 0.35);
+  --negative-border: oklch(62% 0.20 20  / 0.35);
+  --warning-border:  oklch(75% 0.16 75  / 0.35);
+  --accent-border:   oklch(65% 0.18 165 / 0.30);
+  /* Verdict chip palette (buy / weak-buy / review / avoid) */
+  --verdict-buy-bg:       oklch(45% 0.18 165 / 0.25);
+  --verdict-buy-text:     oklch(65% 0.20 165);
+  --verdict-buy-border:   oklch(65% 0.18 165 / 0.40);
+  --verdict-weak-bg:      oklch(50% 0.16 195 / 0.20);
+  --verdict-weak-text:    oklch(68% 0.16 195);
+  --verdict-weak-border:  oklch(68% 0.16 195 / 0.40);
+  --verdict-review-bg:    oklch(55% 0.18 45  / 0.20);
+  --verdict-review-text:  oklch(72% 0.18 45);
+  --verdict-review-border:oklch(72% 0.18 45  / 0.40);
+  /* Chart indicator colors */
+  --chart-ema20:  oklch(75% 0.16 75);
+  --chart-ema50:  oklch(68% 0.15 300);
+  --chart-ema200: oklch(65% 0.18 20);
 
   /* Typography */
   --font-ui:   'Inter', system-ui, -apple-system, sans-serif;

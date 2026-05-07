@@ -830,6 +830,9 @@ function buildMainChart() {
   const clrAccent   = cs.getPropertyValue('--accent').trim();
   const clrGrid     = 'rgba(255,255,255,0.05)';
   const clrTertiary = cs.getPropertyValue('--text-tertiary').trim();
+  const clrEma20    = cs.getPropertyValue('--chart-ema20').trim();
+  const clrEma50    = cs.getPropertyValue('--chart-ema50').trim();
+  const clrEma200   = cs.getPropertyValue('--chart-ema200').trim();
 
   // Build EMA datasets
   const datasets = [
@@ -850,13 +853,13 @@ function buildMainChart() {
   }
 
   if (ov20 && candles.length >= 20) {
-    datasets.push({ label: 'EMA 20', data: buildEMADataset(candles,20), borderColor: '#f59e0b', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y', borderDash: [] });
+    datasets.push({ label: 'EMA 20', data: buildEMADataset(candles,20), borderColor: clrEma20, borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y', borderDash: [] });
   }
   if (ov50 && candles.length >= 50) {
-    datasets.push({ label: 'EMA 50', data: buildEMADataset(candles,50), borderColor: '#a78bfa', borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
+    datasets.push({ label: 'EMA 50', data: buildEMADataset(candles,50), borderColor: clrEma50, borderWidth: 1, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
   }
   if (ov200 && candles.length >= 200) {
-    datasets.push({ label: 'EMA 200', data: buildEMADataset(candles,200), borderColor: '#f87171', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
+    datasets.push({ label: 'EMA 200', data: buildEMADataset(candles,200), borderColor: clrEma200, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false, yAxisID: 'y' });
   }
   if (ovBB) {
     try {

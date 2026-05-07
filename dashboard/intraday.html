@@ -67,9 +67,9 @@
     .muted { color: var(--text-tertiary); }
 
     .btn-sm { padding: 4px 10px; border: none; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; cursor: pointer; }
-    .btn-buy  { background: oklch(65% 0.18 165 / 0.15); color: var(--positive); border: 1px solid oklch(65% 0.18 165 / 0.3); }
-    .btn-sell { background: oklch(62% 0.20 20 / 0.15); color: var(--negative); border: 1px solid oklch(62% 0.20 20 / 0.3); }
-    .btn-ai   { background: var(--accent-dim); color: var(--accent); border: 1px solid oklch(65% 0.18 230 / 0.25); }
+    .btn-buy  { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--accent-border); }
+    .btn-sell { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative-border); }
+    .btn-ai   { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
     .btn-remove { background: none; border: none; color: var(--text-disabled); font-size: 14px; cursor: pointer; padding: 2px 6px; }
     .btn-remove:hover { color: var(--negative); }
 
@@ -126,8 +126,8 @@
     .brain-algo-note { font-size: var(--text-sm); color: var(--text-disabled); font-style: italic; margin-bottom: 14px; padding-left: 4px; }
     .sector-pills { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: 14px; }
     .sector-pill { font-size: var(--text-xs); padding: 3px 8px; border-radius: var(--radius-lg); font-weight: 600; }
-    .sector-pill.buy { background: oklch(65% 0.18 165 / 0.15); color: var(--positive); border: 1px solid oklch(65% 0.18 165 / 0.25); }
-    .sector-pill.avoid { background: oklch(62% 0.20 20 / 0.15); color: var(--negative); border: 1px solid oklch(62% 0.20 20 / 0.25); }
+    .sector-pill.buy { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--accent-border); }
+    .sector-pill.avoid { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative-border); }
     .brain-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-4); }
     .pick-card { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 14px; position: relative; transition: border-color 0.15s; cursor: default; }
     .pick-card:hover { border-color: var(--text-disabled); }
@@ -145,7 +145,7 @@
     .pick-intraday { font-size: var(--text-xs); color: var(--accent); margin-bottom: 6px; font-style: italic; }
     .pick-risk { font-size: var(--text-xs); color: var(--negative); margin-bottom: var(--sp-3); }
     .pick-tags { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-bottom: var(--sp-3); }
-    .pick-tag { font-size: 9px; padding: 2px 6px; background: var(--accent-dim); color: var(--accent); border-radius: var(--radius-sm); border: 1px solid oklch(65% 0.18 230 / 0.2); }
+    .pick-tag { font-size: 9px; padding: 2px 6px; background: var(--accent-dim); color: var(--accent); border-radius: var(--radius-sm); border: 1px solid var(--accent-dim); }
     .pick-meta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-1); }
     .pick-conf { font-size: var(--text-sm); color: var(--warning-text); }
     .pick-score { font-size: var(--text-xs); color: var(--text-disabled); }
@@ -182,9 +182,9 @@
     .sentiment-dot.bearish { background: var(--negative); }
     .sentiment-dot.neutral  { background: var(--text-tertiary); }
     .macro-badge { font-size: var(--text-xs); padding: 2px 7px; border-radius: var(--radius-sm); font-weight: 600; margin-left: 6px; }
-    .macro-badge.low    { background: oklch(65% 0.18 165 / 0.15); color: var(--positive); }
+    .macro-badge.low    { background: var(--positive-dim); color: var(--positive); }
     .macro-badge.medium { background: var(--warning-dim); color: var(--warning-text); }
-    .macro-badge.high   { background: oklch(62% 0.20 20 / 0.15); color: var(--negative); }
+    .macro-badge.high   { background: var(--negative-dim); color: var(--negative); }
 
     /* SOURCE SELECTOR */
     .source-bar { display: flex; align-items: center; gap: 10px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 10px 18px; }
