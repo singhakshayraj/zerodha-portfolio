@@ -1578,6 +1578,14 @@ document.addEventListener('DOMContentLoaded',function(){
       setLoading('tradeSignalsList', 'Fetching live triggers…');
       const trigData = await apiFetch('/api/research?action=triggers');
       triggers = trigData.triggers || [];
+      if (trigData.degraded || trigData.persistent_alert) {
+        const warnEl = document.getElementById('tradeSignalsList');
+        if (warnEl) warnEl.innerHTML =
+          `<div style="padding:10px 14px;background:var(--warning-dim);border:1px solid var(--warning-border);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--warning-text);margin-bottom:var(--sp-4);">` +
+          `⚠ Trigger engine degraded${trigData.degrade_reason ? ': ' + trigData.degrade_reason : ''} — NSE coverage ${trigData.nse_coverage_pct ?? '?'}%` +
+          (trigData.quote_source === 'mixed' ? ` · partial Kite fallback applied` : '') +
+          `</div>`;
+      }
     } catch { /* triggers optional — intersect can work without */ }
 
     // Step 3: intersect brain × triggers

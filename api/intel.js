@@ -618,7 +618,51 @@ Return ONLY raw JSON (no markdown):
             ohlc: { open: p.open, high: p.intraDayHighLow?.max, low: p.intraDayHighLow?.min, close: p.previousClose } };
         } catch { /* skip */ }
       }));
-      return res.status(200).json(await runTriggerCycle(quoteData, vixState, cookie));
+
+      // Item 7: Kite fallback when NSE coverage drops below 70%.
+      // Uses enctoken from request header — lazy-imported to avoid Vercel ncc
+      // bundling the Node https module at the top level.
+      const nseCoverage = Object.keys(quoteData).length / UNIVERSE.length;
+      let quoteSource = 'nse';
+      const rawEnc = req.headers['x-kite-enctoken'] || '';
+      const encForFallback = rawEnc ? decodeURIComponent(rawEnc) : '';
+      if (nseCoverage < 0.70 && encForFallback) {
+        try {
+          const { getQuotes } = await import('../dashboard/lib/kite.js');
+          const missing = UNIVERSE.filter(s => !quoteData[s]).map(s => `NSE:${s}`);
+          if (missing.length) {
+            const kiteData = await getQuotes(missing, encForFallback);
+            for (const [key, d] of Object.entries(kiteData || {})) {
+              const sym = key.split(':')[1];
+              if (sym && d?.last_price != null && !quoteData[sym]) {
+                quoteData[sym] = {
+                  last_price: d.last_price,
+                  change_pct: d.net_change && d.ohlc?.close
+                    ? +(d.net_change / d.ohlc.close * 100).toFixed(2) : 0,
+                  net_change: d.net_change || 0,
+                  volume:     d.volume_traded || 0,
+                  ohlc: { open: d.ohlc?.open, high: d.ohlc?.high, low: d.ohlc?.low, close: d.ohlc?.close },
+                };
+              }
+            }
+            quoteSource = nseCoverage < 0.10 ? 'kite_fallback' : 'mixed';
+          }
+        } catch { /* Kite fallback failed — proceed with partial NSE data */ }
+      }
+
+      const cycleResult = await runTriggerCycle(quoteData, vixState, cookie);
+
+      // Item 5: Read persistent degrade_alert from Redis and surface in response.
+      const degradeAlert = await redisGet('trig:degrade_alert').catch(() => null);
+
+      return res.status(200).json({
+        ...cycleResult,
+        degraded:         !cycleResult.health?.healthy,
+        degrade_reason:   cycleResult.health?.reason || null,
+        persistent_alert: degradeAlert?.alerting ?? false,
+        quote_source:     quoteSource,
+        nse_coverage_pct: Math.round(nseCoverage * 100),
+      });
     }
 
     // ── Fundamental Data Proxy ──────────────────────────────────────────────────

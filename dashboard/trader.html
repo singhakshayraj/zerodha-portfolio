@@ -47,6 +47,7 @@
     .step.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
     .step.done   { background: var(--positive-dim); border-color: var(--accent-border); color: var(--positive); }
     .step.error  { background: var(--negative-dim); border-color: var(--negative-border); color: var(--negative); }
+    .step.warn   { background: var(--warning-dim);  border-color: var(--warning-border); color: var(--warning-text); }
     .step-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .step.active .step-dot { animation: blink 1s infinite; }
     
@@ -625,7 +626,12 @@ document.addEventListener('DOMContentLoaded',function(){
     try {
       const td = await api('/api/research?action=triggers');
       triggers = td.triggers || [];
-      stepSet('triggers', 'done');
+      if (td.degraded || td.persistent_alert) {
+        stepSet('triggers', 'warn');
+        setStatus(`⚠ Trigger engine degraded${td.degrade_reason ? ': ' + td.degrade_reason : ''} — NSE coverage ${td.nse_coverage_pct ?? '?'}% · signals may be incomplete`);
+      } else {
+        stepSet('triggers', 'done');
+      }
     } catch {
       stepSet('triggers', 'done'); // non-fatal
     }
