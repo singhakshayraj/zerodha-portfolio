@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <h1 style="font-size:20px;font-weight:700;color:#e2e8f0">Trade Journal</h1>
       <p style="font-size:13px;color:#4a5568;margin-top:4px">Every trade placed via Market Brain — tracked, measured, improved.</p>
     </div>
-    <button onclick="clearClosed()" style="padding:7px 14px;background:none;border:1px solid #2d3748;border-radius:7px;color:#718096;font-size:12px;cursor:pointer">Clear closed</button>
+    <button onclick="clearClosed()" style="padding:7px 14px;background:none;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);color:var(--text-secondary);font-size:12px;cursor:pointer">Clear closed</button>
   </div>
 
   <!-- STATS -->
@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded',function(){
           <div class="lvl-sl">SL ₹${t.sl}</div>
         </td>
         <td>${t.qty}</td>
-        <td style="font-size:11px;color:#718096">
+        <td style="font-size:11px;color:var(--text-secondary)">
           Risk <span style="color:#fc8181">₹${t.risk_rs}</span><br>
           Reward <span style="color:#68d391">₹${t.reward_rs}</span>
         </td>
