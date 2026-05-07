@@ -238,16 +238,39 @@ export default async function handler(req, res) {
 
     // ── Record outcomes (called by cron or dashboard with live LTP map) ────────
     // POST /api/intel?action=record_outcome
-    // Body: { ltpMap: { SYMBOL: ltp } }  — current prices for pending picks
+    // Body: { ltpMap: { SYMBOL: ltp } }  — current prices for pending picks.
+    // If ltpMap is empty or omitted, auto-fetches LTP from NSE (cron mode).
     if (action === 'record_outcome') {
       if (req.method !== 'POST') { res.status(405).end(); return; }
       const { ltpMap = {} } = req.body ?? {};
-      await recordOutcomes(async symbols => {
-        // Use client-supplied ltpMap; only resolve symbols we have prices for
-        return Object.fromEntries(symbols.filter(s => ltpMap[s]).map(s => [s, ltpMap[s]]));
-      });
+      const hasClientLtp = Object.keys(ltpMap).length > 0;
+
+      let ltpFetcher;
+      if (hasClientLtp) {
+        // Dashboard-supplied prices — use as-is
+        ltpFetcher = async symbols =>
+          Object.fromEntries(symbols.filter(s => ltpMap[s]).map(s => [s, ltpMap[s]]));
+      } else {
+        // Cron / no-arg mode — self-fetch from NSE for all pending symbols.
+        // Prefix plain symbols with 'NSE:' so fetchNSEQuotes stockSym() works,
+        // then strip the prefix back out for the returned map.
+        ltpFetcher = async symbols => {
+          try {
+            const prefixed  = symbols.map(s => s.includes(':') ? s : `NSE:${s}`);
+            const nseData   = await fetchNSEQuotes(prefixed);
+            const result    = {};
+            for (const [key, d] of Object.entries(nseData)) {
+              const sym = key.includes(':') ? key.split(':')[1] : key;
+              if (sym && d?.last_price != null) result[sym] = d.last_price;
+            }
+            return result;
+          } catch { return {}; }
+        };
+      }
+
+      await recordOutcomes(ltpFetcher);
       await refreshSourceStats();
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({ ok: true, mode: hasClientLtp ? 'client_ltp' : 'nse_auto' });
     }
 
     // ── Calibration stats (read current source performance stats) ───────────

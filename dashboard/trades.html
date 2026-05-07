@@ -79,6 +79,25 @@
     .ana-count { font-size: var(--text-xs); color: var(--text-disabled); min-width: 28px; text-align: right; }
     .ana-empty { font-size: var(--text-base); color: var(--text-disabled); padding: 12px 0; text-align: center; }
 
+    /* CALIBRATION TABLE */
+    .calib-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    .calib-table th { text-align: left; padding: 8px 12px; color: var(--text-disabled); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+    .calib-table td { padding: 9px 12px; border-bottom: 1px solid var(--bg-card); color: var(--text-secondary); vertical-align: middle; }
+    .calib-table tr:last-child td { border-bottom: none; }
+    .calib-table tr:hover td { background: var(--bg-card); }
+    .calib-seg  { font-family: monospace; font-size: var(--text-xs); color: var(--text-tertiary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .calib-type { font-size: var(--text-xs); padding: 2px 7px; border-radius: var(--radius-md); font-weight: 700; }
+    .calib-type.source { background: var(--accent-dim); color: var(--accent); }
+    .calib-type.signal { background: var(--warning-dim); color: var(--warning-text); }
+    .calib-wr   { font-weight: 700; }
+    .calib-wr.good  { color: var(--positive); }
+    .calib-wr.ok    { color: var(--warning-text); }
+    .calib-wr.poor  { color: var(--negative); }
+    .calib-ret { color: var(--text-secondary); }
+    .calib-ret.pos  { color: var(--positive-text); }
+    .calib-ret.neg  { color: var(--negative-text); }
+    .calib-n    { color: var(--text-disabled); font-size: var(--text-xs); }
+
   </style>
 
 <script>
@@ -204,6 +223,17 @@ document.addEventListener('DOMContentLoaded',function(){
         <h3>P&amp;L Trend (last 20)</h3>
         <div id="ana-pnl-trend"><div class="ana-empty">No closed trades yet</div></div>
       </div>
+    </div>
+  </div>
+
+  <!-- SIGNAL SOURCE CALIBRATION -->
+  <div class="analytics" id="calibSection" style="margin-top:32px">
+    <h2>📡 Signal Source Calibration</h2>
+    <div style="font-size:var(--text-xs);color:var(--text-disabled);margin-bottom:var(--sp-5)">
+      Top performing sources from <code>brain_source_stats</code> — ranked by win rate · min 10 samples
+    </div>
+    <div id="calibContent">
+      <div class="ana-empty" style="padding:24px 0">Loading calibration data…</div>
     </div>
   </div>
 
@@ -481,6 +511,79 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   load();
+  loadCalibration();
+
+  async function loadCalibration() {
+    const el = document.getElementById('calibContent');
+    try {
+      const res  = await fetch('/api/intel?action=calibration_stats');
+      const data = await res.json();
+      if (!res.ok || !data.stats) { el.innerHTML = '<div class="ana-empty">No calibration data yet — outcomes accumulate after market hours.</div>'; return; }
+
+      // Parse segment key into human-readable label + type
+      function parseKey(key) {
+        const parts = key.split('::');
+        if (parts[0] === 'source') {
+          const src   = parts[1] || '?';
+          const ctx   = [];
+          for (let i = 2; i < parts.length; i += 2) { ctx.push(`${parts[i]}=${parts[i+1]}`); }
+          return { type: 'source', label: src, ctx: ctx.join(' · ') || 'base' };
+        } else {
+          const st    = parts[1] || '?';
+          const et    = parts[2] || '?';
+          const reg   = parts[3] || '?';
+          const ctx   = [];
+          for (let i = 4; i < parts.length; i += 2) { ctx.push(`${parts[i]}=${parts[i+1]}`); }
+          return { type: 'signal', label: `${st} / ${et}`, ctx: (reg !== 'neutral' ? `regime=${reg} ` : '') + ctx.join(' · ') || 'base' };
+        }
+      }
+
+      // Filter to min 10 samples, sort by win_rate desc, take top 20
+      const MIN_N = 10;
+      const rows  = Object.entries(data.stats)
+        .filter(([, v]) => (v.sample_size ?? 0) >= MIN_N && v.win_rate != null)
+        .sort(([, a], [, b]) => b.win_rate - a.win_rate)
+        .slice(0, 20);
+
+      if (!rows.length) { el.innerHTML = '<div class="ana-empty">Not enough data yet — need ≥10 samples per segment.</div>'; return; }
+
+      const wrCls  = wr => wr >= 0.6 ? 'good' : wr >= 0.45 ? 'ok' : 'poor';
+      const retCls = r  => r  > 0   ? 'pos'  : r  < 0    ? 'neg' : '';
+      const pct    = v  => v != null ? (v * 100).toFixed(1) + '%' : '—';
+
+      el.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="calib-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Segment</th>
+                <th>Context</th>
+                <th>Win Rate</th>
+                <th>Avg Return</th>
+                <th>Samples</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(([key, v]) => {
+                const p = parseKey(key);
+                return `<tr>
+                  <td><span class="calib-type ${p.type}">${p.type}</span></td>
+                  <td class="calib-seg" title="${key}">${p.label}</td>
+                  <td class="calib-seg">${p.ctx}</td>
+                  <td class="calib-wr ${wrCls(v.win_rate)}">${pct(v.win_rate)}</td>
+                  <td class="calib-ret ${retCls(v.avg_return)}">${v.avg_return > 0 ? '+' : ''}${pct(v.avg_return)}</td>
+                  <td class="calib-n">${v.sample_size}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          <div style="font-size:var(--text-xs);color:var(--text-disabled);margin-top:var(--sp-4);text-align:right">${data.segment_count} total segments · showing top ${rows.length} by win rate</div>
+        </div>`;
+    } catch(e) {
+      el.innerHTML = `<div class="ana-empty">Failed to load calibration: ${e.message}</div>`;
+    }
+  }
 </script>
 
 <div id="health-panel"></div>
