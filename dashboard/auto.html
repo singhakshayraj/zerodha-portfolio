@@ -11,74 +11,91 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
 
-    .page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
-    h1 { font-size: var(--text-2xl); font-weight: 800; color: var(--text-primary); margin-bottom: 6px; }
+    .page { max-width: 1020px; margin: 0 auto; padding: 32px 24px; }
+    h1 { font-size: var(--text-2xl); font-weight: 800; margin-bottom: 6px; }
     .sub { font-size: var(--text-base); color: var(--text-tertiary); margin-bottom: 28px; }
 
-    /* Stale-token banner */
     #kite-stale-banner { display:none; align-items:center; gap:10px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); border-radius:8px; padding:10px 16px; margin-bottom:20px; color:#f59e0b; font-size:var(--text-sm); }
     #kite-stale-banner a { color:#f59e0b; text-decoration:underline; }
 
-    /* TWO-COLUMN LAYOUT */
-    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 28px; align-items: start; }
-    @media (max-width: 780px) { .layout { grid-template-columns: 1fr; } }
+    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
 
-    /* PARAMS PANEL */
-    .panel { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 22px; }
-    .panel-title { font-size: var(--text-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-disabled); margin-bottom: 18px; }
+    /* PANEL */
+    .panel { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 20px; }
+    .panel-title { font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-disabled); margin-bottom: 16px; }
 
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 5px; }
-    .field input { width: 100%; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 9px 12px; font-size: var(--text-base); color: var(--text-primary); outline: none; }
-    .field input:focus { border-color: var(--accent); }
-    .field .hint { font-size: var(--text-xs); color: var(--text-disabled); margin-top: 4px; }
+    /* HOW TO TRIGGER */
+    .trigger-panel { display: flex; flex-direction: column; gap: 12px; }
 
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: var(--radius-md); font-size: var(--text-base); font-weight: 700; cursor: pointer; border: none; transition: opacity 0.15s, background 0.15s; }
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    .btn-start { background: var(--accent); color: var(--bg-base); width: 100%; justify-content: center; margin-top: 6px; }
-    .btn-start:hover:not(:disabled) { opacity: 0.85; }
-    .btn-stop  { background: var(--negative); color: #fff; width: 100%; justify-content: center; margin-top: 8px; }
-    .btn-stop:hover:not(:disabled) { opacity: 0.85; }
-    .btn-refresh { background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 7px 14px; font-size: var(--text-sm); }
+    .trigger-option { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 16px; }
+    .trigger-option h3 { font-size: var(--text-base); font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+    .trigger-option p  { font-size: var(--text-sm); color: var(--text-tertiary); line-height: 1.5; margin-bottom: 10px; }
+    .trigger-option.primary { border-color: var(--accent); background: var(--accent-dim); }
+    .trigger-option.primary h3 { color: var(--accent); }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s; }
+    .btn-gh    { background: var(--accent); color: var(--bg-base); }
+    .btn-gh:hover { opacity: 0.85; }
+    .btn-refresh { background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
     .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-stop { background: var(--negative); color: #fff; }
+    .btn-stop:hover:not(:disabled) { opacity: 0.85; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    /* SESSION STATUS CARD */
-    .status-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 22px; }
-    .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    .status-header h2 { font-size: var(--text-md); font-weight: 700; color: var(--text-primary); }
+    /* PARAMS REFERENCE */
+    .params-grid { display: grid; gap: 8px; margin-top: 14px; }
+    .param-row { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-sm); }
+    .param-key { color: var(--text-disabled); text-transform: uppercase; font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.05em; min-width: 110px; }
+    .param-val { color: var(--text-primary); font-weight: 600; }
+    .param-hint { color: var(--text-disabled); font-size: var(--text-xs); }
 
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    /* DERIVED TARGETS */
+    .derived { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-top: 12px; }
+    .derived-row { display: flex; justify-content: space-between; font-size: var(--text-sm); padding: 3px 0; }
+    .derived-label { color: var(--text-tertiary); }
+    .pos { color: var(--positive); font-weight: 700; }
+    .neg { color: var(--negative); font-weight: 700; }
+
+    /* INPUT FIELDS */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .field input { width: 100%; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 10px; font-size: var(--text-base); color: var(--text-primary); outline: none; }
+    .field input:focus { border-color: var(--accent); }
+
+    /* STATUS CARD */
+    .status-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 20px; }
+    .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .status-header h2 { font-size: var(--text-md); font-weight: 700; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
     .badge-active    { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); }
     .badge-stopped   { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative-border); }
     .badge-completed { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
     .badge-idle      { background: rgba(113,128,150,0.12); color: var(--text-tertiary); border: 1px solid rgba(113,128,150,0.25); }
 
-    /* METRICS GRID */
-    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; margin-bottom: 20px; }
-    .metric { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; }
-    .metric-label { font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .metric-val { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); }
-    .metric-val.pos { color: var(--positive); }
-    .metric-val.neg { color: var(--negative); }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .metric { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; }
+    .metric-label { font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .metric-val { font-size: var(--text-xl); font-weight: 700; }
 
-    /* PROGRESS BARS */
-    .progress-section { margin-bottom: 20px; }
-    .prog-row { margin-bottom: 12px; }
-    .prog-label { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 5px; }
-    .prog-track { width: 100%; height: 8px; background: var(--bg-base); border-radius: 4px; overflow: hidden; }
-    .prog-fill { height: 8px; border-radius: 4px; transition: width 0.4s; max-width: 100%; }
+    .prog-section { margin-bottom: 18px; }
+    .prog-row { margin-bottom: 10px; }
+    .prog-label { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 4px; }
+    .prog-track { height: 7px; background: var(--bg-base); border-radius: 4px; overflow: hidden; }
+    .prog-fill { height: 7px; border-radius: 4px; transition: width 0.4s; max-width: 100%; }
     .prog-profit { background: var(--positive); }
     .prog-loss   { background: var(--negative); }
 
-    /* TRADES TABLE */
-    .trades-section { margin-top: 28px; }
-    .trades-section h3 { font-size: var(--text-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-disabled); margin-bottom: 14px; }
+    .circuit-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 12px 16px; color: #f59e0b; font-size: var(--text-sm); margin-bottom: 16px; display: none; }
+
+    .trades-section h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-disabled); margin-bottom: 12px; }
     .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: var(--text-base); }
-    thead th { text-align: left; padding: 8px 10px; color: var(--text-disabled); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    thead th { text-align: left; padding: 7px 10px; color: var(--text-disabled); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
     tbody tr { border-bottom: 1px solid var(--bg-card); }
     tbody tr:hover { background: var(--bg-card); }
-    tbody td { padding: 10px 10px; vertical-align: middle; }
+    tbody td { padding: 9px 10px; vertical-align: middle; }
     .sym  { font-weight: 700; color: var(--text-primary); }
     .side-buy  { color: var(--positive); font-weight: 700; }
     .side-sell { color: var(--negative); font-weight: 700; }
@@ -88,18 +105,13 @@
     .pnl-pos { color: var(--positive); font-weight: 700; }
     .pnl-neg { color: var(--negative); font-weight: 700; }
     .pnl-open { color: var(--text-disabled); }
-    .st-open { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .st-closed { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .st-cancelled { background: rgba(113,128,150,0.12); color: var(--text-tertiary); border: 1px solid rgba(113,128,150,0.25); padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .st-open { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .st-closed { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .st-cancelled { background: rgba(113,128,150,0.12); color: var(--text-tertiary); border: 1px solid rgba(113,128,150,0.25); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
 
-    /* CIRCUIT BREAKER WARNING */
-    .circuit-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 12px 16px; color: #f59e0b; font-size: var(--text-sm); margin-bottom: 18px; display: none; }
+    .empty { text-align: center; padding: 36px; color: var(--text-disabled); font-size: var(--text-base); }
 
-    /* EMPTY STATE */
-    .empty { text-align: center; padding: 40px; color: var(--text-disabled); font-size: var(--text-base); }
-
-    /* LOG */
-    #log { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; font-size: var(--text-sm); color: var(--text-secondary); min-height: 36px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; word-break: break-all; display: none; }
+    #log { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px; font-size: var(--text-sm); color: var(--text-secondary); margin-top: 10px; font-family: monospace; white-space: pre-wrap; word-break: break-all; display: none; }
     #log.visible { display: block; }
   </style>
 </head>
@@ -122,63 +134,65 @@
 </nav>
 
 <div id="kite-stale-banner">
-  ⚠ Kite session may be expired — auto trading requires a valid token. <a href="/connect">Re-connect →</a>
+  ⚠ Kite session may be expired. <a href="/connect">Re-connect →</a>
 </div>
 
 <div class="page">
   <h1>Auto Trade</h1>
-  <p class="sub">Define your session parameters. The system runs the full pipeline (Brain → Triggers → Intersection → Plans → Allocate) and places trades automatically with GTT exits.</p>
+  <p class="sub">Full-pipeline autonomous trading: Brain → Triggers → Intersection → Plans → Allocate → Execute. Runs via GitHub Actions — no Vercel dependency on the execution path.</p>
 
   <div class="layout">
 
-    <!-- LEFT: PARAMS PANEL -->
+    <!-- LEFT: TRIGGER + CONFIG -->
     <div>
-      <div class="panel">
-        <div class="panel-title">Session Parameters</div>
+      <!-- How to start -->
+      <div class="panel" style="margin-bottom:16px;">
+        <div class="panel-title">Start a Session</div>
+        <div class="trigger-panel">
 
-        <div class="field">
-          <label>Capital to deploy (₹)</label>
-          <input type="number" id="inp-capital" placeholder="e.g. 10000" min="1000" step="1000"/>
-          <div class="hint">Funds allocated to this session</div>
+          <div class="trigger-option primary">
+            <h3>▶ Trigger via GitHub Actions</h3>
+            <p>Runs <code>modules/auto-trade/session.js</code> directly — no Vercel needed. Provide runtime params when you trigger manually.</p>
+            <a class="btn btn-gh" href="https://github.com/singhakshayraj/zerodha-portfolio/actions/workflows/auto-trade.yml" target="_blank" rel="noopener">Open Workflow →</a>
+          </div>
+
+          <div class="trigger-option">
+            <h3>⏰ Scheduled (cron)</h3>
+            <p>Runs automatically at <strong>9:45 AM IST</strong> on weekdays using <code>AUTO_CAPITAL</code>, <code>AUTO_MAX_PROFIT_PCT</code>, <code>AUTO_MAX_LOSS_PCT</code> repo vars.</p>
+          </div>
+
         </div>
-
-        <div class="field">
-          <label>Max profit target (%)</label>
-          <input type="number" id="inp-profit" placeholder="e.g. 15" min="1" max="100" step="0.5"/>
-          <div class="hint">Session stops when realized P&L ≥ this % of capital</div>
-        </div>
-
-        <div class="field">
-          <label>Max loss limit (%)</label>
-          <input type="number" id="inp-loss" placeholder="e.g. 10" min="0.5" max="50" step="0.5"/>
-          <div class="hint">Session stops and GTTs cancelled when P&L ≤ −this % of capital</div>
-        </div>
-
-        <div class="field">
-          <label>Max trades</label>
-          <input type="number" id="inp-trades" placeholder="5" min="1" max="20" step="1" value="5"/>
-          <div class="hint">Maximum number of positions to open</div>
-        </div>
-
-        <button class="btn btn-start" id="btn-start" onclick="startSession()">▶ Start Auto Session</button>
-        <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="stopSession()">■ Stop Session &amp; Cancel GTTs</button>
-        <div id="log"></div>
       </div>
 
-      <!-- Derived targets preview -->
-      <div id="targets-preview" style="display:none; margin-top:14px;">
-        <div class="panel" style="padding:14px 18px;">
-          <div class="panel-title" style="margin-bottom:10px;">Session Targets</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="metric">
-              <div class="metric-label">Profit Target</div>
-              <div class="metric-val pos" id="preview-profit">—</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Loss Limit</div>
-              <div class="metric-val neg" id="preview-loss">—</div>
-            </div>
+      <!-- Config helper -->
+      <div class="panel">
+        <div class="panel-title">Preview Session Targets</div>
+        <div class="field">
+          <label>Capital (₹)</label>
+          <input type="number" id="inp-capital" placeholder="e.g. 10000" step="1000"/>
+        </div>
+        <div class="field">
+          <label>Max Profit (%)</label>
+          <input type="number" id="inp-profit" placeholder="e.g. 15" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Max Loss (%)</label>
+          <input type="number" id="inp-loss" placeholder="e.g. 10" step="0.5"/>
+        </div>
+        <div id="targets-preview" style="display:none;">
+          <div class="derived">
+            <div class="derived-row"><span class="derived-label">Profit target</span><span id="prev-profit" class="pos">—</span></div>
+            <div class="derived-row"><span class="derived-label">Loss limit</span><span id="prev-loss" class="neg">—</span></div>
+            <div class="derived-row"><span class="derived-label">Target R-multiple</span><span id="prev-rmult" style="font-weight:700;">—</span></div>
           </div>
+        </div>
+
+        <!-- Emergency stop (works via Vercel if deployed) -->
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-subtle);">
+          <div class="panel-title" style="margin-bottom:10px;">Emergency Stop</div>
+          <p style="font-size:var(--text-sm);color:var(--text-tertiary);margin-bottom:10px;">Cancels all GTTs and marks open auto-session trades as cancelled. Positions still need to be exited manually in Kite.</p>
+          <button class="btn btn-stop" id="btn-stop" onclick="stopSession()">■ Stop Session &amp; Cancel GTTs</button>
+          <div id="log"></div>
         </div>
       </div>
     </div>
@@ -187,7 +201,7 @@
     <div>
       <div class="status-card">
         <div class="status-header">
-          <h2>Session Status</h2>
+          <h2>Today's Session</h2>
           <div style="display:flex;gap:8px;align-items:center;">
             <span id="status-badge" class="badge badge-idle">—</span>
             <button class="btn btn-refresh" onclick="loadSession()">↻ Refresh</button>
@@ -195,28 +209,17 @@
         </div>
 
         <div id="circuit-warn" class="circuit-warn"></div>
-
-        <div id="session-empty" class="empty">No active session today.<br>Set parameters and click Start.</div>
-
+        <div id="session-empty" class="empty">No session found for today.<br>Trigger via GitHub Actions to start.</div>
         <div id="session-body" style="display:none;">
           <div class="metrics" id="metrics-grid"></div>
-
-          <div class="progress-section" id="progress-section"></div>
-
+          <div class="prog-section" id="progress-section"></div>
           <div class="trades-section">
-            <h3>Positions</h3>
+            <h3>Positions (auto_session)</h3>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Side</th>
-                    <th>Entry</th>
-                    <th>Target</th>
-                    <th>SL</th>
-                    <th>Qty</th>
-                    <th>P&amp;L</th>
-                    <th>Status</th>
+                    <th>Symbol</th><th>Side</th><th>Entry</th><th>Target</th><th>SL</th><th>Qty</th><th>P&amp;L</th><th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="trades-body"></tbody>
@@ -227,13 +230,13 @@
       </div>
     </div>
 
-  </div><!-- /layout -->
-</div><!-- /page -->
+  </div>
+</div>
 
 <script>
-const BASE = '';
+const BASE     = '';
 const enctoken = () => localStorage.getItem('kite_enc') || '';
-const fmtRs = n => '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmtRs    = n => '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 function toggleTheme() {
@@ -244,24 +247,22 @@ function toggleTheme() {
   document.getElementById('theme-label').textContent = isLight ? 'Dark' : 'Light';
 }
 (function(){
-  const t = localStorage.getItem('zpi-theme');
-  const isLight = t === 'light';
+  const isLight = localStorage.getItem('zpi-theme') === 'light';
   document.getElementById('theme-icon-moon').style.display = isLight ? 'none' : '';
   document.getElementById('theme-icon-sun').style.display  = isLight ? '' : 'none';
   document.getElementById('theme-label').textContent = isLight ? 'Dark' : 'Light';
 })();
 
-// ── Kite token banner ─────────────────────────────────────────────────────────
+// ── Stale token banner ────────────────────────────────────────────────────────
 fetch(BASE + '/api/kite?action=token_status')
   .then(r => r.ok ? r.json() : null)
   .then(d => { if (d?.stale) document.getElementById('kite-stale-banner').style.display = 'flex'; })
   .catch(() => {});
 
-// ── Target preview ────────────────────────────────────────────────────────────
-['inp-capital', 'inp-profit', 'inp-loss'].forEach(id => {
-  document.getElementById(id).addEventListener('input', updatePreview);
-});
-
+// ── Targets preview ───────────────────────────────────────────────────────────
+['inp-capital', 'inp-profit', 'inp-loss'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updatePreview)
+);
 function updatePreview() {
   const cap    = +document.getElementById('inp-capital').value;
   const profit = +document.getElementById('inp-profit').value;
@@ -269,8 +270,9 @@ function updatePreview() {
   const prev   = document.getElementById('targets-preview');
   if (cap > 0 && profit > 0 && loss > 0) {
     prev.style.display = 'block';
-    document.getElementById('preview-profit').textContent = '+' + fmtRs(cap * profit / 100);
-    document.getElementById('preview-loss').textContent   = '−' + fmtRs(cap * loss / 100);
+    document.getElementById('prev-profit').textContent = '+' + fmtRs(cap * profit / 100);
+    document.getElementById('prev-loss').textContent   = '−' + fmtRs(cap * loss / 100);
+    document.getElementById('prev-rmult').textContent  = (profit / loss).toFixed(2) + 'x R';
   } else {
     prev.style.display = 'none';
   }
@@ -283,66 +285,21 @@ function log(msg) {
   el.textContent = msg;
 }
 
-// ── Start Session ─────────────────────────────────────────────────────────────
-async function startSession() {
-  const capital        = +document.getElementById('inp-capital').value;
-  const max_profit_pct = +document.getElementById('inp-profit').value;
-  const max_loss_pct   = +document.getElementById('inp-loss').value;
-  const maxTrades      = +document.getElementById('inp-trades').value || 5;
-
-  if (!capital || !max_profit_pct || !max_loss_pct) {
-    log('Please fill in capital, profit target, and loss limit.'); return;
-  }
-  if (!enctoken()) { log('Kite enctoken not found — connect Kite first.'); return; }
-
-  const btn = document.getElementById('btn-start');
-  btn.disabled = true;
-  btn.textContent = '⏳ Launching…';
-  log('Launching auto session…');
-
-  try {
-    const res = await fetch(BASE + '/api/intel?action=auto_session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': encodeURIComponent(enctoken()) },
-      body: JSON.stringify({ capital, max_profit_pct, max_loss_pct, maxTrades }),
-    });
-    const data = await res.json();
-
-    if (res.status === 409) {
-      log('Session already active for today. Refreshing status…');
-      loadSession(); return;
-    }
-    if (!res.ok) { log('Error: ' + (data.error || res.status)); return; }
-
-    const executed = data.executed ?? 0;
-    log(`✅ Session started — status: ${data.status}, ${executed} trade(s) placed.`);
-    if ((data.exec_errors || []).length) log('Warnings: ' + data.exec_errors.map(e => `${e.symbol} [${e.step}]: ${e.error}`).join('\n'));
-    renderSession(data);
-    document.getElementById('btn-stop').style.display = '';
-  } catch (e) {
-    log('Request failed: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '▶ Start Auto Session';
-  }
-}
-
-// ── Stop Session ──────────────────────────────────────────────────────────────
+// ── Emergency Stop ────────────────────────────────────────────────────────────
 async function stopSession() {
-  if (!confirm('Stop the session and cancel all GTT orders? Open positions will NOT be auto-exited — you must sell them manually.')) return;
+  if (!confirm('Cancel all GTTs and stop this session?\n\nYou will need to exit open positions manually in Kite.')) return;
   const btn = document.getElementById('btn-stop');
   btn.disabled = true;
   btn.textContent = '⏳ Stopping…';
-  log('Stopping session…');
-
+  log('Sending stop request…');
   try {
-    const res = await fetch(BASE + '/api/orders?action=session_stop', {
+    const res  = await fetch(BASE + '/api/orders?action=session_stop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': encodeURIComponent(enctoken()) },
     });
     const data = await res.json();
     if (!res.ok) { log('Error: ' + (data.error || res.status)); return; }
-    log(`✅ Session stopped — ${data.gtts_cancelled} GTT(s) cancelled, ${data.trades_cancelled} trade(s) marked cancelled.`);
+    log(`✅ Stopped — ${data.gtts_cancelled} GTT(s) cancelled, ${data.trades_cancelled} trade(s) marked.\nExit open positions manually in Kite.`);
     loadSession();
   } catch (e) {
     log('Request failed: ' + e.message);
@@ -352,124 +309,106 @@ async function stopSession() {
   }
 }
 
-// ── Load & render current session ─────────────────────────────────────────────
+// ── Load session status ───────────────────────────────────────────────────────
 async function loadSession() {
   try {
     const res  = await fetch(BASE + '/api/orders?action=session_status');
     if (res.status === 404) { renderSession(null); return; }
-    const data = await res.json();
-    renderSession(data);
+    renderSession(await res.json());
   } catch { renderSession(null); }
 }
 
 function renderSession(s) {
-  const empty  = document.getElementById('session-empty');
-  const body   = document.getElementById('session-body');
-  const badge  = document.getElementById('status-badge');
-  const warn   = document.getElementById('circuit-warn');
-  const stopBtn = document.getElementById('btn-stop');
+  const empty   = document.getElementById('session-empty');
+  const body    = document.getElementById('session-body');
+  const badge   = document.getElementById('status-badge');
+  const warn    = document.getElementById('circuit-warn');
 
   if (!s) {
     empty.style.display = ''; body.style.display = 'none';
     badge.className = 'badge badge-idle'; badge.textContent = '—';
-    warn.style.display = 'none'; stopBtn.style.display = 'none';
+    warn.style.display = 'none';
     return;
   }
 
   empty.style.display = 'none'; body.style.display = '';
 
-  // Badge
   const statusMap = {
-    active:    ['badge-active',    'Active'],
-    stopped:   ['badge-stopped',   'Stopped'],
-    completed: ['badge-completed', 'Completed'],
-    no_signals: ['badge-idle', 'No Signals'],
-    no_brain_picks: ['badge-idle', 'No Brain Picks'],
+    active:           ['badge-active',    'Active'],
+    stopped:          ['badge-stopped',   'Stopped'],
+    completed:        ['badge-completed', 'Completed'],
+    no_signals:       ['badge-idle', 'No Signals'],
+    no_brain_picks:   ['badge-idle', 'No Brain Picks'],
     no_opportunities: ['badge-idle', 'No Matches'],
-    no_plans:  ['badge-idle', 'No Plans'],
-    no_trades: ['badge-idle', 'No Trades'],
+    no_plans:         ['badge-idle', 'No Plans'],
+    no_trades:        ['badge-idle', 'No Trades'],
+    market_closed:    ['badge-idle', 'Market Closed'],
   };
-  const [cls, label] = statusMap[s.status] || ['badge-idle', s.status];
+  const [cls, label] = statusMap[s.status] || ['badge-idle', s.status || '—'];
   badge.className = 'badge ' + cls; badge.textContent = label;
 
-  // Circuit breaker warning
   if (s.stop_reason) {
     warn.style.display = '';
-    warn.textContent = '⚠ ' + s.stop_reason + ' — GTTs cancelled. Please exit open positions manually.';
+    warn.textContent = '⚠ ' + s.stop_reason + ' — GTTs cancelled. Exit open positions in Kite manually.';
   } else { warn.style.display = 'none'; }
 
-  // Stop button visibility
-  stopBtn.style.display = s.status === 'active' ? '' : 'none';
-
-  // Metrics grid
-  const pnl       = s.realized_pnl ?? 0;
-  const pnlCls    = pnl >= 0 ? 'pos' : 'neg';
-  const pnlSign   = pnl >= 0 ? '+' : '−';
-  const openCount = (s.trades || []).length;
+  const pnl    = s.realized_pnl ?? 0;
+  const pnlCls = pnl >= 0 ? 'pos' : 'neg';
   document.getElementById('metrics-grid').innerHTML = `
     <div class="metric"><div class="metric-label">Capital</div><div class="metric-val">${fmtRs(s.capital)}</div></div>
-    <div class="metric"><div class="metric-label">Realized P&L</div><div class="metric-val ${pnlCls}">${pnlSign}${fmtRs(pnl)}</div></div>
+    <div class="metric"><div class="metric-label">Realized P&L</div><div class="metric-val ${pnlCls}">${pnl >= 0 ? '+' : '−'}${fmtRs(pnl)}</div></div>
     <div class="metric"><div class="metric-label">Profit Target</div><div class="metric-val pos">+${fmtRs(s.profit_target)}</div></div>
     <div class="metric"><div class="metric-label">Loss Limit</div><div class="metric-val neg">−${fmtRs(s.loss_limit)}</div></div>
-    <div class="metric"><div class="metric-label">Positions</div><div class="metric-val">${openCount}</div></div>
-    <div class="metric"><div class="metric-label">NSE Coverage</div><div class="metric-val">${s.nse_coverage_pct ?? '?'}%</div></div>
+    <div class="metric"><div class="metric-label">Positions</div><div class="metric-val">${(s.trades || []).length}</div></div>
+    <div class="metric"><div class="metric-label">Quote Source</div><div class="metric-val" style="font-size:var(--text-base)">${s.quote_source ?? '—'}</div></div>
   `;
 
-  // Progress bars
-  const profitPct = s.profit_target ? Math.min(100, Math.max(0, pnl / s.profit_target * 100)) : 0;
-  const lossPct   = s.loss_limit    ? Math.min(100, Math.max(0, (-pnl) / s.loss_limit * 100)) : 0;
+  const pPct = s.profit_target ? Math.min(100, Math.max(0, pnl / s.profit_target * 100)) : 0;
+  const lPct = s.loss_limit    ? Math.min(100, Math.max(0, (-pnl) / s.loss_limit * 100)) : 0;
   document.getElementById('progress-section').innerHTML = `
     <div class="prog-row">
-      <div class="prog-label"><span>Profit progress</span><span style="color:var(--positive)">${profitPct.toFixed(0)}%</span></div>
-      <div class="prog-track"><div class="prog-fill prog-profit" style="width:${profitPct}%"></div></div>
+      <div class="prog-label"><span>Profit progress</span><span class="pos">${pPct.toFixed(0)}%</span></div>
+      <div class="prog-track"><div class="prog-fill prog-profit" style="width:${pPct}%"></div></div>
     </div>
     <div class="prog-row">
-      <div class="prog-label"><span>Loss exposure</span><span style="color:var(--negative)">${lossPct.toFixed(0)}%</span></div>
-      <div class="prog-track"><div class="prog-fill prog-loss" style="width:${lossPct}%"></div></div>
+      <div class="prog-label"><span>Loss exposure</span><span class="neg">${lPct.toFixed(0)}%</span></div>
+      <div class="prog-track"><div class="prog-fill prog-loss" style="width:${lPct}%"></div></div>
     </div>
   `;
 
-  // Trades table — fetch live journal for auto_session source
   fetchAutoTrades();
 }
 
 async function fetchAutoTrades() {
   try {
-    const res = await fetch(BASE + '/api/orders?action=journal');
-    if (!res.ok) return;
-    const { trades } = await res.json();
-    const autoTrades = (trades || []).filter(t => t.source === 'auto_session');
-    renderTradesTable(autoTrades);
-  } catch { }
+    const { trades } = await fetch(BASE + '/api/orders?action=journal').then(r => r.json());
+    const auto = (trades || []).filter(t => t.source === 'auto_session');
+    const tbody = document.getElementById('trades-body');
+    if (!auto.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-disabled);padding:18px;">No positions recorded</td></tr>';
+      return;
+    }
+    tbody.innerHTML = auto.map(t => {
+      const pnl    = t.pnl;
+      const pnlStr = pnl != null
+        ? `<span class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${pnl >= 0 ? '+' : '−'}${fmtRs(pnl)}</span>`
+        : '<span class="pnl-open">Open</span>';
+      const side  = t.side === 'BUY' ? '<span class="side-buy">BUY</span>' : '<span class="side-sell">SELL</span>';
+      const stCls = t.status === 'open' ? 'st-open' : t.status === 'closed' ? 'st-closed' : 'st-cancelled';
+      return `<tr>
+        <td><span class="sym">${t.symbol}</span></td>
+        <td>${side}</td>
+        <td class="lvl-entry">₹${(t.entry||0).toLocaleString('en-IN')}</td>
+        <td class="lvl-target">₹${(t.target||0).toLocaleString('en-IN')}</td>
+        <td class="lvl-sl">₹${(t.sl||0).toLocaleString('en-IN')}</td>
+        <td>${t.qty}</td>
+        <td>${pnlStr}</td>
+        <td><span class="${stCls}">${t.status}</span></td>
+      </tr>`;
+    }).join('');
+  } catch { /* silent */ }
 }
 
-function renderTradesTable(trades) {
-  const tbody = document.getElementById('trades-body');
-  if (!trades.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-disabled);padding:20px;">No positions yet</td></tr>';
-    return;
-  }
-  tbody.innerHTML = trades.map(t => {
-    const pnl = t.pnl != null ? t.pnl : null;
-    const pnlStr = pnl != null
-      ? `<span class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${pnl >= 0 ? '+' : '−'}${fmtRs(pnl)}</span>`
-      : '<span class="pnl-open">Open</span>';
-    const stCls = t.status === 'open' ? 'st-open' : t.status === 'closed' ? 'st-closed' : 'st-cancelled';
-    const side  = t.side === 'BUY' ? '<span class="side-buy">BUY</span>' : '<span class="side-sell">SELL</span>';
-    return `<tr>
-      <td><span class="sym">${t.symbol}</span></td>
-      <td>${side}</td>
-      <td class="lvl-entry">₹${(t.entry||0).toLocaleString('en-IN')}</td>
-      <td class="lvl-target">₹${(t.target||0).toLocaleString('en-IN')}</td>
-      <td class="lvl-sl">₹${(t.sl||0).toLocaleString('en-IN')}</td>
-      <td>${t.qty}</td>
-      <td>${pnlStr}</td>
-      <td><span class="${stCls}">${t.status}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
 loadSession();
 </script>
 </body>

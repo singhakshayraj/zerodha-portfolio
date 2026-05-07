@@ -10,29 +10,26 @@ on:
 jobs:
   monitor:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check P&L and circuit breaker
-        run: |
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-Kite-Enctoken: ${{ secrets.KITE_ENCTOKEN }}" \
-            "${{ vars.VERCEL_APP_URL }}/api/orders?action=session_monitor")
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          HTTP=$(echo "$RESPONSE" | tail -1)
-          echo "HTTP $HTTP — $BODY"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Session monitor failed (HTTP $HTTP): $BODY"
-            exit 1
-          fi
+      - name: Install dependencies
+        run: npm install
 
-          CIRCUIT=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('circuit_fired',False))" 2>/dev/null || echo "False")
-          if [ "$CIRCUIT" = "True" ]; then
-            REASON=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('stop_reason','?'))" 2>/dev/null || echo "?")
-            echo "⚠️ Circuit breaker fired: $REASON — GTTs cancelled, please exit positions manually"
-          else
-            PNL=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('realized_pnl','?'))" 2>/dev/null || echo "?")
-            OPEN=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('open_trades','?'))" 2>/dev/null || echo "?")
-            echo "✅ Monitor OK — realized P&L: ₹$PNL, open trades: $OPEN"
-          fi
+      - name: Run session monitor
+        run: node modules/auto-trade/monitor.js
+        env:
+          RUNTIME_MODE: server
+          KITE_ENCTOKEN: ${{ secrets.KITE_ENCTOKEN }}
+          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          UPSTASH_REDIS_URL:   ${{ secrets.UPSTASH_REDIS_URL }}
+          UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}

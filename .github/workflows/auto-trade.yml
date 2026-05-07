@@ -7,56 +7,54 @@ on:
   workflow_dispatch:
     inputs:
       capital:
-        description: 'Capital to deploy (₹)'
+        description: 'Capital to deploy (₹) — overrides repo var AUTO_CAPITAL'
         required: false
         default: ''
       max_profit_pct:
-        description: 'Max profit target (%)'
+        description: 'Max profit target (%) — e.g. 15'
         required: false
         default: ''
       max_loss_pct:
-        description: 'Max loss limit (%)'
+        description: 'Max loss limit (%) — e.g. 10'
         required: false
         default: ''
       max_trades:
-        description: 'Max number of trades'
+        description: 'Max number of trades (default: 5)'
         required: false
-        default: '5'
+        default: ''
 
 jobs:
   auto-session:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Launch auto trade session
-        run: |
-          CAPITAL="${{ github.event.inputs.capital || vars.AUTO_CAPITAL }}"
-          MAX_PROFIT="${{ github.event.inputs.max_profit_pct || vars.AUTO_MAX_PROFIT_PCT }}"
-          MAX_LOSS="${{ github.event.inputs.max_loss_pct || vars.AUTO_MAX_LOSS_PCT }}"
-          MAX_TRADES="${{ github.event.inputs.max_trades || vars.AUTO_MAX_TRADES || '5' }}"
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-          if [ -z "$CAPITAL" ] || [ -z "$MAX_PROFIT" ] || [ -z "$MAX_LOSS" ]; then
-            echo "::error::AUTO_CAPITAL, AUTO_MAX_PROFIT_PCT, AUTO_MAX_LOSS_PCT vars must be set in repo settings"
-            exit 1
-          fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-          BODY="{\"capital\":$CAPITAL,\"max_profit_pct\":$MAX_PROFIT,\"max_loss_pct\":$MAX_LOSS,\"maxTrades\":$MAX_TRADES}"
-          echo "Launching session: capital=₹$CAPITAL, profit_target=${MAX_PROFIT}%, loss_limit=${MAX_LOSS}%, max_trades=$MAX_TRADES"
+      - name: Install dependencies
+        run: npm install
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-Kite-Enctoken: ${{ secrets.KITE_ENCTOKEN }}" \
-            -d "$BODY" \
-            "${{ vars.VERCEL_APP_URL }}/api/intel?action=auto_session")
-
-          BODY_OUT=$(echo "$RESPONSE" | head -n -1)
-          HTTP=$(echo "$RESPONSE" | tail -1)
-          echo "HTTP $HTTP — $BODY_OUT"
-
-          if [ "$HTTP" != "200" ]; then
-            echo "::error::Auto trade session failed (HTTP $HTTP): $BODY_OUT"
-            exit 1
-          fi
-
-          STATUS=$(echo "$BODY_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "?")
-          EXECUTED=$(echo "$BODY_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('executed',0))" 2>/dev/null || echo "0")
-          echo "✅ Session status=$STATUS, executed=$EXECUTED trades"
+      - name: Run auto-trade session
+        run: node modules/auto-trade/session.js
+        env:
+          RUNTIME_MODE: server
+          # Inputs override repo vars — allows ad-hoc parameter changes at trigger time
+          CAPITAL:        ${{ github.event.inputs.capital        || vars.AUTO_CAPITAL }}
+          MAX_PROFIT_PCT: ${{ github.event.inputs.max_profit_pct || vars.AUTO_MAX_PROFIT_PCT }}
+          MAX_LOSS_PCT:   ${{ github.event.inputs.max_loss_pct   || vars.AUTO_MAX_LOSS_PCT }}
+          MAX_TRADES:     ${{ github.event.inputs.max_trades     || vars.AUTO_MAX_TRADES || '5' }}
+          KITE_ENCTOKEN:  ${{ secrets.KITE_ENCTOKEN }}
+          LLM_PROVIDER:   ${{ vars.LLM_PROVIDER || 'groq' }}
+          GROQ_API_KEY:   ${{ secrets.GROQ_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL:   ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          UPSTASH_REDIS_URL:   ${{ secrets.UPSTASH_REDIS_URL }}
+          UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
