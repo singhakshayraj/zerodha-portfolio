@@ -149,6 +149,10 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 </nav>
 
+<div id="kite-stale-banner" style="display:none;background:var(--warning-dim);border-bottom:1px solid var(--warning-border);padding:8px 24px;font-size:var(--text-sm);color:var(--warning-text);align-items:center;gap:var(--sp-3);">
+  ⚠ Kite enctoken expired — <a href="/connect" style="color:var(--warning-text);font-weight:700;text-decoration:underline;">renew at /connect</a>
+</div>
+
 <header>
   <div>
     <h1>📈 Consolidated Portfolio Report</h1>
@@ -717,6 +721,11 @@ async function saveSnapshot({ totalInvested, currentValue, totalPnl, totalPnlPct
     })
   });
 }
+
+// ── Kite token staleness banner ───────────────────────────────────────────────
+fetch('/api/kite?action=token_status').then(r => r.ok ? r.json() : null).then(d => {
+  if (d?.stale) document.getElementById('kite-stale-banner').style.display = 'flex';
+}).catch(() => {});
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 const _enc = localStorage.getItem('kite_enctoken');

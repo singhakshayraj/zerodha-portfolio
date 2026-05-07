@@ -162,6 +162,10 @@ document.addEventListener('DOMContentLoaded',function(){
     </button>
 </nav>
 
+<div id="kite-stale-banner" style="display:none;background:var(--warning-dim);border-bottom:1px solid var(--warning-border);padding:8px 24px;font-size:var(--text-sm);color:var(--warning-text);align-items:center;gap:var(--sp-3);">
+  ⚠ Kite enctoken expired — <a href="/connect" style="color:var(--warning-text);font-weight:700;text-decoration:underline;">renew at /connect</a>
+</div>
+
 <!-- CONFIRMATION MODAL -->
 <div class="modal-overlay" id="execModal">
   <div class="modal">
@@ -716,6 +720,11 @@ document.addEventListener('DOMContentLoaded',function(){
     setStatus('');
     allStepsPending();
   }
+
+  // ── Kite token staleness banner ─────────────────────────────────────────────
+  fetch(BASE + '/api/kite?action=token_status').then(r => r.ok ? r.json() : null).then(d => {
+    if (d?.stale) document.getElementById('kite-stale-banner').style.display = 'flex';
+  }).catch(() => {});
 </script>
 
 <div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:10px;opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>

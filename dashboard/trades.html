@@ -134,7 +134,10 @@ document.addEventListener('DOMContentLoaded',function(){
       <h1 style="font-size:20px;font-weight:700;color:var(--text-primary)">Trade Journal</h1>
       <p style="font-size:13px;color:var(--text-tertiary);margin-top:4px">Every trade placed via Market Brain — tracked, measured, improved.</p>
     </div>
-    <button onclick="clearClosed()" style="padding:7px 14px;background:none;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);color:var(--text-secondary);font-size:12px;cursor:pointer">Clear closed</button>
+    <div style="display:flex;gap:var(--sp-3)">
+      <button onclick="syncTrades()" id="syncBtn" style="padding:7px 14px;background:none;border:1px solid var(--accent-border);border-radius:var(--radius-lg);color:var(--accent);font-size:12px;cursor:pointer">↻ Sync LTP</button>
+      <button onclick="clearClosed()" style="padding:7px 14px;background:none;border:1px solid var(--border-subtle);border-radius:var(--radius-lg);color:var(--text-secondary);font-size:12px;cursor:pointer">Clear closed</button>
+    </div>
   </div>
 
   <!-- STATS -->
@@ -427,6 +430,30 @@ document.addEventListener('DOMContentLoaded',function(){
     const price = prompt('Exit price (₹):');
     if (!price || isNaN(+price)) return;
     await markOutcome(id, 'manual', +price);
+  }
+
+  async function syncTrades() {
+    const enc = localStorage.getItem('kite_enctoken');
+    if (!enc) { toast('No Kite enctoken — go to /connect first', false); return; }
+    const btn = document.getElementById('syncBtn');
+    btn.disabled = true;
+    btn.textContent = '⟳ Syncing…';
+    try {
+      const res  = await fetch('/api/orders?action=sync_trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Kite-Enctoken': enc },
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || 'Sync failed', false); return; }
+      if (data.synced > 0) {
+        // Refresh the full trade list so closed trades show updated state
+        await load();
+        toast(`${data.synced} trade${data.synced > 1 ? 's' : ''} auto-closed`, true);
+      } else {
+        toast('No trades hit target or SL at current price', true);
+      }
+    } catch(e) { toast('Sync error: ' + e.message, false); }
+    finally { btn.disabled = false; btn.textContent = '↻ Sync LTP'; }
   }
 
   async function clearClosed() {

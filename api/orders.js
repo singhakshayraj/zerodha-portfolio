@@ -5,7 +5,7 @@
  * POST /api/orders?action=journal   — log new trade
  * PATCH /api/orders?action=journal  — update trade outcome
  */
-import { placeOrder, placeGTT } from '../dashboard/lib/kite.js';
+import { placeOrder, placeGTT, getQuotes } from '../dashboard/lib/kite.js';
 import { listTrades, insertTrade, updateTrade, deleteTrades, upsertSnapshot } from '../dashboard/lib/supabase.js';
 
 function stats(trades) {
@@ -131,6 +131,67 @@ export default async function handler(req, res) {
       res.status(500).json({ error: e.message });
     }
     return;
+  }
+
+  // ── Sync Trades — auto-close open trades against current LTP ─────────────────
+  // POST /api/orders?action=sync_trades  (requires X-Kite-Enctoken header)
+  if (action === 'sync_trades') {
+    if (req.method !== 'POST') { res.status(405).end(); return; }
+    const raw = req.headers['x-kite-enctoken'] || '';
+    const enctoken = raw ? decodeURIComponent(raw) : '';
+    if (!enctoken) {
+      res.status(401).json({ error: 'X-Kite-Enctoken header required for sync' }); return;
+    }
+    try {
+      const openTrades = await listTrades('open');
+      if (!openTrades.length) {
+        const all = await listTrades();
+        return res.status(200).json({ synced: 0, auto_closed: [], stats: stats(all) });
+      }
+
+      // Batch LTP fetch — unique symbols, prefixed with exchange
+      const symbols = [...new Set(openTrades.map(t => `${t.exchange || 'NSE'}:${t.symbol}`))];
+      const ltpMap = {};
+      try {
+        const quotes = await getQuotes(symbols, enctoken);
+        for (const [key, data] of Object.entries(quotes || {})) {
+          const sym = key.split(':')[1];
+          if (sym && data?.last_price != null) ltpMap[sym] = data.last_price;
+        }
+      } catch (e) {
+        return res.status(502).json({ error: 'LTP fetch failed: ' + e.message });
+      }
+
+      const autoClosed = [];
+      for (const trade of openTrades) {
+        const ltp = ltpMap[trade.symbol];
+        if (ltp == null) continue;
+
+        let exitReason = null;
+        let exitPrice  = null;
+        if (trade.side === 'BUY') {
+          if (ltp >= trade.target)      { exitReason = 'target';   exitPrice = trade.target; }
+          else if (ltp <= trade.sl)     { exitReason = 'stoploss'; exitPrice = trade.sl; }
+        } else {
+          if (ltp <= trade.target)      { exitReason = 'target';   exitPrice = trade.target; }
+          else if (ltp >= trade.sl)     { exitReason = 'stoploss'; exitPrice = trade.sl; }
+        }
+
+        if (exitReason) {
+          const pnl = +((exitPrice - trade.entry) * trade.qty * (trade.side === 'SELL' ? -1 : 1)).toFixed(2);
+          await updateTrade(trade.id, {
+            status: 'closed', exit_price: exitPrice, exit_reason: exitReason,
+            pnl, closed_at: new Date().toISOString(),
+          });
+          autoClosed.push({ id: trade.id, symbol: trade.symbol, exit_reason: exitReason, exit_price: exitPrice, pnl });
+        }
+      }
+
+      const all = await listTrades();
+      return res.status(200).json({ synced: autoClosed.length, auto_closed: autoClosed, stats: stats(all) });
+    } catch (e) {
+      res.status(500).json({ error: e.message }); return;
+    }
   }
 
   // ── Place Order / GTT ─────────────────────────────────────────────────────────

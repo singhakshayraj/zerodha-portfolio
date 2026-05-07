@@ -874,7 +874,13 @@ Return ONLY raw JSON (no markdown):
           checks.redis = v?.ts ? 'ok' : 'empty';
         } catch (e) { checks.redis = `error: ${e.message}`; }
       }
-      const warnings = new Set(['not_configured']);
+      // Check Kite token staleness (set by api/kite.js on any 403)
+      try {
+        const kiteStale = await redisGet('kite:token_stale');
+        checks.kite_token = kiteStale ? 'stale — go to /connect' : 'ok';
+      } catch { checks.kite_token = 'unknown'; }
+
+      const warnings = new Set(['not_configured', 'unknown']);
       const critical = Object.entries(checks).filter(([k, v]) => v !== 'ok' && !warnings.has(v) && !(k === 'yahoo_data' && v.includes('429')));
       const status = critical.length === 0 ? 'ok' : 'degraded';
       if (checks.yahoo_data?.includes('429')) checks._note = 'Yahoo IP-blocked on Vercel; Tickertape fallback active';
