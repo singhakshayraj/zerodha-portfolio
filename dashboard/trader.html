@@ -11,13 +11,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family:var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
 
-    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 var(--sp-9); display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
-    .topnav-brand { font-size: 14px; font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
-    .topnav-links { display: flex; gap: var(--sp-7); }
-    .topnav-links a { font-size: var(--text-md); color: var(--text-tertiary); text-decoration: none; transition: color 0.15s; }
-    .topnav-links a:hover, .topnav-links a.active { color: var(--text-primary); }
-    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: var(--sp-5); } }
-
     .page { max-width: 1100px; margin: 0 auto; padding: 36px 40px 60px; }
     @media (max-width: 640px) { .page { padding: 20px 16px 40px; } }
 

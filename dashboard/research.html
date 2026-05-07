@@ -27,14 +27,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family:var(--font-ui); background: var(--off-white); color: var(--text-primary); }
 
-    /* NAV */
-    nav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 var(--sp-9); display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
-    .nav-brand { font-size: 14px; font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
-    .nav-links { display: flex; gap: var(--sp-7); }
-    .nav-links a { font-size: 13px; color: var(--text-tertiary); text-decoration: none; transition: color 0.15s; }
-    .nav-links a:hover, .nav-links a.active { color: var(--text-primary); }
-    @media (max-width: 640px) { nav { padding: 0 16px; } .nav-links { gap: var(--sp-5); } }
-
     /* HERO SEARCH */
     .hero { background: var(--white); border-bottom: 1px solid var(--border); padding: 48px 48px 36px; }
     .hero h2 { font-size: 28px; font-weight: 400; color: var(--text-primary); letter-spacing: -0.01em; }
@@ -54,7 +46,7 @@
 
     /* MAIN GRID */
     .container { max-width: 1400px; margin: 0 auto; padding: 36px 48px; }
-    .section-title { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--sp-6); }
+    .section-title { font-family: var(--font-ui); font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--sp-6); }
     .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: var(--sp-6); }
 
     /* STOCK CARD */
@@ -147,10 +139,8 @@
     /* ── MOBILE RESPONSIVE ────────────────────────────────────── */
     @media (max-width: 640px) {
       /* Nav */
-      nav { padding: 0 16px; height: auto; flex-wrap: wrap; gap: var(--sp-3); padding-top: 10px; padding-bottom: 10px; }
-      .nav-right { display: none; }
-      .nav-links { gap: var(--sp-5); }
-      .nav-links a { font-size: 12px; }
+      .topnav { height: auto; flex-wrap: wrap; gap: var(--sp-3); padding-top: 10px; padding-bottom: 10px; }
+      .topnav-links a { font-size: 12px; }
 
       /* Hero */
       .hero { padding: 24px 16px 20px; }
@@ -307,9 +297,9 @@ document.addEventListener('DOMContentLoaded',function(){
 <body>
 
 <!-- NAV -->
-<nav>
-  <a href="/" class="nav-brand">📈 Portfolio</a>
-  <div class="nav-links">
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
     <a href="/">Dashboard</a>
     <a href="/trader">Trader Desk</a>
     <a href="/event">⚡ Events</a>

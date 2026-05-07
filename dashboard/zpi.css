@@ -322,11 +322,12 @@ select:focus:not(:focus-visible) {
 }
 
 /* ── Topnav (flat layout, no sidebar) ─────────────────────────────────────── */
+.topnav,
 .zpi-topnav {
   height: 48px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-dim);
-  padding: 0 var(--sp-7);
+  padding: 0 var(--sp-9);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -348,11 +349,16 @@ select:focus:not(:focus-visible) {
 }
 .topnav-links a {
   font-size: var(--text-md);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
+  text-decoration: none;
   transition: var(--t-color);
 }
 .topnav-links a:hover,
 .topnav-links a.active { color: var(--text-primary); text-decoration: none; }
+@media (max-width: 640px) {
+  .topnav, .zpi-topnav { padding: 0 var(--sp-5); }
+  .topnav-links { gap: var(--sp-5); }
+}
 
 /* Active page indicator — higher specificity to override per-page rules */
 .topnav .topnav-links a.active,
@@ -617,6 +623,30 @@ body.light .zpi-select {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ── Simple per-page toast (shared by trades, intraday) ───────────────────── */
+#toast,
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 10px 18px;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
+  font-weight: 600;
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  border: 1px solid transparent;
+}
+#toast.show,
+.toast.show  { opacity: 1; transform: translateY(0); }
+#toast.ok,
+.toast.ok    { background: var(--positive-dim); color: var(--positive-text); border-color: var(--positive); }
+#toast.err,
+.toast.err   { background: var(--negative-dim); color: var(--negative-text); border-color: var(--negative); }
 
 /* ── Skeleton loading ─────────────────────────────────────────────────────── */
 .skeleton {

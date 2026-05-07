@@ -17,14 +17,8 @@
     a:hover{text-decoration:underline}
 
     /* NAV */
-    .topnav{background:var(--bg-surface);border-bottom:1px solid var(--border-dim);padding:0 var(--sp-9);display:flex;align-items:center;justify-content:space-between;height:48px;position:sticky;top:0;z-index:100}
-    .topnav-brand{font-size:14px;font-weight:700;color:var(--text-primary);text-decoration:none;letter-spacing:.02em}
-    .topnav-links{display:flex;gap:var(--sp-7);align-items:center}
-    .topnav-links a{font-size:13px;color:var(--text-tertiary);text-decoration:none;transition:color .15s}
-    .topnav-links a:hover,.topnav-links a.active{color:var(--text-primary)}
     .theme-btn{border-radius:var(--radius-md);font-size:var(--text-sm)}
     .theme-btn:hover{border-color:var(--border-strong);color:var(--text-primary)}
-    @media(max-width:900px){.topnav{padding:0 16px}.topnav-links{gap:14px}}
     @media(max-width:640px){.topnav-links .hide-mobile{display:none}}
 
     /* PAGE */
@@ -231,7 +225,7 @@
 
     /* CARD */
     .card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:16px}
-    .card-title{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    .card-title{font-size:var(--text-xs);font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
 
     /* COLOR HELPERS */
     .c-pos{color:var(--positive)}

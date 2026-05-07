@@ -13,12 +13,6 @@
     body { font-family:var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
 
     /* NAV */
-    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 var(--sp-9); display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; }
-    .topnav-brand { font-size: 14px; font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
-    .topnav-links { display: flex; gap: var(--sp-7); }
-    .topnav-links a { font-size: var(--text-md); color: var(--text-tertiary); text-decoration: none; transition: color 0.15s; }
-    .topnav-links a:hover, .topnav-links a.active { color: var(--text-primary); }
-    @media (max-width: 640px) { .topnav { padding: 0 16px; } .topnav-links { gap: 14px; } }
     @media (max-width: 480px) {
       .page { padding: 12px; }
       .pulse-card { min-width: 120px; padding: 10px 12px; }
@@ -116,11 +110,6 @@
     .modal-confirm.buy  { background: var(--positive); }
     .modal-confirm.sell { background: var(--negative); }
 
-    /* TOAST */
-    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: var(--radius-lg); font-size: var(--text-md); font-weight: 600; color: #fff; z-index: 1000; transform: translateY(60px); opacity: 0; transition: all 0.25s; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.ok  { background: var(--positive-dim); color: var(--positive); }
-    .toast.err { background: var(--negative-dim); color: var(--negative); }
 
     /* CARD WRAPPER */
     .card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 20px; }
@@ -286,7 +275,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="pulse-card"><div class="pulse-label">BANK NIFTY</div><div class="pulse-ltp" id="p-BANKNIFTY">—</div><div class="pulse-chg muted" id="pc-BANKNIFTY">—</div><div class="pulse-ohlc" id="po-BANKNIFTY"></div></div>
       <div class="pulse-card"><div class="pulse-label">MIDCAP 50</div><div class="pulse-ltp" id="p-MIDCPNIFTY">—</div><div class="pulse-chg muted" id="pc-MIDCPNIFTY">—</div><div class="pulse-ohlc" id="po-MIDCPNIFTY"></div></div>
       <div class="pulse-card"><div class="pulse-label">INDIA VIX</div><div class="pulse-ltp" id="p-INDIAVIX">—</div><div class="pulse-chg muted" id="pc-INDIAVIX">—</div><div class="pulse-ohlc" id="po-INDIAVIX"></div></div>
-      <div class="pulse-card" style="border-left:2px solid #805ad5"><div class="pulse-label" style="color:#b794f4">GIFT NIFTY <span style="font-size:9px;color:#4a5568">Futures</span></div><div class="pulse-ltp" id="p-GIFTNIFTY">—</div><div class="pulse-chg muted" id="pc-GIFTNIFTY">—</div><div class="pulse-ohlc" id="po-GIFTNIFTY"></div></div>
+      <div class="pulse-card" style="border-left:2px solid var(--accent)"><div class="pulse-label" style="color:var(--accent)">GIFT NIFTY <span style="font-size:9px;color:var(--text-disabled)">Futures</span></div><div class="pulse-ltp" id="p-GIFTNIFTY">—</div><div class="pulse-chg muted" id="pc-GIFTNIFTY">—</div><div class="pulse-ohlc" id="po-GIFTNIFTY"></div></div>
     </div>
   </div>
 
@@ -335,7 +324,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div id="chartContainer" style="height:420px">
         <div class="chart-empty">No stock selected — click a symbol in the watchlist</div>
       </div>
-      <div id="chartLevels" style="display:none;padding:8px 14px;background:#0f1117;border-top:1px solid #2d3748;font-size:11px;display:flex;gap:var(--sp-6);flex-wrap:wrap"></div>
+      <div id="chartLevels" style="display:none;padding:8px 14px;background:var(--bg-base);border-top:1px solid var(--border-subtle);font-size:11px;display:flex;gap:var(--sp-6);flex-wrap:wrap"></div>
     </div>
   </div>
 
@@ -474,7 +463,7 @@ async function loadPulse() {
         document.getElementById('po-' + key).innerHTML   =
           `O ${fmt(q.ohlc?.open)}  H ${fmt(q.ohlc?.high)}  L ${fmt(q.ohlc?.low)}<br>` +
           `<span class="${gapCls}" style="font-weight:700">${gapLabel} ${premSign}${fmt(premium)} (${premSign}${premPct.toFixed(2)}% vs prev close)</span>` +
-          (q.expiry ? `<span style="color:#4a5568"> · exp ${q.expiry}</span>` : '');
+          (q.expiry ? `<span style="color:var(--text-disabled)"> · exp ${q.expiry}</span>` : '');
       } else {
         document.getElementById('pc-' + key).textContent = `${chg >= 0 ? '▲' : '▼'} ${fmt(Math.abs(chg))} (${Math.abs(chgPct).toFixed(2)}%)`;
         if (q.ohlc) document.getElementById('po-' + key).textContent =
@@ -525,7 +514,7 @@ function onWatchKeydown(e) {
 }
 
 function highlightSuggest(items) {
-  items.forEach((el, i) => el.style.background = i === _watchSuggestIdx ? '#2d3748' : '');
+  items.forEach((el, i) => el.style.background = i === _watchSuggestIdx ? 'var(--bg-active)' : '');
 }
 
 function selectWatchSuggest(symbol) {
@@ -590,7 +579,7 @@ function renderWatchlistRows(data) {
     const exch = sym.split(':')[0];
     const notFound = data && !q;
     return `<tr${notFound ? ' style="opacity:0.45"' : ''}>
-      <td><span class="sym-cell" onclick="loadChart('${sym}')">${bare}<span class="exch-badge">${exch}</span></span>${notFound ? ' <span style="font-size:10px;color:#fc8181">not found</span>' : ''}</td>
+      <td><span class="sym-cell" onclick="loadChart('${sym}')">${bare}<span class="exch-badge">${exch}</span></span>${notFound ? ' <span style="font-size:10px;color:var(--negative-text)">not found</span>' : ''}</td>
       <td><strong>${ltp}</strong></td>
       <td class="${cls}">${chgStr}</td>
       <td class="muted">${q ? fmt(q.ohlc.open)  : '—'}</td>
@@ -640,10 +629,10 @@ function loadChart(sym) {
   if (levels) {
     levelsEl.style.display = 'flex';
     levelsEl.innerHTML = `
-      <span>Entry <strong style="color:#63b3ed">₹${levels.entry}</strong></span>
-      <span>Target <strong style="color:#68d391">₹${levels.target}</strong></span>
-      <span>SL <strong style="color:#fc8181">₹${levels.sl}</strong></span>
-      <span style="color:#4a5568">· Levels from trade plan</span>`;
+      <span>Entry <strong style="color:var(--accent)">₹${levels.entry}</strong></span>
+      <span>Target <strong style="color:var(--positive-text)">₹${levels.target}</strong></span>
+      <span>SL <strong style="color:var(--negative-text)">₹${levels.sl}</strong></span>
+      <span style="color:var(--text-disabled)">· Levels from trade plan</span>`;
   } else {
     levelsEl.style.display = 'none';
   }
@@ -673,8 +662,8 @@ async function loadAI(symbol) {
     const sellLabel = verdict.includes('sell') ? 'Exit at'     : 'Target';
     const priceRow = (data.buy_price || data.sell_price)
       ? `<div style="display:flex;gap:var(--sp-5);margin:10px 0;font-size:13px">
-           ${data.buy_price  ? `<span>${buyLabel} <strong style="color:#68d391">₹${data.buy_price}</strong></span>`  : ''}
-           ${data.sell_price ? `<span>${sellLabel} <strong style="color:#76e4f7">₹${data.sell_price}</strong></span>` : ''}
+           ${data.buy_price  ? `<span>${buyLabel} <strong style="color:var(--positive-text)">₹${data.buy_price}</strong></span>`  : ''}
+           ${data.sell_price ? `<span>${sellLabel} <strong style="color:var(--accent)">₹${data.sell_price}</strong></span>` : ''}
          </div>`
       : '';
     document.getElementById('aiContent').innerHTML = `
@@ -684,8 +673,8 @@ async function loadAI(symbol) {
         </div>
         ${priceRow}
         <div>${data.summary || data.analysis || JSON.stringify(data)}</div>
-        ${data.bull_case ? `<br><strong style="color:#68d391">Bull case:</strong> ${data.bull_case}` : ''}
-        ${data.bear_case ? `<br><strong style="color:#fc8181">Bear case:</strong> ${data.bear_case}` : ''}
+        ${data.bull_case ? `<br><strong style="color:var(--positive-text)">Bull case:</strong> ${data.bull_case}` : ''}
+        ${data.bear_case ? `<br><strong style="color:var(--negative-text)">Bear case:</strong> ${data.bear_case}` : ''}
       </div>`;
   } catch(e) {
     document.getElementById('aiContent').textContent = 'Error: ' + e.message;
@@ -800,13 +789,13 @@ async function loadBrain(bust = false) {
     const data = await res.json();
 
     if (data.error) {
-      content.innerHTML = `<div class="brain-error">⚠ ${data.error}${data.tip ? '<br><span style="color:#718096">'+data.tip+'</span>' : ''}</div>`;
+      content.innerHTML = `<div class="brain-error">⚠ ${data.error}${data.tip ? '<br><span style="color:var(--text-tertiary)">'+data.tip+'</span>' : ''}</div>`;
       status.textContent = 'Error';
       return;
     }
 
     const picks = data.picks || [];
-    const smtColors = { bullish: '#68d391', bearish: '#fc8181', neutral: '#718096' };
+    const smtColors = { bullish: 'var(--positive-text)', bearish: 'var(--negative-text)', neutral: 'var(--text-tertiary)' };
     const smt = data.market_sentiment || 'neutral';
     const macroRisk = data.macro_risk || 'medium';
     const cacheLabel = data.cached
@@ -838,7 +827,7 @@ async function loadBrain(bust = false) {
     if (data.algo_note) html += `<div class="brain-algo-note">⚡ ${data.algo_note}</div>`;
 
     if (data.top_sectors?.length || data.avoid_sectors?.length) {
-      html += '<div class="sector-pills"><span style="font-size:10px;color:#4a5568;padding:3px 0">Sectors: </span>';
+      html += '<div class="sector-pills"><span style="font-size:10px;color:var(--text-disabled);padding:3px 0">Sectors: </span>';
       (data.top_sectors || []).forEach(s => html += `<span class="sector-pill buy">↑ ${s}</span>`);
       (data.avoid_sectors || []).forEach(s => html += `<span class="sector-pill avoid">↓ ${s}</span>`);
       html += '</div>';
@@ -859,7 +848,7 @@ async function loadBrain(bust = false) {
           onclick="addPickToWatchlist('${full}','${i}')">${inWl ? '✓' : '+'}</button>
         <div class="pick-header">
           <span class="pick-sym">${sym}</span>
-          <span style="font-size:10px;color:#718096;margin-left:4px">${exch}</span>
+          <span style="font-size:10px;color:var(--text-tertiary);margin-left:4px">${exch}</span>
           <div class="pick-co">${p.company || ''}</div>
         </div>
         <div class="pick-sector">${p.sector || ''}</div>
@@ -872,7 +861,7 @@ async function loadBrain(bust = false) {
           <span class="pick-conf">${confidenceStars(p.confidence)}</span>
           <span class="pick-score">score ${(p.score||0).toFixed(1)}</span>
           <button onclick="loadChart('${full}');document.getElementById('chartContainer').scrollIntoView({behavior:'smooth',block:'center'})"
-            style="margin-left:auto;padding:2px 8px;font-size:10px;background:none;border:1px solid #2d3748;color:#63b3ed;border-radius:4px;cursor:pointer">📈 Chart</button>
+            style="margin-left:auto;padding:2px 8px;font-size:10px;background:none;border:1px solid var(--border-subtle);color:var(--accent);border-radius:var(--radius-sm);cursor:pointer">📈 Chart</button>
         </div>
         <div class="pick-by" title="${byStr}">${byStr}</div>
         <div class="trade-plan" id="tp-${i}">
@@ -886,7 +875,7 @@ async function loadBrain(bust = false) {
     if (notInWl.length) {
       html += `<div class="brain-actions">
         <button class="btn-sm btn-ai" onclick="addAllBrainPicks()">+ Add all ${notInWl.length} to watchlist</button>
-        <span style="font-size:11px;color:#4a5568">Hover a card for full reasoning · Refreshes every 30 min · Not financial advice</span>
+        <span style="font-size:11px;color:var(--text-disabled)">Hover a card for full reasoning · Refreshes every 30 min · Not financial advice</span>
       </div>`;
     }
 
@@ -978,16 +967,16 @@ function renderTradePlan(i, pick, plan, enc) {
     `Day ×${f.day_factor}`,
   ].join(' · ');
   const rsiHtml = plan.rsi != null
-    ? `<div style="font-size:9px;margin-bottom:4px;color:${plan.rsi_ok ? '#68d391' : '#fc8181'}">${plan.rsi_signal}</div>`
+    ? `<div style="font-size:9px;margin-bottom:4px;color:${plan.rsi_ok ? 'var(--positive-text)' : 'var(--negative-text)'}">${plan.rsi_signal}</div>`
     : '';
   const pc = plan.price_confirmation || {};
   const pcHtml = pc.signal
-    ? `<div style="font-size:9px;margin-bottom:4px;color:${pc.signal_ok ? '#68d391' : '#f6e05e'}">${pc.signal}${pc.vwap ? ` · VWAP ₹${pc.vwap}` : ''}</div>`
+    ? `<div style="font-size:9px;margin-bottom:4px;color:${pc.signal_ok ? 'var(--positive-text)' : 'var(--warning-text)'}">${pc.signal}${pc.vwap ? ` · VWAP ₹${pc.vwap}` : ''}</div>`
     : '';
 
   // Signal pills
   const pill = (label, bull, neutral) => {
-    const col = neutral ? '#a0aec0' : bull ? '#68d391' : '#fc8181';
+    const col = neutral ? 'var(--text-tertiary)' : bull ? 'var(--positive-text)' : 'var(--negative-text)';
     const arr = neutral ? '' : bull ? ' ▲' : ' ▼';
     return `<span style="display:inline-block;padding:1px 6px;border-radius:var(--radius-sm);border:1px solid ${col};color:${col};font-size:8px;white-space:nowrap">${label}${arr}</span>`;
   };
@@ -1004,8 +993,8 @@ function renderTradePlan(i, pick, plan, enc) {
   if (plan.support_resistance)
     pillsArr.push(`<span style="display:inline-block;padding:1px 6px;border-radius:var(--radius-sm);border:1px solid var(--border-subtle);color:var(--text-secondary);font-size:8px">S ₹${plan.support_resistance.support} · R ₹${plan.support_resistance.resistance}</span>`);
   if (plan.patterns) {
-    (plan.patterns.bullish||[]).forEach(p => pillsArr.push(`<span style="color:#68d391;font-size:8px">${p}</span>`));
-    (plan.patterns.bearish||[]).forEach(p => pillsArr.push(`<span style="color:#fc8181;font-size:8px">${p}</span>`));
+    (plan.patterns.bullish||[]).forEach(p => pillsArr.push(`<span style="color:var(--positive-text);font-size:8px">${p}</span>`));
+    (plan.patterns.bearish||[]).forEach(p => pillsArr.push(`<span style="color:var(--negative-text);font-size:8px">${p}</span>`));
   }
   const pillsHtml = pillsArr.length
     ? `<div style="display:flex;flex-wrap:wrap;gap:var(--sp-1);margin-bottom:6px">${pillsArr.join('')}</div>`
