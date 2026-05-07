@@ -152,7 +152,7 @@
     .chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     .chart-title-sm{font-size:var(--text-sm);font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-tertiary)}
     .chart-toggle{display:flex;gap:var(--sp-1)}
-    .chart-toggle-btn{background:none;border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);cursor:pointer;font-size:var(--text-sm);padding:3px 9px;transition:all .15s}
+    .chart-toggle-btn{background:none;border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);cursor:pointer;font-size:var(--text-sm);padding:3px 9px;transition:border-color .15s,color .15s,background .15s}
     .chart-toggle-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--text-primary)}
     .chart-placeholder{text-align:center;padding:40px;color:var(--text-tertiary);font-size:var(--text-base)}
     canvas.q-chart{max-height:200px}
@@ -332,8 +332,8 @@ const chartInstances = {};
 // ── Formatting helpers
 function fmt(v, dec=1){ if(v===null||v===undefined||isNaN(v)) return '—'; return Number(v).toFixed(dec); }
 function fmtCr(v){ if(v===null||v===undefined||isNaN(v)) return '—'; const n=Number(v); if(n>=10000) return '₹'+(n/10000).toFixed(1)+'L Cr'; if(n>=100) return '₹'+n.toFixed(0)+' Cr'; return '₹'+n.toFixed(1)+' Cr'; }
-function scoreColor(score, max){ const pct=score/max; if(pct>=0.8) return 'oklch(65% 0.18 165)'; if(pct>=0.5) return 'oklch(75% 0.16 75)'; return 'oklch(62% 0.20 20)'; }
-function scoreBg(score, max){ const pct=score/max; if(pct>=0.8) return 'oklch(65% 0.18 165 / 0.12)'; if(pct>=0.5) return 'oklch(75% 0.16 75 / 0.12)'; return 'oklch(62% 0.20 20 / 0.12)'; }
+function scoreColor(score, max){ const pct=score/max; if(pct>=0.8) return 'var(--positive)'; if(pct>=0.5) return 'var(--warning-text)'; return 'var(--negative)'; }
+function scoreBg(score, max){ const pct=score/max; if(pct>=0.8) return 'var(--positive-dim)'; if(pct>=0.5) return 'var(--warning-dim)'; return 'var(--negative-dim)'; }
 function verdictClass(v){ const m={'Strong Buy':'strong-buy','Buy':'buy','Hold':'hold','Review':'review','Avoid':'avoid'}; return m[v]||'hold'; }
 
 // ── Piotroski labels
@@ -533,10 +533,10 @@ function renderDetailView(d, standalone=true){
   // Ownership
   const own = d.ownership||{};
   const ownItems = [
-    {label:'Promoter', pct:own.promoter, color:'oklch(65% 0.18 165)'},
+    {label:'Promoter', pct:own.promoter, color:'var(--positive)'},
     {label:'FII', pct:own.fii, color:'var(--verdict-weak-text)'},
-    {label:'DII', pct:own.dii, color:'oklch(75% 0.16 75)'},
-    {label:'Public', pct:own.public, color:'oklch(55% 0.12 240)'},
+    {label:'DII', pct:own.dii, color:'var(--warning-text)'},
+    {label:'Public', pct:own.public, color:'var(--text-tertiary)'},
   ];
   const hasOwn = ownItems.some(o=>o.pct!=null);
   const donutId = 'donut-'+sfx;

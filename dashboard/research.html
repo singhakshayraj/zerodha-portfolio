@@ -127,10 +127,10 @@
     .detail-block p { font-family: var(--font-ui); font-size: var(--text-base); color: var(--text-secondary); line-height: 1.7; }
 
     /* SUMMARY BAR */
-    .summary-bar { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px 24px; margin-bottom: 28px; display: flex; gap: var(--sp-8); align-items: center; }
+    .summary-bar { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 16px 24px; margin-bottom: 28px; display: flex; gap: var(--sp-8); align-items: center; }
     .summary-item { font-family: var(--font-ui); }
     .summary-item .s-label { font-size: var(--text-sm); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .summary-item .s-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .summary-item .s-value { font-size: var(--text-xl); font-weight: 700; margin-top: 2px; }
     .divider { width: 1px; height: 36px; background: var(--border); }
 
     footer { text-align: center; padding: 24px; font-family: var(--font-ui); font-size: var(--text-sm); color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 16px; }
@@ -144,7 +144,7 @@
 
       /* Hero */
       .hero { padding: 24px 16px 20px; }
-      .hero h2 { font-size: 20px; }
+      .hero h2 { font-size: var(--text-xl); }
       .search-bar { flex-direction: column; gap: var(--sp-3); }
       .search-bar button { width: 100%; }
 
@@ -162,7 +162,7 @@
 
       /* Summary bar */
       .summary-bar { flex-wrap: wrap; gap: var(--sp-4); padding: 14px 16px; }
-      .summary-item .s-value { font-size: 16px; }
+      .summary-item .s-value { font-size: var(--text-lg); }
       .divider { display: none; }
 
       /* Card */
@@ -227,47 +227,43 @@
     .modal-confirm.buy { background: var(--green); }
     .modal-confirm.sell { background: var(--red); }
 
-    /* TOAST */
-    .toast { position: fixed; bottom: 28px; right: 28px; padding: 14px 20px; border-radius: var(--radius-xl); font-family: var(--font-ui); font-size: var(--text-md); font-weight: 600; color: var(--bg-base); z-index: 2000; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.success { background: var(--green); }
-    .toast.error { background: var(--red); }
+
 
     /* INTELLIGENCE FEED */
-    .pick-row { display:flex; align-items:center; gap:10px; padding:9px 16px; border-bottom:1px solid var(--border-dim); transition:background .15s; cursor:default; }
+    .pick-row { display:flex; align-items:center; gap:var(--sp-3); padding:9px 16px; border-bottom:1px solid var(--border-dim); transition:background .15s; cursor:default; }
     .pick-row:last-child { border-bottom:none; }
     .pick-row:hover { background:var(--bg-hover); }
     .pick-sym { font-size:13px; font-weight:700; color:var(--text-primary); min-width:80px; }
-    .pick-bias { font-size:10px; padding:2px 8px; border-radius:var(--radius-lg); font-weight:700; text-transform:uppercase; flex-shrink:0; }
+    .pick-bias { font-size:var(--text-xs); padding:2px 8px; border-radius:var(--radius-lg); font-weight:700; text-transform:uppercase; flex-shrink:0; }
     .pick-bias.long  { background:var(--positive-dim); color:var(--positive); border:1px solid oklch(65% 0.18 165 / 0.25); }
     .pick-bias.short { background:var(--negative-dim); color:var(--negative); border:1px solid oklch(62% 0.20 20 / 0.25); }
     .pick-bias.neutral { background:rgba(160,174,192,.1); color:var(--text-secondary); border:1px solid rgba(160,174,192,.2); }
-    .pick-score { font-size:12px; font-weight:700; min-width:36px; text-align:right; }
+    .pick-score { font-size:var(--text-base); font-weight:700; min-width:36px; text-align:right; }
     .pick-reason { font-size:11px; color:var(--text-tertiary); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .pick-event { font-size:10px; color:var(--text-disabled); flex-shrink:0; }
+    .pick-event { font-size:var(--text-xs); color:var(--text-disabled); flex-shrink:0; }
 
     .signal-row { padding:10px 16px; border-bottom:1px solid var(--border-dim); }
     .signal-row:last-child { border-bottom:none; }
     .signal-row:hover { background:var(--bg-hover); }
     .signal-header { display:flex; align-items:center; gap:var(--sp-3); margin-bottom:6px; }
     .signal-sym { font-size:13px; font-weight:700; color:var(--text-primary); }
-    .signal-dir { font-size:10px; padding:2px 8px; border-radius:var(--radius-lg); font-weight:700; }
+    .signal-dir { font-size:var(--text-xs); padding:2px 8px; border-radius:var(--radius-lg); font-weight:700; }
     .signal-dir.long  { background:var(--positive-dim); color:var(--positive); }
     .signal-dir.short { background:var(--negative-dim); color:var(--negative); }
-    .signal-conf { font-size:10px; color:var(--text-tertiary); margin-left:auto; }
+    .signal-conf { font-size:var(--text-xs); color:var(--text-tertiary); margin-left:auto; }
     .signal-levels { display:flex; gap:14px; font-size:11px; flex-wrap:wrap; }
     .level-item { display:flex; flex-direction:column; gap:1px; }
-    .level-lbl { color:var(--text-disabled); font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+    .level-lbl { color:var(--text-disabled); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:.04em; }
     .level-val { color:var(--text-primary); font-weight:600; }
     .level-val.entry  { color:var(--accent); }
     .level-val.target { color:var(--positive); }
     .level-val.sl     { color:var(--negative); }
     .level-rr { font-size:11px; font-weight:700; color:var(--text-secondary); margin-left:auto; align-self:flex-end; }
-    .signal-setup { font-size:10px; color:var(--text-disabled); margin-top:4px; }
-    .intel-loading { display:flex; align-items:center; gap:var(--sp-3); padding:20px 16px; color:var(--text-disabled); font-size:12px; }
+    .signal-setup { font-size:var(--text-xs); color:var(--text-disabled); margin-top:4px; }
+    .intel-loading { display:flex; align-items:center; gap:var(--sp-3); padding:20px 16px; color:var(--text-disabled); font-size:var(--text-base); }
     .intel-spinner { width:14px; height:14px; border:2px solid var(--border-subtle); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; flex-shrink:0; }
     
-    .intel-error { padding:16px; font-size:12px; color:var(--negative); }
+    .intel-error { padding:16px; font-size:var(--text-base); color:var(--negative); }
     @media (max-width:640px) { #intelGrid { grid-template-columns:1fr; } }
   </style>
 
@@ -318,10 +314,10 @@ document.addEventListener('DOMContentLoaded',function(){
 </nav>
 
 <!-- KITE STATUS BANNER -->
-<div id="kiteBanner" style="background:#1a1f2e;border-bottom:1px solid #2d3748;padding:8px 40px;font-size:12px;display:flex;align-items:center;gap:10px;">
-  <span id="kiteStatusDot" style="width:7px;height:7px;border-radius:50%;background:#fc8181;display:inline-block;"></span>
-  <span id="kiteStatusText" style="color:#718096;">Kite not connected</span>
-  <a href="/connect" style="color:#63b3ed;text-decoration:none;margin-left:4px;">→ Connect Kite</a>
+<div id="kiteBanner" style="background:var(--bg-surface);border-bottom:1px solid var(--border-dim);padding:8px var(--sp-9);font-size:var(--text-base);display:flex;align-items:center;gap:var(--sp-3);">
+  <span id="kiteStatusDot" style="width:7px;height:7px;border-radius:50%;background:var(--negative);display:inline-block;"></span>
+  <span id="kiteStatusText" style="color:var(--text-tertiary);">Kite not connected</span>
+  <a href="/connect" style="color:var(--accent);text-decoration:none;margin-left:4px;">→ Connect Kite</a>
 </div>
 
 <!-- CONFIRMATION MODAL -->
@@ -354,7 +350,7 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
     <button id="analyzeBtn" onclick="analyzeStock()">Analyze →</button>
   </div>
-  <div id="analyzeError" style="display:none; font-size:12px; color:var(--red); margin-top:8px;"></div>
+  <div id="analyzeError" style="display:none; font-size:var(--text-base); color:var(--red); margin-top:8px;"></div>
 </div>
 
 <!-- FILTERS -->
@@ -383,33 +379,33 @@ document.addEventListener('DOMContentLoaded',function(){
     <!-- Header row -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-5);">
       <div class="section-title" style="margin-bottom:0;">Live Intelligence</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span id="intelAge" style="font-size:11px;color:#4a5568;"></span>
-        <button id="intelRunBtn" onclick="runIntelPipeline()" style="padding:6px 16px;background:#2d3748;border:1px solid #4a5568;color:#e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">▶ Run Scan</button>
+      <div style="display:flex;align-items:center;gap:var(--sp-3);">
+        <span id="intelAge" style="font-size:11px;color:var(--text-disabled);"></span>
+        <button id="intelRunBtn" onclick="runIntelPipeline()" style="padding:6px 16px;background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-primary);border-radius:var(--radius-md);font-size:var(--text-base);font-weight:600;cursor:pointer;">▶ Run Scan</button>
       </div>
     </div>
 
     <!-- Market Context strip -->
-    <div id="intelContext" style="display:none;background:#1a1f2e;border:1px solid #2d3748;border-radius:var(--radius-lg);padding:14px 20px;margin-bottom:var(--sp-5);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:center;">
+    <div id="intelContext" style="display:none;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:14px 20px;margin-bottom:var(--sp-5);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:center;">
       <div style="flex:1;min-width:200px;">
-        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Market Mood</div>
-        <div id="ctxMood" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Market Mood</div>
+        <div id="ctxMood" style="font-size:var(--text-md);font-weight:700;color:var(--text-primary);">—</div>
       </div>
       <div style="flex:1;min-width:140px;">
-        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Regime</div>
-        <div id="ctxRegime" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Regime</div>
+        <div id="ctxRegime" style="font-size:var(--text-md);font-weight:700;color:var(--text-primary);">—</div>
       </div>
       <div style="flex:1;min-width:140px;">
-        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Gift Nifty</div>
-        <div id="ctxGift" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Gift Nifty</div>
+        <div id="ctxGift" style="font-size:var(--text-md);font-weight:700;color:var(--text-primary);">—</div>
       </div>
       <div style="flex:1;min-width:140px;">
-        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">VIX State</div>
-        <div id="ctxVix" style="font-size:14px;font-weight:700;color:#e2e8f0;">—</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">VIX State</div>
+        <div id="ctxVix" style="font-size:var(--text-md);font-weight:700;color:var(--text-primary);">—</div>
       </div>
       <div style="flex:2;min-width:240px;">
-        <div style="font-size:10px;color:#718096;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Summary</div>
-        <div id="ctxSummary" style="font-size:12px;color:#a0aec0;line-height:1.5;">—</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Summary</div>
+        <div id="ctxSummary" style="font-size:var(--text-base);color:var(--text-tertiary);line-height:1.5;">—</div>
       </div>
     </div>
 
@@ -417,24 +413,24 @@ document.addEventListener('DOMContentLoaded',function(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-5);" id="intelGrid">
 
       <!-- Brain Picks -->
-      <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:var(--radius-lg);overflow:hidden;">
-        <div style="padding:12px 16px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.07em;">Brain Picks</span>
-          <span id="brainPickCount" style="font-size:11px;color:#4a5568;"></span>
+      <div style="background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-lg);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-dim);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;">Brain Picks</span>
+          <span id="brainPickCount" style="font-size:11px;color:var(--text-disabled);"></span>
         </div>
         <div id="brainPicksList" style="padding:12px 0;min-height:80px;">
-          <div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">Hit Run Scan to fetch latest signals.</div>
+          <div style="padding:20px 16px;text-align:center;color:var(--text-disabled);font-size:var(--text-base);">Hit Run Scan to fetch latest signals.</div>
         </div>
       </div>
 
       <!-- Trade Signals -->
-      <div style="background:#1a1f2e;border:1px solid #2d3748;border-radius:var(--radius-lg);overflow:hidden;">
-        <div style="padding:12px 16px;border-bottom:1px solid #2d3748;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.07em;">Trade Signals</span>
-          <span id="signalCount" style="font-size:11px;color:#4a5568;"></span>
+      <div style="background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-lg);overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-dim);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;">Trade Signals</span>
+          <span id="signalCount" style="font-size:11px;color:var(--text-disabled);"></span>
         </div>
         <div id="tradeSignalsList" style="padding:12px 0;min-height:80px;">
-          <div id="tradeSignalsEmpty" style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">Signals populate after scan.</div>
+          <div id="tradeSignalsEmpty" style="padding:20px 16px;text-align:center;color:var(--text-disabled);font-size:var(--text-base);">Signals populate after scan.</div>
         </div>
       </div>
 
@@ -465,7 +461,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="divider"></div>
     <div class="summary-item">
       <div class="s-label">Book Profits</div>
-      <div class="s-value" style="color:#1565C0">2</div>
+      <div class="s-value" style="color:var(--accent)">2</div>
     </div>
   </div>
 
@@ -1490,7 +1486,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const el = document.getElementById('brainPicksList');
     document.getElementById('brainPickCount').textContent = picks.length ? `${picks.length} signal${picks.length !== 1 ? 's' : ''}` : '';
     if (!picks.length) {
-      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No picks above threshold — market may be quiet.</div>';
+      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:var(--text-disabled);font-size:var(--text-base);">No picks above threshold — market may be quiet.</div>';
       return;
     }
     el.innerHTML = picks.slice(0, 10).map(p => {
@@ -1510,7 +1506,7 @@ document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('signalCount').textContent = plans.length ? `${plans.length} setup${plans.length !== 1 ? 's' : ''}` : '';
     document.getElementById('tradeSignalsEmpty').style.display = 'none';
     if (!plans.length) {
-      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No setups qualified this cycle.</div>';
+      el.innerHTML = '<div style="padding:20px 16px;text-align:center;color:var(--text-disabled);font-size:var(--text-base);">No setups qualified this cycle.</div>';
       return;
     }
     el.innerHTML = plans.slice(0, 8).map(p => {
@@ -1598,7 +1594,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     if (!opportunities.length) {
       document.getElementById('tradeSignalsList').innerHTML =
-        '<div style="padding:20px 16px;text-align:center;color:#4a5568;font-size:12px;">No qualifying setups found — brain picks did not match live triggers.</div>';
+        '<div style="padding:20px 16px;text-align:center;color:var(--text-disabled);font-size:var(--text-base);">No qualifying setups found — brain picks did not match live triggers.</div>';
       document.getElementById('signalCount').textContent = '0 setups';
       btn.disabled = false; btn.textContent = '▶ Run Scan';
       return;
@@ -1647,7 +1643,7 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 </script>
 
-<div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:10px;opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>
+<div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:var(--text-xs);opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>
 <script>
 fetch("/api/version").then(r=>r.json()).then(d=>{
   const t=d.buildTime||d.version;

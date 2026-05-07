@@ -661,11 +661,11 @@ body.light .zpi-select {
   border: 1px solid transparent;
 }
 #toast.show,
-.toast.show  { opacity: 1; transform: translateY(0); }
-#toast.ok,
-.toast.ok    { background: var(--positive-dim); color: var(--positive-text); border-color: var(--positive); }
-#toast.err,
-.toast.err   { background: var(--negative-dim); color: var(--negative-text); border-color: var(--negative); }
+.toast.show    { opacity: 1; transform: translateY(0); }
+#toast.ok, #toast.success,
+.toast.ok, .toast.success { background: var(--positive-dim); color: var(--positive-text); border-color: var(--positive); }
+#toast.err, #toast.error,
+.toast.err, .toast.error  { background: var(--negative-dim); color: var(--negative-text); border-color: var(--negative); }
 
 /* ── Skeleton loading ─────────────────────────────────────────────────────── */
 .skeleton {

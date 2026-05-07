@@ -25,23 +25,23 @@
     @media (max-width: 640px) { .param-grid { grid-template-columns: 1fr; } }
     .field { display: flex; flex-direction: column; gap: var(--sp-2); }
     .field label { font-size: var(--text-sm); color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-    .field input, .field select { padding: 11px 14px; background: var(--bg-base); border: 1.5px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: 14px; color: var(--text-primary); outline: none; transition: border-color 0.15s; }
+    .field input, .field select { padding: 11px 14px; background: var(--bg-base); border: 1.5px solid var(--border-subtle); border-radius: var(--radius-lg); font-size: var(--text-md); color: var(--text-primary); outline: none; transition: border-color 0.15s; }
     .field input:focus, .field select:focus { border-color: var(--accent); }
     .field .hint { font-size: var(--text-sm); color: var(--text-disabled); }
 
     .derived-strip { display: flex; gap: var(--sp-7); flex-wrap: wrap; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border-subtle); }
     .derived-item .d-label { font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: .05em; }
-    .derived-item .d-value { font-size: 16px; font-weight: 700; color: var(--text-secondary); margin-top: 2px; }
+    .derived-item .d-value { font-size: var(--text-lg); font-weight: 700; color: var(--text-secondary); margin-top: 2px; }
 
     .run-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
-    .btn-run { padding: 12px 32px; background: var(--accent); color: var(--bg-base); border-color: var(--accent); border-radius: var(--radius-lg); font-size: 14px; font-weight: 700; }
+    .btn-run { padding: 12px 32px; background: var(--accent); color: var(--bg-base); border-color: var(--accent); border-radius: var(--radius-lg); font-size: var(--text-md); font-weight: 700; }
     .btn-run:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
     .btn-run:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-reset { padding: 12px 20px; border-radius: var(--radius-lg); color: var(--text-tertiary); border-color: var(--border-subtle); }
     .btn-reset:hover { border-color: var(--text-disabled); color: var(--text-secondary); }
 
     .pipeline { display: flex; gap: 0; margin-bottom: var(--sp-6); flex-wrap: wrap; }
-    .step { display: flex; align-items: center; gap: var(--sp-2); padding: 7px 14px; font-size: var(--text-sm); font-weight: 600; border: 1px solid var(--border-subtle); border-right: none; background: var(--bg-card); color: var(--text-disabled); transition: all 0.2s; }
+    .step { display: flex; align-items: center; gap: var(--sp-2); padding: 7px 14px; font-size: var(--text-sm); font-weight: 600; border: 1px solid var(--border-subtle); border-right: none; background: var(--bg-card); color: var(--text-disabled); transition: border-color 0.2s, color 0.2s, background 0.2s; }
     .step:first-child { border-radius: 8px 0 0 8px; }
     .step:last-child  { border-radius: 0 8px 8px 0; border-right: 1px solid var(--border-subtle); }
     .step.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
@@ -55,7 +55,7 @@
     @media (max-width: 640px) { .session-grid { grid-template-columns: repeat(2,1fr); } }
     .stat-card { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 14px 16px; }
     .stat-label { font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: .06em; }
-    .stat-value { font-size: 20px; font-weight: 700; margin-top: 6px; }
+    .stat-value { font-size: var(--text-xl); font-weight: 700; margin-top: 6px; }
     .stat-sub   { font-size: var(--text-sm); color: var(--text-disabled); margin-top: 3px; }
 
     .trades-wrap { overflow-x: auto; }
@@ -84,7 +84,7 @@
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; animation: overlayIn 160ms ease; }
     .modal { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); padding: 28px 32px; max-width: 400px; width: 92%; box-shadow: var(--shadow-lg); animation: popIn 180ms ease; }
-    .modal h3 { font-size: 17px; margin-bottom: 6px; }
+    .modal h3 { font-size: var(--text-lg); margin-bottom: 6px; }
     .modal-detail { background: var(--bg-elevated); border-radius: var(--radius-lg); padding: 14px 16px; margin: 14px 0; font-size: var(--text-base); color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
     .modal-detail .md-item .md-label { font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: .05em; }
     .modal-detail .md-item .md-val   { font-size: var(--text-md); font-weight: 700; color: var(--text-primary); margin-top: 2px; }
@@ -95,11 +95,7 @@
     .modal-confirm.buy  { background: var(--positive); }
     .modal-confirm.sell { background: var(--negative); }
 
-    /* TOAST */
-    .toast { position: fixed; bottom: 28px; right: 28px; padding: 13px 20px; border-radius: var(--radius-lg); font-size: var(--text-md); font-weight: 600; color: #fff; z-index: 2000; transform: translateY(80px); opacity: 0; transition: all .3s; max-width: 320px; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.success { background: var(--positive-dim); border: 1px solid var(--positive); }
-    .toast.error   { background: var(--negative-dim); border: 1px solid var(--negative); }
+
 
     .skipped-list { display: flex; flex-direction: column; gap: var(--sp-2); }
     .skip-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-elevated); border-radius: var(--radius-md); font-size: var(--text-base); }
@@ -107,7 +103,7 @@
     .skip-reason { color: var(--text-tertiary); flex: 1; }
 
     .state-box { padding: 40px 20px; text-align: center; color: var(--text-disabled); font-size: var(--text-md); }
-    .state-box .ico { font-size: 32px; margin-bottom: 10px; }
+    .state-box .ico { font-size: var(--text-3xl); margin-bottom: 10px; }
 
     .ctx-strip { display: flex; gap: var(--sp-7); flex-wrap: wrap; padding: 14px 0; border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--sp-5); }
     .ctx-item .c-label { font-size: var(--text-xs); color: var(--text-disabled); text-transform: uppercase; letter-spacing: .05em; }
@@ -115,7 +111,7 @@
     .ctx-summary { font-size: var(--text-base); color: var(--text-tertiary); line-height: 1.6; margin-top: 4px; }
 
     .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-subtle); margin-bottom: var(--sp-6); }
-    .tab { padding: 10px 18px; font-size: var(--text-base); font-weight: 600; color: var(--text-tertiary); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+    .tab { padding: 10px 18px; font-size: var(--text-base); font-weight: 600; color: var(--text-tertiary); cursor: pointer; border-bottom: 2px solid transparent; transition: border-color .15s, color .15s, background .15s; }
     .tab:hover { color: var(--text-secondary); }
     .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .tab-panel { display: none; }
@@ -526,7 +522,7 @@ document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('modalTitle').textContent = `${side} ${qty} × ${symbol}`;
     document.getElementById('modalDetail').innerHTML = `
       <div class="md-item"><div class="md-label">Symbol</div><div class="md-val">${symbol} · ${exchange}</div></div>
-      <div class="md-item"><div class="md-label">Side</div><div class="md-val" style="color:${side==='BUY'?'#68d391':'#fc8181'}">${side}</div></div>
+      <div class="md-item"><div class="md-label">Side</div><div class="md-val" style="color:${side==='BUY'?'var(--positive-text)':'var(--negative-text)'}">${side}</div></div>
       <div class="md-item"><div class="md-label">Quantity</div><div class="md-val">${qty} shares</div></div>
       <div class="md-item"><div class="md-label">Plan Entry</div><div class="md-val" style="color:var(--accent)">₹${fmt(entry)}</div></div>
       <div class="md-item"><div class="md-label">Target</div><div class="md-val" style="color:var(--positive-text)">₹${fmt(target)}</div></div>

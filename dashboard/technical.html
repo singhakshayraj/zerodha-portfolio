@@ -47,7 +47,7 @@
     .tf-badge.bearish { background: var(--negative-dim); color: var(--negative-text); border: 1px solid var(--negative); }
     .tf-badge.neutral { background: var(--warning-dim); color: var(--warning-text); border: 1px solid var(--warning-text); }
     .stock-card-body { display: flex; gap: 14px; align-items: flex-start; }
-    .ta-score-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; border: 3px solid var(--accent); flex-shrink: 0; }
+    .ta-score-circle { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; border: 3px solid var(--accent); flex-shrink: 0; }
     .ta-score-circle.strong-bullish { border-color: var(--positive); color: var(--positive-text); }
     .ta-score-circle.bullish        { border-color: var(--accent); color: var(--accent); }
     .ta-score-circle.neutral        { border-color: var(--warning-text); color: var(--warning-text); }
@@ -73,7 +73,7 @@
     .sugg-name { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
 
     /* ── MTF Badge ───────────────────────────────────────────────────────── */
-    .mtf-badge { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+    .mtf-badge { padding: 6px 14px; border-radius: var(--radius-lg); font-size: var(--text-md); font-weight: 600; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
     .mtf-badge .tf-label { font-size: var(--text-xs); opacity: 0.75; font-weight: 400; }
     .mtf-badge.bullish { background: var(--positive-dim); color: var(--positive-text); border: 1px solid var(--positive); }
     .mtf-badge.bearish { background: var(--negative-dim); color: var(--negative-text); border: 1px solid var(--negative); }
@@ -133,8 +133,8 @@
     .macd-vals { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary); }
 
     /* ADX Progress bar */
-    .adx-bar { height: 6px; background: var(--bg-elevated); border-radius: 3px; margin: 6px 0; overflow: hidden; }
-    .adx-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.5s ease; }
+    .adx-bar { height: 6px; background: var(--bg-elevated); border-radius: var(--radius-sm); margin: 6px 0; overflow: hidden; }
+    .adx-fill { height: 100%; background: var(--accent); border-radius: var(--radius-sm); transition: width 0.5s ease; }
 
     /* OBV Sparkline */
     .obv-chart-wrap { height: 60px; }
@@ -387,7 +387,7 @@ function scoreColor(score) {
   if (score >= 70) return 'var(--positive-text)';
   if (score >= 55) return 'var(--accent)';
   if (score >= 45) return 'var(--warning-text)';
-  if (score >= 30) return 'oklch(68% 0.18 20)';
+  if (score >= 30) return 'var(--negative-text)';
   return 'var(--negative-text)';
 }
 function signalClass(signal) {
