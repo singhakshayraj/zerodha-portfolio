@@ -7,15 +7,15 @@ on:
   workflow_dispatch:
     inputs:
       capital:
-        description: 'Capital to deploy (₹) — overrides repo var AUTO_CAPITAL'
+        description: 'Capital to deploy (₹) — overrides AUTO_CAPITAL repo var'
         required: false
         default: ''
       max_profit_pct:
-        description: 'Max profit target (%) — e.g. 15'
+        description: 'Max profit target (%)'
         required: false
         default: ''
       max_loss_pct:
-        description: 'Max loss limit (%) — e.g. 10'
+        description: 'Max loss limit (%)'
         required: false
         default: ''
       max_trades:
@@ -26,10 +26,14 @@ on:
 jobs:
   auto-session:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to commit data/auto-session.json
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,18 +47,25 @@ jobs:
       - name: Run auto-trade session
         run: node modules/auto-trade/session.js
         env:
-          RUNTIME_MODE: server
-          # Inputs override repo vars — allows ad-hoc parameter changes at trigger time
-          CAPITAL:        ${{ github.event.inputs.capital        || vars.AUTO_CAPITAL }}
-          MAX_PROFIT_PCT: ${{ github.event.inputs.max_profit_pct || vars.AUTO_MAX_PROFIT_PCT }}
-          MAX_LOSS_PCT:   ${{ github.event.inputs.max_loss_pct   || vars.AUTO_MAX_LOSS_PCT }}
-          MAX_TRADES:     ${{ github.event.inputs.max_trades     || vars.AUTO_MAX_TRADES || '5' }}
-          KITE_ENCTOKEN:  ${{ secrets.KITE_ENCTOKEN }}
-          LLM_PROVIDER:   ${{ vars.LLM_PROVIDER || 'groq' }}
-          GROQ_API_KEY:   ${{ secrets.GROQ_API_KEY }}
+          RUNTIME_MODE:    server
+          CAPITAL:         ${{ github.event.inputs.capital        || vars.AUTO_CAPITAL }}
+          MAX_PROFIT_PCT:  ${{ github.event.inputs.max_profit_pct || vars.AUTO_MAX_PROFIT_PCT }}
+          MAX_LOSS_PCT:    ${{ github.event.inputs.max_loss_pct   || vars.AUTO_MAX_LOSS_PCT }}
+          MAX_TRADES:      ${{ github.event.inputs.max_trades     || vars.AUTO_MAX_TRADES || '5' }}
+          KITE_ENCTOKEN:   ${{ secrets.KITE_ENCTOKEN }}
+          LLM_PROVIDER:    ${{ vars.LLM_PROVIDER || 'groq' }}
+          GROQ_API_KEY:    ${{ secrets.GROQ_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL:   ${{ secrets.SUPABASE_URL }}
+          OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL:    ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           UPSTASH_REDIS_URL:   ${{ secrets.UPSTASH_REDIS_URL }}
           UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
+
+      - name: Commit session state
+        run: |
+          git config user.name  "portfolio-bot"
+          git config user.email "bot@portfolio"
+          git add data/auto-session.json
+          git diff --cached --quiet || git commit -m "chore: auto-session $(date -u '+%Y-%m-%d')"
+          git push

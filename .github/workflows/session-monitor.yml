@@ -6,14 +6,25 @@ on:
     - cron: '0,30 4,5,6,7,8,9 * * 1-5'
     - cron: '0 10 * * 1-5'
   workflow_dispatch:
+    inputs:
+      force_stop:
+        description: 'Force stop the session and cancel all GTTs immediately'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to commit data/auto-session.json
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,9 +38,18 @@ jobs:
       - name: Run session monitor
         run: node modules/auto-trade/monitor.js
         env:
-          RUNTIME_MODE: server
-          KITE_ENCTOKEN: ${{ secrets.KITE_ENCTOKEN }}
-          SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          RUNTIME_MODE:   server
+          FORCE_STOP:     ${{ github.event.inputs.force_stop || 'false' }}
+          KITE_ENCTOKEN:  ${{ secrets.KITE_ENCTOKEN }}
+          SUPABASE_URL:   ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           UPSTASH_REDIS_URL:   ${{ secrets.UPSTASH_REDIS_URL }}
           UPSTASH_REDIS_TOKEN: ${{ secrets.UPSTASH_REDIS_TOKEN }}
+
+      - name: Commit updated session state
+        run: |
+          git config user.name  "portfolio-bot"
+          git config user.email "bot@portfolio"
+          git add data/auto-session.json
+          git diff --cached --quiet || git commit -m "chore: session monitor $(date -u '+%Y-%m-%dT%H:%M')"
+          git push
