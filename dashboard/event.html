@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <!-- Controls + Scenario Tabs -->
   <div class="controls">
     <button class="btn btn-refresh" id="btnRefresh" onclick="loadEventPlays()">↻ Refresh</button>
-    <span id="statusLabel" style="font-size:12px;color:#64748b">Loading…</span>
+    <span id="statusLabel" style="font-size:12px;color:var(--text-secondary)">Loading…</span>
   </div>
 
   <div class="scenario-tabs" id="scenarioTabs">
@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded',function(){
             </tr>
           </thead>
           <tbody id="histGeneralBody">
-            <tr><td colspan="4" style="color:#4a5568;font-size:11px;padding:8px">Loading…</td></tr>
+            <tr><td colspan="4" style="color:var(--text-tertiary);font-size:11px;padding:8px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded',function(){
             </tr>
           </thead>
           <tbody id="histStateBody">
-            <tr><td colspan="3" style="color:#4a5568;font-size:11px;padding:8px">Loading…</td></tr>
+            <tr><td colspan="3" style="color:var(--text-tertiary);font-size:11px;padding:8px">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     <!-- Sector Cards -->
     <div>
-      <div class="section-label">Top Sectors — <span id="sectorScenarioLabel"></span> <span id="sectorCount" style="color:#4a5568;font-weight:400;text-transform:none"></span></div>
+      <div class="section-label">Top Sectors — <span id="sectorScenarioLabel"></span> <span id="sectorCount" style="color:var(--text-tertiary);font-weight:400;text-transform:none"></span></div>
       <div class="sector-grid" id="sectorGrid">
         <div class="loading-row" style="grid-column:1/-1">Loading sectors…</div>
       </div>
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <!-- Top 10 Picks -->
   <div class="card">
     <div class="card-title">Top 10 Stock Picks — <span id="picksScenarioLabel"></span>
-      <span style="color:#4a5568;font-weight:400;font-size:10px;margin-left:6px">Click row for selection rationale</span>
+      <span style="color:var(--text-tertiary);font-weight:400;font-size:10px;margin-left:6px">Click row for selection rationale</span>
     </div>
     <div style="overflow-x:auto">
       <table class="picks-table">
@@ -379,9 +379,9 @@ document.addEventListener('DOMContentLoaded',function(){
             <th>Sector</th>
             <th>Dir</th>
             <th>Hist%</th>
-            <th>Score <span style="color:#4a5568;font-weight:400;font-size:9px">H40·AI35·B25</span></th>
+            <th>Score <span style="color:var(--text-tertiary);font-weight:400;font-size:9px">H40·AI35·B25</span></th>
             <th>Conviction</th>
-            <th>AI Analysis <span id="llmStatus" style="color:#4a5568;font-weight:400">pending…</span></th>
+            <th>AI Analysis <span id="llmStatus" style="color:var(--text-tertiary);font-weight:400">pending…</span></th>
           </tr>
         </thead>
         <tbody id="picksBody">
@@ -396,12 +396,12 @@ document.addEventListener('DOMContentLoaded',function(){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px">
       <div>
         <div class="card-title" style="margin-bottom:2px">⚡ Live AI Intelligence
-          <span style="font-size:10px;color:#4a5568;font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">AI generates fresh sector + stock picks at runtime using financial reasoning</span>
+          <span style="font-size:10px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">AI generates fresh sector + stock picks at runtime using financial reasoning</span>
         </div>
-        <div style="font-size:11px;color:#4a5568" id="liveIntelMeta">Not yet generated for this scenario.</div>
+        <div style="font-size:11px;color:var(--text-tertiary)" id="liveIntelMeta">Not yet generated for this scenario.</div>
       </div>
       <button class="btn" id="btnLiveIntel" onclick="generateLiveIntel()"
-        style="background:#1a2a3a;color:#63b3ed;border:1px solid #2a4a6a;white-space:nowrap">
+        style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-subtle);white-space:nowrap">
         ⚡ Generate Live Analysis
       </button>
     </div>
@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded',function(){
       if (!sub) {
         sub = document.createElement('div');
         sub.id = 'eventSubtitle';
-        sub.style.cssText = 'font-size:12px;color:#63b3ed;margin-bottom:8px;font-weight:500;';
+        sub.style.cssText = 'font-size:12px;color:var(--accent);margin-bottom:8px;font-weight:500;';
         document.getElementById('eventName').after(sub);
       }
       sub.textContent = ev.subtitle;
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const el = document.getElementById('marketTone');
     const icon = bias === 'bullish' ? '📈' : bias === 'bearish' ? '📉' : '↔';
     el.textContent = `${icon} ${tone || '—'}`;
-    el.style.borderLeftColor = bias === 'bullish' ? '#68d391' : bias === 'bearish' ? '#fc8181' : '#fbd38d';
+    el.style.borderLeftColor = bias === 'bullish' ? 'var(--positive)' : bias === 'bearish' ? 'var(--negative)' : 'var(--warning-text)';
   }
 
   function renderHistorical(generalEvents, stateEvents) {
@@ -588,13 +588,13 @@ document.addEventListener('DOMContentLoaded',function(){
               .map(([s,v]) => `${s}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
           : '';
         return `<tr>
-          <td><strong style="color:#e2e8f0">${e.year}</strong></td>
+          <td><strong style="color:var(--text-primary)">${e.year}</strong></td>
           <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
           <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
           <td class="outcome-cell">
             ${topSectors ? `<div class="top-sector">${topSectors}</div>` : ''}
-            <div style="color:#64748b;font-size:10px;margin-top:1px">${e.notes.length > 55 ? e.notes.slice(0,55)+'…' : e.notes}</div>
-            ${e.recovery_3d ? `<div style="color:#68d391;font-size:9px">+${e.recovery_3d}% 3d recovery</div>` : ''}
+            <div style="color:var(--text-secondary);font-size:10px;margin-top:1px">${e.notes.length > 55 ? e.notes.slice(0,55)+'…' : e.notes}</div>
+            ${e.recovery_3d ? `<div style="color:var(--positive);font-size:9px">+${e.recovery_3d}% 3d recovery</div>` : ''}
           </td>
         </tr>`;
       }).join('');
@@ -611,10 +611,10 @@ document.addEventListener('DOMContentLoaded',function(){
               .map(([s,v]) => `${s}: ${v >= 0 ? '+' : ''}${v}%`).join(' · ')
           : '';
         return `<tr>
-          <td><strong style="color:#e2e8f0">${e.year}</strong></td>
+          <td><strong style="color:var(--text-primary)">${e.year}</strong></td>
           <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
           <td class="outcome-cell">
-            <div style="color:#94a3b8;font-size:11px">${e.outcome.length > 50 ? e.outcome.slice(0,50)+'…' : e.outcome}</div>
+            <div style="color:var(--text-secondary);font-size:11px">${e.outcome.length > 50 ? e.outcome.slice(0,50)+'…' : e.outcome}</div>
             ${topSectors ? `<div class="top-sector" style="margin-top:2px">${topSectors}</div>` : ''}
           </td>
         </tr>`;
@@ -675,7 +675,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="sector-stocks">${visibleRows}</div>
         ${hiddenRows ? `
           <div class="sector-stocks" id="extra-${sectorId}" style="display:none;margin-top:3px">${hiddenRows}</div>
-          <div style="font-size:10px;color:#63b3ed;margin-top:6px;cursor:pointer;user-select:none"
+          <div style="font-size:10px;color:var(--accent);margin-top:6px;cursor:pointer;user-select:none"
             onclick="const el=document.getElementById('extra-${sectorId}');const hidden=el.style.display==='none';el.style.display=hidden?'flex':'none';this.textContent=hidden?'▲ show less':'▼ +${s.stocks.length-7} more stocks'">
             ▼ +${s.stocks.length-7} more stocks
           </div>` : ''}
@@ -716,9 +716,9 @@ document.addEventListener('DOMContentLoaded',function(){
       return `<tr class="pick-row" id="row-${p.symbol}" onclick="toggleRationale('${p.symbol}', ${JSON.stringify(rationaleMap[p.symbol]?.rationale || p.rationale || '')})">
         <td class="rank-num">${i+1}</td>
         <td class="sym-cell">${p.symbol}${brainHtml ? ' '+brainHtml : ''}
-          <small>${p.name || ''}${hasRationale ? ' <span style="color:#4a5568;font-size:9px">▾ why</span>' : ''}</small>
+          <small>${p.name || ''}${hasRationale ? ' <span style="color:var(--text-tertiary);font-size:9px">▾ why</span>' : ''}</small>
         </td>
-        <td style="font-size:11px;color:#718096">${p.sector}</td>
+        <td style="font-size:11px;color:var(--text-secondary)">${p.sector}</td>
         <td><span class="dir-badge ${dirClass}">${dirLabel}</span></td>
         <td class="hist-pct ${pctClass}">${sign}${p.avg_move}%</td>
         <td class="score-cell ${scoreCls}" id="score-${p.symbol}">${score.toFixed(1)}</td>
@@ -812,7 +812,7 @@ document.addEventListener('DOMContentLoaded',function(){
       liveIntelCache[scenario] = result;
       renderLiveIntel(result, scenario);
     } catch (e) {
-      body.innerHTML = `<div style="color:#fc8181;font-size:13px;padding:16px">⚠ Generation failed: ${e.message}</div>`;
+      body.innerHTML = `<div style="color:var(--negative);font-size:13px;padding:16px">⚠ Generation failed: ${e.message}</div>`;
       meta.textContent = 'Failed.';
     } finally {
       btn.disabled = false;
@@ -830,9 +830,9 @@ document.addEventListener('DOMContentLoaded',function(){
       const pct = (p * 100).toFixed(0);
       const cls = scenarioColors[sc] || 'mixed';
       return `<div class="prob-row">
-        <span style="color:#94a3b8;width:80px;flex-shrink:0">${scenarioLabels[sc] || sc}</span>
+        <span style="color:var(--text-secondary);width:80px;flex-shrink:0">${scenarioLabels[sc] || sc}</span>
         <div class="prob-bar-wrap"><div class="prob-bar ${cls}" style="width:${pct}%"></div></div>
-        <span style="color:#e2e8f0;font-weight:700;width:30px;text-align:right">${pct}%</span>
+        <span style="color:var(--text-primary);font-weight:700;width:30px;text-align:right">${pct}%</span>
       </div>`;
     }).join('');
 
@@ -848,14 +848,14 @@ document.addEventListener('DOMContentLoaded',function(){
       const cls = s.adj_ev >= 2 ? 'pos' : s.adj_ev <= -2 ? 'neg' : 'flat';
       const sign = s.adj_ev >= 0 ? '+' : '';
       const barW = Math.round(Math.abs(s.adj_ev) / maxAbsEV * 100);
-      const barColor = cls === 'pos' ? '#68d391' : cls === 'neg' ? '#fc8181' : '#718096';
+      const barColor = cls === 'pos' ? 'var(--positive)' : cls === 'neg' ? 'var(--negative)' : 'var(--text-secondary)';
       const cons = Math.round((s.consistency || 0.5) * 100);
       return `<div class="ev-row">
-        <span style="color:#94a3b8;font-size:10px;flex:1">${s.name.replace(' & PSU Aerospace','').replace(' — WB Projects Unlocked','').replace(' — WB Corridor','').replace(' — WB Energy','')}</span>
+        <span style="color:var(--text-secondary);font-size:10px;flex:1">${s.name.replace(' & PSU Aerospace','').replace(' — WB Projects Unlocked','').replace(' — WB Corridor','').replace(' — WB Energy','')}</span>
         <span class="ev-val ${cls}">${sign}${s.adj_ev}%
           <span class="ev-bar-wrap"><span class="ev-bar" style="width:${barW}%;background:${barColor}"></span></span>
         </span>
-        <span style="color:#4a5568;font-size:10px;margin-left:6px">${cons}%✓</span>
+        <span style="color:var(--text-tertiary);font-size:10px;margin-left:6px">${cons}%✓</span>
       </div>`;
     }).join('');
 
@@ -867,13 +867,13 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="quant-block">
         <div class="qb-label">Market Regime</div>
         <div class="regime-mult ${rmClass}">${rm}x <span style="font-size:12px;font-weight:400">${rmDir}</span></div>
-        <div class="regime-tags">${regimeTags || '<span style="color:#4a5568;font-size:11px">Brain cache unavailable</span>'}</div>
-        ${qc.regime_context ? '' : '<div style="font-size:10px;color:#4a5568;margin-top:4px">Using neutral multiplier (1.0x)</div>'}
+        <div class="regime-tags">${regimeTags || '<span style="color:var(--text-tertiary);font-size:11px">Brain cache unavailable</span>'}</div>
+        ${qc.regime_context ? '' : '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">Using neutral multiplier (1.0x)</div>'}
       </div>
       <div class="quant-block">
         <div class="qb-label">Sector EV T+7 (regime-adj)</div>
         ${evRows}
-        <div style="font-size:9px;color:#4a5568;margin-top:6px">%✓ = historical consistency</div>
+        <div style="font-size:9px;color:var(--text-tertiary);margin-top:6px">%✓ = historical consistency</div>
       </div>
     </div>`;
   }
@@ -896,21 +896,21 @@ document.addEventListener('DOMContentLoaded',function(){
     if (result.key_risk || result.regime_note) {
       html += `<div class="live-risk">`;
       if (result.key_risk) html += `<div class="risk-label">⚠ Key Risk</div>${result.key_risk}`;
-      if (result.regime_note) html += `<div style="margin-top:6px;color:#94a3b8"><span style="color:#63b3ed;font-weight:700;font-size:10px">REGIME · </span>${result.regime_note}</div>`;
+      if (result.regime_note) html += `<div style="margin-top:6px;color:var(--text-secondary)"><span style="color:var(--accent);font-weight:700;font-size:10px">REGIME · </span>${result.regime_note}</div>`;
       html += `</div>`;
     }
 
     const sectors = result.sectors || [];
     if (!sectors.length) {
-      html += `<div style="color:#4a5568;font-size:13px">No sectors returned by AI.</div>`;
+      html += `<div style="color:var(--text-tertiary);font-size:13px">No sectors returned by AI.</div>`;
     } else {
       html += `<div class="live-sector-grid">`;
       sectors.forEach(s => {
         const dirClass = s.direction || 'bullish';
         const evAdj = s.ev_adj ?? s.expected_move_pct ?? 0;
         const sign = evAdj >= 0 ? '+' : '';
-        const moveColor = dirClass === 'bullish' ? '#68d391' : dirClass === 'bearish' ? '#fc8181' : '#94a3b8';
-        const consistency = s.consistency_pct ? `<span style="font-size:10px;color:#4a5568;margin-left:6px">${s.consistency_pct}% consistent</span>` : '';
+        const moveColor = dirClass === 'bullish' ? 'var(--positive)' : dirClass === 'bearish' ? 'var(--negative)' : 'var(--text-secondary)';
+        const consistency = s.consistency_pct ? `<span style="font-size:10px;color:var(--text-tertiary);margin-left:6px">${s.consistency_pct}% consistent</span>` : '';
 
         const stocksHtml = (s.stocks || []).map(st => {
           const stDir = st.direction || 'bullish';
@@ -922,7 +922,7 @@ document.addEventListener('DOMContentLoaded',function(){
               <span class="live-stock-sym">${st.symbol} <span class="live-conv ${stConv}">${stConv}</span></span>
               <span class="live-stock-move ${stMoveClass}">${stSign}${st.expected_move_pct || 0}%</span>
             </div>
-            <div class="live-stock-name">${st.name || ''} <span style="font-size:9px;color:#4a5568">▾ tap for rationale</span></div>
+            <div class="live-stock-name">${st.name || ''} <span style="font-size:9px;color:var(--text-tertiary)">▾ tap for rationale</span></div>
             <div class="live-stock-rationale">${st.rationale || ''}</div>
           </div>`;
         }).join('');
