@@ -677,8 +677,8 @@ function initDetailCharts(d, sfx){
       data:{
         labels,
         datasets:[
-          {type:'bar', label:'Revenue (₹Cr)', data:rev, backgroundColor:'var(--accent-dim)', borderColor:'oklch(65% 0.18 165)', borderWidth:1, yAxisID:'y'},
-          {type:'line', label:'Net Profit (₹Cr)', data:profit, borderColor:'oklch(62% 0.20 20)', backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3, yAxisID:'y'},
+          {type:'bar', label:'Revenue (₹Cr)', data:rev, backgroundColor:'var(--accent-dim)', borderColor:'var(--accent)', borderWidth:1, yAxisID:'y'},
+          {type:'line', label:'Net Profit (₹Cr)', data:profit, borderColor:'var(--negative)', backgroundColor:'transparent', borderWidth:2, pointRadius:3, tension:0.3, yAxisID:'y'},
         ]
       },
       options:{responsive:true, interaction:{mode:'index',intersect:false}, plugins:{legend:{labels:{color:'rgba(255,255,255,0.55)',font:{size:11}}}},
@@ -697,7 +697,7 @@ function initDetailCharts(d, sfx){
       type:'doughnut',
       data:{
         labels:['Promoter','FII','DII','Public'],
-        datasets:[{data:vals, backgroundColor:['oklch(65% 0.18 165 / 0.8)','oklch(68% 0.16 195 / 0.8)','oklch(75% 0.16 75 / 0.8)','oklch(55% 0.12 240 / 0.8)'],
+        datasets:[{data:vals, backgroundColor:['var(--positive)','var(--verdict-weak-text)','var(--warning-text)','var(--text-tertiary)'],
           borderColor:'transparent', hoverOffset:4}]
       },
       options:{cutout:'70%',plugins:{legend:{display:false}},responsive:false}

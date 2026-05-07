@@ -89,16 +89,7 @@
     .qa-btn:hover { background: var(--accent-hover); }
     .qa-error { font-size: var(--text-sm); color: var(--negative-text); margin-top: 6px; display: none; }
 
-    /* Top Nav */
-    .topnav { background: var(--bg-surface); border-bottom: 1px solid var(--border-dim); padding: 0 var(--sp-9); display: flex; align-items: center; justify-content: space-between; height: 48px; position: sticky; top: 0; z-index: 100; transition: var(--t-bg), var(--t-border); }
-    .topnav-brand { font-size: var(--text-md); font-weight: 700; color: var(--text-primary); text-decoration: none; letter-spacing: 0.02em; }
-    .topnav-links { display: flex; gap: var(--sp-7); align-items: center; }
-    .topnav-links a { font-size: var(--text-md); color: var(--text-secondary); text-decoration: none; transition: var(--t-color); }
-    .topnav-links a:hover, .topnav-links a.active { color: var(--text-primary); }
-
     @media (max-width: 640px) {
-      .topnav { padding: 0 16px; }
-      .topnav-links { gap: 14px; }
       .quick-analyze { padding: 10px 16px; }
       .qa-wrap { max-width: 100%; }
       header { padding: 18px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
