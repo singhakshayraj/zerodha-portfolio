@@ -1,0 +1,62 @@
+name: Auto Trade Session
+
+on:
+  schedule:
+    # 9:45 AM IST = 4:15 AM UTC, weekdays
+    - cron: '15 4 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      capital:
+        description: 'Capital to deploy (₹)'
+        required: false
+        default: ''
+      max_profit_pct:
+        description: 'Max profit target (%)'
+        required: false
+        default: ''
+      max_loss_pct:
+        description: 'Max loss limit (%)'
+        required: false
+        default: ''
+      max_trades:
+        description: 'Max number of trades'
+        required: false
+        default: '5'
+
+jobs:
+  auto-session:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Launch auto trade session
+        run: |
+          CAPITAL="${{ github.event.inputs.capital || vars.AUTO_CAPITAL }}"
+          MAX_PROFIT="${{ github.event.inputs.max_profit_pct || vars.AUTO_MAX_PROFIT_PCT }}"
+          MAX_LOSS="${{ github.event.inputs.max_loss_pct || vars.AUTO_MAX_LOSS_PCT }}"
+          MAX_TRADES="${{ github.event.inputs.max_trades || vars.AUTO_MAX_TRADES || '5' }}"
+
+          if [ -z "$CAPITAL" ] || [ -z "$MAX_PROFIT" ] || [ -z "$MAX_LOSS" ]; then
+            echo "::error::AUTO_CAPITAL, AUTO_MAX_PROFIT_PCT, AUTO_MAX_LOSS_PCT vars must be set in repo settings"
+            exit 1
+          fi
+
+          BODY="{\"capital\":$CAPITAL,\"max_profit_pct\":$MAX_PROFIT,\"max_loss_pct\":$MAX_LOSS,\"maxTrades\":$MAX_TRADES}"
+          echo "Launching session: capital=₹$CAPITAL, profit_target=${MAX_PROFIT}%, loss_limit=${MAX_LOSS}%, max_trades=$MAX_TRADES"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Kite-Enctoken: ${{ secrets.KITE_ENCTOKEN }}" \
+            -d "$BODY" \
+            "${{ vars.VERCEL_APP_URL }}/api/intel?action=auto_session")
+
+          BODY_OUT=$(echo "$RESPONSE" | head -n -1)
+          HTTP=$(echo "$RESPONSE" | tail -1)
+          echo "HTTP $HTTP — $BODY_OUT"
+
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::Auto trade session failed (HTTP $HTTP): $BODY_OUT"
+            exit 1
+          fi
+
+          STATUS=$(echo "$BODY_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','?'))" 2>/dev/null || echo "?")
+          EXECUTED=$(echo "$BODY_OUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('executed',0))" 2>/dev/null || echo "0")
+          echo "✅ Session status=$STATUS, executed=$EXECUTED trades"

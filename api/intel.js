@@ -10,7 +10,7 @@ import { getBrainResult }  from '../dashboard/lib/brain.js';
 // plan.js uses Node 'https' module — lazy-imported inside the handler to avoid
 // Vercel ncc bundling conflict that silently drops the function at deploy time.
 import { analyzeStock, analyzeEventStocks, analyzeEventScenario } from '../dashboard/lib/llm.js';
-import { getBrainCache, setBrainCache } from '../dashboard/lib/supabase.js';
+import { getBrainCache, setBrainCache, insertTrade as dbInsertTrade } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
 import { runIntersection }    from '../dashboard/lib/intersect.js';
 import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
@@ -903,6 +903,258 @@ Return ONLY raw JSON (no markdown):
       return res.status(200).json(taResult);
     }
 
+    // ── Auto Session — full pipeline: brain → triggers → intersect → plans → allocate → execute ─
+    // POST /api/intel?action=auto_session
+    // Body: { capital, max_profit_pct, max_loss_pct, maxTrades? }
+    // Header: X-Kite-Enctoken (required; falls back to KITE_ENCTOKEN env var for cron)
+    if (action === 'auto_session') {
+      if (req.method !== 'POST') { res.status(405).end(); return; }
+
+      const { capital, max_profit_pct, max_loss_pct, maxTrades = 5 } = req.body ?? {};
+      if (!capital || !max_profit_pct || !max_loss_pct) {
+        return res.status(400).json({ error: 'capital, max_profit_pct, max_loss_pct required' });
+      }
+
+      const rawEnc  = req.headers['x-kite-enctoken'] || '';
+      const enctoken = rawEnc ? decodeURIComponent(rawEnc) : (process.env.KITE_ENCTOKEN || '');
+      if (!enctoken) {
+        return res.status(401).json({ error: 'enctoken required — set KITE_ENCTOKEN env or X-Kite-Enctoken header' });
+      }
+
+      const istToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+      // Guard: don't start a second session today
+      const existing = await redisGet('auto:session').catch(() => null);
+      if (existing?.date === istToday && existing?.status === 'active') {
+        return res.status(409).json({ error: 'Session already active for today', session: existing });
+      }
+
+      // Derive allocator params from user's max_profit/max_loss targets
+      const maxRiskPct       = +max_loss_pct;
+      const targetRMultiple  = +(+max_profit_pct / +max_loss_pct).toFixed(2);
+      const profitTarget     = +(+capital * +max_profit_pct / 100).toFixed(2);
+      const lossLimit        = +(+capital * +max_loss_pct / 100).toFixed(2);
+
+      // Step 1: Brain (use Supabase cache; refresh if stale)
+      let brain = null;
+      try {
+        const cached = await getBrainCache();
+        if (cached) {
+          const ageMs = Date.now() - new Date(cached.updated_at).getTime();
+          if (ageMs < CACHE_TTL_MS) brain = cached.data;
+        }
+        if (!brain) {
+          brain = await getBrainResult(true);
+          setBrainCache(brain).catch(() => {});
+        }
+      } catch (e) {
+        console.warn('auto_session: brain unavailable:', e.message);
+      }
+
+      const vixState = brain?.vix_state || 'unknown';
+
+      // Step 2: NSE triggers (parallel fetch, Kite fallback if coverage < 70%)
+      const cookie    = await getNSESession();
+      const hdrs      = { ...NSE_HDR, Cookie: cookie };
+      const quoteData = {};
+      await Promise.allSettled(UNIVERSE.map(async sym => {
+        try {
+          const r = await fetch(`https://www.nseindia.com/api/quote-equity?symbol=${encodeURIComponent(sym)}`, { headers: hdrs });
+          if (!r.ok) return;
+          const json = await r.json();
+          const p = json.priceInfo;
+          if (!p) return;
+          quoteData[sym] = { last_price: p.lastPrice, change_pct: p.pChange, net_change: p.change,
+            volume: json.marketDeptOrderBook?.tradeInfo?.totalTradedVolume || 0,
+            ohlc: { open: p.open, high: p.intraDayHighLow?.max, low: p.intraDayHighLow?.min, close: p.previousClose } };
+        } catch { /* skip */ }
+      }));
+
+      const nseCoverage = Object.keys(quoteData).length / UNIVERSE.length;
+      if (nseCoverage < 0.70) {
+        try {
+          const { getQuotes } = await import('../dashboard/lib/kite.js');
+          const missing = UNIVERSE.filter(s => !quoteData[s]).map(s => `NSE:${s}`);
+          if (missing.length) {
+            const kiteData = await getQuotes(missing, enctoken);
+            for (const [key, d] of Object.entries(kiteData || {})) {
+              const sym = key.split(':')[1];
+              if (sym && d?.last_price != null && !quoteData[sym]) {
+                quoteData[sym] = {
+                  last_price: d.last_price,
+                  change_pct: d.net_change && d.ohlc?.close ? +(d.net_change / d.ohlc.close * 100).toFixed(2) : 0,
+                  net_change: d.net_change || 0,
+                  volume:     d.volume_traded || 0,
+                  ohlc: { open: d.ohlc?.open, high: d.ohlc?.high, low: d.ohlc?.low, close: d.ohlc?.close },
+                };
+              }
+            }
+          }
+        } catch { /* Kite fallback failed — proceed with partial NSE data */ }
+      }
+
+      const cycleResult = await runTriggerCycle(quoteData, vixState, cookie);
+      const triggers    = cycleResult.triggers || [];
+
+      const noSignalSession = {
+        date: istToday, capital: +capital, max_profit_pct: +max_profit_pct, max_loss_pct: +max_loss_pct,
+        maxTrades: +maxTrades, profit_target: profitTarget, loss_limit: lossLimit,
+        trades: [], status: 'no_signals', realized_pnl: 0, stopped_at: null, stop_reason: null,
+        started_at: new Date().toISOString(), nse_coverage_pct: Math.round(nseCoverage * 100),
+      };
+
+      if (!triggers.length) {
+        await redisSet('auto:session', noSignalSession, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ ...noSignalSession, message: 'No trigger signals found — session recorded with 0 trades' });
+      }
+
+      // Step 3: Intersection (brain picks × trigger events)
+      const brainPicks = brain?.picks ?? [];
+      if (!brainPicks.length) {
+        const noPicksSession = { ...noSignalSession, status: 'no_brain_picks' };
+        await redisSet('auto:session', noPicksSession, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ ...noPicksSession, message: 'Brain cache has no picks — run /api/intel?action=brain first' });
+      }
+
+      const intersectResult  = runIntersection(brainPicks, triggers);
+      const opportunities    = intersectResult.opportunities || [];
+
+      if (!opportunities.length) {
+        const noOppSession = { ...noSignalSession, status: 'no_opportunities', triggers_found: triggers.length };
+        await redisSet('auto:session', noOppSession, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ ...noOppSession, message: 'Triggers found but no intersection with brain picks' });
+      }
+
+      // Step 4: Trade plans (generateTradePlans logs to Supabase automatically for audit)
+      const planResult = await generateTradePlans(opportunities);
+      const plans      = planResult.plans || [];
+
+      if (!plans.length) {
+        const noPlanSession = { ...noSignalSession, status: 'no_plans', opportunities_found: opportunities.length };
+        await redisSet('auto:session', noPlanSession, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ ...noPlanSession, message: 'Opportunities found but no valid trade plans generated' });
+      }
+
+      // Step 5: Allocate capital across plans
+      const allocResult = await allocate({
+        opportunities: plans,
+        capital: +capital,
+        maxRiskPct,
+        targetRMultiple,
+        maxTrades: +maxTrades,
+        regime: brain?.regime,
+      });
+      const allocated = allocResult.newTrades || [];
+
+      // Step 6: Execute each allocated trade (market entry + GTT OCO)
+      // Lazy-import kite to avoid Vercel ncc bundling conflict (same pattern as triggers action)
+      const { placeOrder: kPlaceOrder, placeGTT: kPlaceGTT } = await import('../dashboard/lib/kite.js');
+
+      const executedTrades = [];
+      const execErrors     = [];
+
+      for (const trade of allocated) {
+        const symbol   = trade.symbol;
+        const exchange = trade.exchange || 'NSE';
+        const qty      = trade.qty;
+        const entry    = trade.entry;
+        const sl       = trade.sl;
+        const target   = trade.t1 ?? trade.t2 ?? null;
+        const side     = trade.direction === 'short' ? 'SELL' : 'BUY';
+
+        if (!target) {
+          execErrors.push({ symbol, step: 'no_target', error: 'trade plan missing t1/t2 target' });
+          continue;
+        }
+
+        let orderId   = null;
+        let triggerId = null;
+
+        // 6a. Market entry
+        try {
+          const orderRes = await kPlaceOrder({ symbol, transactionType: side, quantity: qty, enctoken, exchange });
+          orderId = orderRes.order_id;
+        } catch (e) {
+          execErrors.push({ symbol, step: 'entry_order', error: e.message });
+          continue; // skip GTT + journal if entry failed
+        }
+
+        // 6b. GTT OCO (target + SL) — non-fatal; trade still recorded even without GTT
+        try {
+          const gttRes  = await kPlaceGTT({ symbol, exchange, qty, ltp: entry, target, sl, enctoken });
+          triggerId = gttRes.trigger_id;
+        } catch (e) {
+          execErrors.push({ symbol, step: 'gtt', error: e.message });
+        }
+
+        // 6c. Insert auto-session trade record in Supabase (separate from the plan journal entry)
+        const tradeRecord = {
+          id:          `auto-${Date.now()}-${symbol}`,
+          symbol,
+          exchange,
+          sector:      trade.sector || '',
+          side,
+          entry:       +entry,
+          target:      +target,
+          sl:          +sl,
+          qty:         +qty,
+          capital:     +(trade.capitalAllocated || 0),
+          risk_rs:     +(trade.risk || 0),
+          reward_rs:   +(target - entry) * qty,
+          rr:          sl !== entry ? +((target - entry) / Math.abs(entry - sl)).toFixed(2) : 0,
+          trigger_id:  triggerId,
+          factors:     { ev: trade.ev, final_score: trade.final_score, win_rate: trade.win_rate, setup_type: trade.setup_type, order_id: orderId },
+          source:      'auto_session',
+          confidence:  +(trade.confidence || 0),
+          score:       +(trade.final_score || 0),
+          status:      'open',
+          pnl:         null,
+          exit_price:  null,
+          exit_reason: null,
+          opened_at:   new Date().toISOString(),
+          closed_at:   null,
+        };
+        try {
+          await dbInsertTrade(tradeRecord);
+        } catch (e) {
+          execErrors.push({ symbol, step: 'db_insert', error: e.message });
+        }
+
+        executedTrades.push({ symbol, order_id: orderId, trigger_id: triggerId, entry, target, sl, qty, side });
+      }
+
+      // Step 7: Persist session to Redis (TTL 24h; monitor + dashboard read this)
+      const sessionRecord = {
+        date:             istToday,
+        capital:          +capital,
+        max_profit_pct:   +max_profit_pct,
+        max_loss_pct:     +max_loss_pct,
+        maxTrades:        +maxTrades,
+        profit_target:    profitTarget,
+        loss_limit:       lossLimit,
+        trades:           executedTrades,
+        status:           executedTrades.length > 0 ? 'active' : 'no_trades',
+        realized_pnl:     0,
+        stopped_at:       null,
+        stop_reason:      null,
+        started_at:       new Date().toISOString(),
+        nse_coverage_pct: Math.round(nseCoverage * 100),
+        alloc_session:    allocResult.session,
+        exec_errors:      execErrors,
+      };
+      await redisSet('auto:session', sessionRecord, 24 * 60 * 60).catch(() => {});
+
+      return res.status(200).json({
+        ...sessionRecord,
+        triggers_found:   triggers.length,
+        opportunities:    opportunities.length,
+        plans_generated:  plans.length,
+        allocated:        allocated.length,
+        executed:         executedTrades.length,
+        skipped:          (allocResult.skipped || []).length,
+      });
+    }
+
     // ── Health check ─────────────────────────────────────────────────────────────
     if (action === 'health') {
       const checks = {};
@@ -954,7 +1206,7 @@ Return ONLY raw JSON (no markdown):
       return res.status(status === 'ok' ? 200 : 207).json({ status, checks, ts: new Date().toISOString() });
     }
 
-    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel | fa_narrative | quotes | symbol | alpha | triggers | fundamental | technical_full | health' });
+    res.status(400).json({ error: 'action must be brain | plan | analyze | record_outcome | calibration_stats | intersect | trade_plan | allocate | allocate_update | allocate_session | allocate_reset | event_plays | event_stock_analysis | event_live_intel | fa_narrative | quotes | symbol | alpha | triggers | fundamental | technical_full | auto_session | health' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

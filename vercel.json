@@ -31,6 +31,7 @@
     { "source": "/fundamental",        "destination": "/dashboard/fundamental.html" },
     { "source": "/technical",          "destination": "/dashboard/technical.html" },
     { "source": "/login",              "destination": "/dashboard/login.html" },
+    { "source": "/auto",               "destination": "/dashboard/auto.html" },
     { "source": "/",                   "destination": "/dashboard/index.html" }
   ]
 }

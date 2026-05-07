@@ -5,8 +5,9 @@
  * POST /api/orders?action=journal   — log new trade
  * PATCH /api/orders?action=journal  — update trade outcome
  */
-import { placeOrder, placeGTT, getQuotes } from '../dashboard/lib/kite.js';
+import { placeOrder, placeGTT, getQuotes, cancelGTT } from '../dashboard/lib/kite.js';
 import { listTrades, insertTrade, updateTrade, deleteTrades, upsertSnapshot } from '../dashboard/lib/supabase.js';
+import { redisGet, redisSet } from '../dashboard/lib/redis.js';
 
 function stats(trades) {
   const closed      = trades.filter(t => t.status !== 'open');
@@ -191,6 +192,118 @@ export default async function handler(req, res) {
       return res.status(200).json({ synced: autoClosed.length, auto_closed: autoClosed, stats: stats(all) });
     } catch (e) {
       res.status(500).json({ error: e.message }); return;
+    }
+  }
+
+  // ── Auto Session Status ───────────────────────────────────────────────────────
+  // GET /api/orders?action=session_status
+  if (action === 'session_status') {
+    if (req.method !== 'GET') { res.status(405).end(); return; }
+    try {
+      const session = await redisGet('auto:session').catch(() => null);
+      if (!session) return res.status(404).json({ error: 'No session found — run auto_session to start one' });
+      return res.status(200).json(session);
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── Session Monitor — circuit breaker check (called by cron every 30 min) ─────
+  // POST /api/orders?action=session_monitor
+  // Header: X-Kite-Enctoken (from KITE_ENCTOKEN secret in GitHub Actions)
+  if (action === 'session_monitor') {
+    if (req.method !== 'POST') { res.status(405).end(); return; }
+    try {
+      const session = await redisGet('auto:session').catch(() => null);
+      if (!session || session.status !== 'active') {
+        return res.status(200).json({ monitored: false, reason: session ? `session_${session.status}` : 'no_session' });
+      }
+
+      // Find open auto-session trades in Supabase
+      const allTrades  = await listTrades();
+      const istToday   = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      const autoOpen   = allTrades.filter(t => t.source === 'auto_session' && t.status === 'open');
+      const autoClosed = allTrades.filter(t => t.source === 'auto_session' && t.status === 'closed'
+                                             && t.closed_at?.slice(0, 10) === istToday);
+
+      // Compute realized P&L from today's closed auto trades
+      const realizedPnl = +autoClosed.reduce((s, t) => s + (t.pnl || 0), 0).toFixed(2);
+
+      const { profit_target, loss_limit } = session;
+
+      // All positions closed naturally — mark session complete
+      if (!autoOpen.length) {
+        const done = { ...session, status: 'completed', realized_pnl: realizedPnl, stopped_at: new Date().toISOString(), stop_reason: 'all_positions_closed' };
+        await redisSet('auto:session', done, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ monitored: true, circuit_fired: false, status: 'completed', realized_pnl: realizedPnl });
+      }
+
+      // Circuit breaker: profit target or loss limit hit
+      let circuitFired = false;
+      let stopReason   = null;
+      if (profit_target != null && realizedPnl >= profit_target) {
+        circuitFired = true;
+        stopReason   = `profit_target_hit (+₹${realizedPnl.toFixed(0)} ≥ +₹${profit_target})`;
+      } else if (loss_limit != null && realizedPnl <= -loss_limit) {
+        circuitFired = true;
+        stopReason   = `loss_limit_hit (-₹${Math.abs(realizedPnl).toFixed(0)} ≥ -₹${loss_limit})`;
+      }
+
+      if (circuitFired) {
+        const rawEnc   = req.headers['x-kite-enctoken'] || '';
+        const enctoken = rawEnc ? decodeURIComponent(rawEnc) : (process.env.KITE_ENCTOKEN || '');
+        const cancelled = [];
+
+        for (const trade of autoOpen) {
+          // Cancel GTT so no automatic exit fires
+          if (trade.trigger_id && enctoken) {
+            try { await cancelGTT(trade.trigger_id, enctoken); cancelled.push(trade.trigger_id); } catch { /* best-effort */ }
+          }
+          // Mark trade cancelled (user must exit the position manually)
+          await updateTrade(trade.id, { status: 'cancelled', exit_reason: 'circuit_breaker', closed_at: new Date().toISOString() });
+        }
+
+        const stopped = { ...session, status: 'stopped', realized_pnl: realizedPnl, stopped_at: new Date().toISOString(), stop_reason: stopReason };
+        await redisSet('auto:session', stopped, 24 * 60 * 60).catch(() => {});
+        return res.status(200).json({ monitored: true, circuit_fired: true, stop_reason: stopReason, gtts_cancelled: cancelled.length, realized_pnl: realizedPnl });
+      }
+
+      // Normal check-in — update P&L in session
+      await redisSet('auto:session', { ...session, realized_pnl: realizedPnl }, 24 * 60 * 60).catch(() => {});
+      return res.status(200).json({ monitored: true, circuit_fired: false, realized_pnl: realizedPnl, open_trades: autoOpen.length });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // ── Session Stop — manual kill switch ─────────────────────────────────────────
+  // POST /api/orders?action=session_stop
+  // Header: X-Kite-Enctoken (required to cancel GTTs)
+  if (action === 'session_stop') {
+    if (req.method !== 'POST') { res.status(405).end(); return; }
+    try {
+      const session = await redisGet('auto:session').catch(() => null);
+      if (!session || !['active', 'no_signals', 'no_opportunities', 'no_plans', 'no_trades'].includes(session.status)) {
+        return res.status(404).json({ error: 'No stoppable session found' });
+      }
+
+      const rawEnc   = req.headers['x-kite-enctoken'] || '';
+      const enctoken = rawEnc ? decodeURIComponent(rawEnc) : '';
+      const autoOpen = await listTrades('open').then(ts => ts.filter(t => t.source === 'auto_session'));
+      const cancelled = [];
+
+      for (const trade of autoOpen) {
+        if (trade.trigger_id && enctoken) {
+          try { await cancelGTT(trade.trigger_id, enctoken); cancelled.push(trade.trigger_id); } catch { /* best-effort */ }
+        }
+        await updateTrade(trade.id, { status: 'cancelled', exit_reason: 'manual_stop', closed_at: new Date().toISOString() });
+      }
+
+      const stopped = { ...session, status: 'stopped', stopped_at: new Date().toISOString(), stop_reason: 'manual_stop' };
+      await redisSet('auto:session', stopped, 24 * 60 * 60).catch(() => {});
+      return res.status(200).json({ ok: true, gtts_cancelled: cancelled.length, trades_cancelled: autoOpen.length });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
     }
   }
 
