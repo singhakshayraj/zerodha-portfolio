@@ -22,7 +22,7 @@
     .topnav-links{display:flex;gap:var(--sp-7);align-items:center}
     .topnav-links a{font-size:13px;color:var(--text-tertiary);text-decoration:none;transition:color .15s}
     .topnav-links a:hover,.topnav-links a.active{color:var(--text-primary)}
-    .theme-btn{background:none;border:1px solid var(--border-subtle);border-radius:5px;color:var(--text-secondary);cursor:pointer;font-size:12px;padding:4px 10px;display:flex;align-items:center;gap:5px;transition:border-color .15s,color .15s}
+    .theme-btn{border-radius:var(--radius-md);font-size:var(--text-sm)}
     .theme-btn:hover{border-color:var(--border-strong);color:var(--text-primary)}
     @media(max-width:900px){.topnav{padding:0 16px}.topnav-links{gap:14px}}
     @media(max-width:640px){.topnav-links .hide-mobile{display:none}}
@@ -60,6 +60,7 @@
     /* PORTFOLIO GRID */
     .portfolio-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-5)}
     @media(max-width:720px){.portfolio-grid{grid-template-columns:1fr}}
+    @media(max-width:480px){.search-input{font-size:var(--text-md)}.detail-body{gap:var(--sp-4)}.score-section{flex-direction:column}}
 
     /* HOLDING CARD */
     .holding-card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:16px;cursor:pointer;transition:border-color .18s,background .18s}
@@ -102,8 +103,8 @@
     .search-exch{font-size:10px;color:var(--text-tertiary);background:var(--bg-hover);padding:2px 6px;border-radius:3px}
 
     /* DETAIL VIEW */
-    .detail-view{display:none;margin-top:16px;animation:fadeIn .2s ease}
-    .detail-view.visible{display:block}
+    .detail-view{display:none;margin-top:16px}
+    .detail-view.visible{display:block;animation:popIn .2s ease}
     
 
     /* DETAIL HEADER */
@@ -280,7 +281,7 @@
     <a href="/trades" class="hide-mobile">Journal</a>
     <a href="/fundamental" class="active">Fundamental</a>
     <a href="/technical" class="hide-mobile">Technical</a>
-    <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+    <button class="btn btn-ghost btn-sm theme-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
       <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       <svg id="theme-icon-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <span id="theme-label">Light</span>
@@ -810,6 +811,7 @@ async function loadPortfolio(){
     return;
   }
   document.getElementById('portfolio-loading').style.display='block';
+  document.getElementById('portfolio-grid-wrap').innerHTML=`<div class="portfolio-grid">${Array(6).fill('<div class="holding-card skeleton" style="height:140px"></div>').join('')}</div>`;
   try{
     const results = await analyzePortfolio(enc);
     document.getElementById('portfolio-loading').style.display='none';

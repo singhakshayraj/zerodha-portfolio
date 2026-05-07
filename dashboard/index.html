@@ -110,6 +110,12 @@
       .section { overflow-x: auto; }
       table { min-width: 480px; font-size: var(--text-sm); }
     }
+    @media (max-width: 480px) {
+      .cards { grid-template-columns: 1fr; }
+      .stock-grid { grid-template-columns: 1fr; }
+      header { padding: 14px 12px; }
+      .container { padding: 10px 12px; }
+    }
   </style>
 
 <script>

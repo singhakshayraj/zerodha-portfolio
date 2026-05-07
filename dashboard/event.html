@@ -11,40 +11,40 @@
   <title>Event Plays — Portfolio Intelligence</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-ui);font-size:14px;line-height:1.5}
+    body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-ui);font-size:var(--text-md);line-height:1.5}
     a{color:var(--accent);text-decoration:none}
     a:hover{text-decoration:underline}
 
     /* NAV */
     .topnav{background:var(--bg-surface);border-bottom:1px solid var(--border-dim);padding:0 var(--sp-9);display:flex;align-items:center;justify-content:space-between;height:48px;position:sticky;top:0;z-index:100}
-    .topnav-brand{font-size:14px;font-weight:700;color:var(--text-primary);text-decoration:none;letter-spacing:.02em}
+    .topnav-brand{font-size:var(--text-md);font-weight:700;color:var(--text-primary);text-decoration:none;letter-spacing:.02em}
     .topnav-links{display:flex;gap:var(--sp-7)}
-    .topnav-links a{font-size:13px;color:var(--text-tertiary);text-decoration:none;transition:color .15s}
+    .topnav-links a{font-size:var(--text-md);color:var(--text-tertiary);text-decoration:none;transition:color .15s}
     .topnav-links a:hover,.topnav-links a.active{color:var(--text-primary)}
     @media(max-width:640px){.topnav{padding:0 16px}.topnav-links{gap:var(--sp-5)}}
 
     /* LAYOUT */
     .page{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
     .page-header{margin-bottom:var(--sp-6)}
-    .page-header h1{font-size:22px;font-weight:700;color:var(--text-primary)}
-    .page-header p{color:var(--text-secondary);margin-top:4px;font-size:13px}
+    .page-header h1{font-size:var(--text-2xl);font-weight:700;color:var(--text-primary)}
+    .page-header p{color:var(--text-secondary);margin-top:4px;font-size:var(--text-md)}
 
     /* CARDS */
     .card{background:var(--bg-elevated);border:1px solid var(--border-dim);border-radius:var(--radius-lg);padding:16px}
-    .card-title{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    .card-title{font-size:var(--text-sm);font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
 
     /* EVENT HEADER */
     .event-header{background:linear-gradient(135deg,var(--bg-elevated) 0%,var(--bg-card) 100%);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:20px;margin-bottom:var(--sp-6)}
-    .event-name{font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:6px}
+    .event-name{font-size:var(--text-xl);font-weight:700;color:var(--text-primary);margin-bottom:6px}
     .event-meta{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:10px}
-    .event-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-hover);border:1px solid var(--border-subtle);border-radius:4px;padding:4px 10px;font-size:12px;color:var(--text-secondary)}
+    .event-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-hover);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:4px 10px;font-size:var(--text-base);color:var(--text-secondary)}
     .event-chip.highlight{border-color:var(--warning-text);color:var(--warning-text)}
-    .event-note{font-size:12px;color:var(--text-tertiary);margin-top:6px}
+    .event-note{font-size:var(--text-base);color:var(--text-tertiary);margin-top:6px}
 
     /* BRAIN STRIP */
-    .brain-strip{display:flex;flex-wrap:wrap;gap:var(--sp-3);padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:6px;margin-bottom:var(--sp-5);align-items:center}
-    .brain-strip .label{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
-    .brain-tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+    .brain-strip{display:flex;flex-wrap:wrap;gap:var(--sp-3);padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-md);margin-bottom:var(--sp-5);align-items:center}
+    .brain-strip .label{font-size:var(--text-sm);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+    .brain-tag{font-size:var(--text-base);font-weight:600;padding:2px 8px;border-radius:var(--radius-sm)}
     .brain-tag.bullish{background:var(--positive-dim);color:var(--positive)}
     .brain-tag.bearish{background:var(--negative-dim);color:var(--negative)}
     .brain-tag.neutral{background:var(--warning-dim);color:var(--warning-text)}
@@ -53,12 +53,12 @@
 
     /* SCENARIO TABS */
     .scenario-tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-6);flex-wrap:wrap}
-    .scenario-tab{padding:8px 16px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s}
+    .scenario-tab{padding:8px 16px;border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--bg-elevated);color:var(--text-secondary);cursor:pointer;font-size:var(--text-md);font-weight:500;transition:all .15s}
     .scenario-tab:hover{border-color:var(--text-disabled);color:var(--text-primary)}
     .scenario-tab.active{border-color:var(--accent);color:var(--text-primary);background:var(--accent-dim);box-shadow:0 0 0 1px var(--accent);font-weight:700}
     .scenario-tab.active.bearish{border-color:var(--negative);color:var(--negative);background:var(--negative-dim);box-shadow:0 0 0 1px var(--negative);font-weight:700}
     .scenario-tab.active.mixed{border-color:var(--warning-text);color:var(--warning-text);background:var(--warning-dim);box-shadow:0 0 0 1px var(--warning-text);font-weight:700}
-    .market-tone{font-size:12px;color:var(--text-tertiary);margin-bottom:var(--sp-6);padding:8px 12px;background:var(--bg-surface);border-left:3px solid var(--border-subtle);border-radius:0 4px 4px 0}
+    .market-tone{font-size:var(--text-base);color:var(--text-tertiary);margin-bottom:var(--sp-6);padding:8px 12px;background:var(--bg-surface);border-left:3px solid var(--border-subtle);border-radius:0 4px 4px 0}
 
     /* TWO-COL LAYOUT */
     .two-col{display:grid;grid-template-columns:300px 1fr;gap:var(--sp-5);margin-bottom:var(--sp-6)}
@@ -66,18 +66,18 @@
 
     /* HISTORICAL TABLES */
     .hist-section{margin-bottom:14px}
-    .hist-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-disabled);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border-dim)}
+    .hist-section-title{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-disabled);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border-dim)}
     .hist-table{width:100%;border-collapse:collapse}
-    .hist-table th{color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:5px 7px;border-bottom:1px solid var(--border-dim);text-align:left;white-space:nowrap}
-    .hist-table td{padding:6px 7px;border-bottom:1px solid var(--bg-base);vertical-align:top;font-size:11px}
+    .hist-table th{color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;font-size:var(--text-xs);padding:5px 7px;border-bottom:1px solid var(--border-dim);text-align:left;white-space:nowrap}
+    .hist-table td{padding:6px 7px;border-bottom:1px solid var(--bg-base);vertical-align:top;font-size:var(--text-sm)}
     .hist-table tr:last-child td{border-bottom:none}
     .hist-table .pct{font-weight:700;white-space:nowrap}
     .hist-table .pct.pos{color:var(--positive)}
     .hist-table .pct.neg{color:var(--negative)}
-    .hist-table .type-badge{font-size:9px;padding:1px 4px;border-radius:3px;background:var(--bg-hover);color:var(--text-secondary);white-space:nowrap}
+    .hist-table .type-badge{font-size:var(--text-xs);padding:1px 4px;border-radius:var(--radius-sm);background:var(--bg-hover);color:var(--text-secondary);white-space:nowrap}
     .hist-table .type-badge.exit_poll{background:var(--accent-dim);color:var(--accent)}
     .hist-table .outcome-cell{color:var(--text-secondary);max-width:130px;line-height:1.3}
-    .hist-table .top-sector{font-size:9px;color:var(--text-tertiary);margin-top:2px}
+    .hist-table .top-sector{font-size:var(--text-xs);color:var(--text-tertiary);margin-top:2px}
 
     /* SECTOR GRID — 3 col, wraps for 4-5 */
     .sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4);margin-bottom:var(--sp-6)}
@@ -87,75 +87,75 @@
     .sector-card.high{border-color:oklch(65% 0.18 165 / 0.3)}
     .sector-card.medium{border-color:oklch(75% 0.16 75 / 0.3)}
     .sector-card.low{border-color:var(--border-subtle)}
-    .sector-name{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px}
-    .sector-move{font-size:22px;font-weight:700;margin-bottom:6px}
+    .sector-name{font-size:var(--text-md);font-weight:600;color:var(--text-primary);margin-bottom:4px}
+    .sector-move{font-size:var(--text-2xl);font-weight:700;margin-bottom:6px}
     .sector-move.pos{color:var(--positive)}
     .sector-move.neg{color:var(--negative)}
-    .sector-confidence{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px;display:inline-block;margin-bottom:8px}
+    .sector-confidence{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:var(--radius-sm);display:inline-block;margin-bottom:8px}
     .conf-high{background:var(--positive-dim);color:var(--positive)}
     .conf-medium{background:var(--warning-dim);color:var(--warning-text)}
     .conf-low{background:var(--bg-hover);color:var(--text-tertiary)}
-    .sector-rationale{font-size:11px;color:var(--text-tertiary);margin-bottom:10px;line-height:1.4}
+    .sector-rationale{font-size:var(--text-sm);color:var(--text-tertiary);margin-bottom:10px;line-height:1.4}
     .sector-stocks{display:flex;flex-direction:column;gap:3px}
-    .sector-stock{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 6px;border-radius:4px;background:var(--bg-surface);cursor:pointer;transition:background .12s}
+    .sector-stock{display:flex;justify-content:space-between;align-items:center;font-size:var(--text-base);padding:4px 6px;border-radius:var(--radius-sm);background:var(--bg-surface);cursor:pointer;transition:background .12s}
     .sector-stock:hover{background:var(--bg-hover)}
     .sector-stock .sym{font-weight:600;color:var(--text-primary)}
     .sector-stock .sym.brain{color:var(--accent)}
-    .sector-stock .move{font-weight:600;font-size:11px}
+    .sector-stock .move{font-weight:600;font-size:var(--text-sm)}
     .sector-stock .move.pos{color:var(--positive)}
     .sector-stock .move.neg{color:var(--negative)}
-    .brain-badge{font-size:9px;font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);padding:1px 4px;border-radius:3px;margin-left:4px;opacity:.7}
-    .why-hint{font-size:9px;color:var(--text-disabled);margin-left:4px}
+    .brain-badge{font-size:var(--text-xs);font-weight:600;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);padding:1px 4px;border-radius:var(--radius-sm);margin-left:4px;opacity:.7}
+    .why-hint{font-size:var(--text-xs);color:var(--text-disabled);margin-left:4px}
 
     /* PICKS TABLE */
     .picks-table{width:100%;border-collapse:collapse}
-    .picks-table th{color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding:8px 10px;border-bottom:1px solid var(--border-dim);text-align:left;white-space:nowrap}
+    .picks-table th{color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;font-size:var(--text-xs);padding:8px 10px;border-bottom:1px solid var(--border-dim);text-align:left;white-space:nowrap}
     .picks-table td{padding:9px 10px;border-bottom:1px solid var(--bg-elevated);vertical-align:middle}
     .picks-table tr:last-child td{border-bottom:none}
     .picks-table tr.pick-row{cursor:pointer}
     .picks-table tr.pick-row:hover td{background:var(--bg-base)}
-    .rank-num{font-size:12px;color:var(--text-disabled);font-weight:600;width:24px}
-    .sym-cell{font-weight:700;font-size:13px;color:var(--text-primary)}
-    .sym-cell small{display:block;font-size:10px;font-weight:400;color:var(--text-tertiary);margin-top:1px}
-    .dir-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px}
+    .rank-num{font-size:var(--text-base);color:var(--text-disabled);font-weight:600;width:24px}
+    .sym-cell{font-weight:700;font-size:var(--text-md);color:var(--text-primary)}
+    .sym-cell small{display:block;font-size:var(--text-xs);font-weight:400;color:var(--text-tertiary);margin-top:1px}
+    .dir-badge{font-size:var(--text-xs);font-weight:600;padding:2px 7px;border-radius:var(--radius-sm)}
     .dir-long{background:var(--positive-dim);color:var(--positive)}
     .dir-short{background:var(--negative-dim);color:var(--negative)}
     .dir-neutral{background:var(--bg-hover);color:var(--text-tertiary)}
-    .hist-pct{font-weight:700;font-size:12px}
+    .hist-pct{font-weight:700;font-size:var(--text-base)}
     .hist-pct.pos{color:var(--positive)}
     .hist-pct.neg{color:var(--negative)}
-    .score-cell{font-weight:700;font-size:13px}
+    .score-cell{font-weight:700;font-size:var(--text-md)}
     .score-cell.high{color:var(--positive)}
     .score-cell.med{color:var(--warning-text)}
     .score-cell.low{color:var(--text-tertiary)}
     .score-cell.neg{color:var(--negative)}
-    .conv-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:3px}
+    .conv-badge{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:var(--radius-sm)}
     .conv-high{background:var(--positive-dim);color:var(--positive)}
     .conv-medium{background:var(--bg-hover);color:var(--text-secondary)}
     .conv-low{background:var(--bg-hover);color:var(--text-tertiary)}
-    .llm-cell{font-size:11px;color:var(--text-secondary);max-width:200px}
-    .llm-cell .llm-verdict{font-weight:700;font-size:10px;padding:1px 5px;border-radius:3px;margin-right:5px}
+    .llm-cell{font-size:var(--text-sm);color:var(--text-secondary);max-width:200px}
+    .llm-cell .llm-verdict{font-weight:700;font-size:var(--text-xs);padding:1px 5px;border-radius:var(--radius-sm);margin-right:5px}
     .llm-cell .llm-verdict.BUY{background:var(--positive-dim);color:var(--positive)}
     .llm-cell .llm-verdict.HOLD{background:var(--bg-hover);color:var(--text-secondary)}
     .llm-cell .llm-verdict.AVOID{background:var(--negative-dim);color:var(--negative)}
-    .llm-cell .llm-reason{color:var(--text-tertiary);font-size:10px}
+    .llm-cell .llm-reason{color:var(--text-tertiary);font-size:var(--text-xs)}
     .llm-cell.analyzing{color:var(--text-disabled);font-style:italic;animation:pulse 1.5s infinite}
     .brain-score-val{color:var(--accent);font-weight:600}
 
     /* RATIONALE ROW */
     .rationale-row td{padding:0!important;overflow:hidden;transition:max-height .2s ease}
-    .rationale-content{padding:8px 12px 10px 36px;background:var(--bg-base);border-bottom:1px solid var(--border-dim);font-size:12px;color:var(--text-secondary);line-height:1.5}
-    .rationale-content .why-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-disabled);margin-bottom:3px}
+    .rationale-content{padding:8px 12px 10px 36px;background:var(--bg-base);border-bottom:1px solid var(--border-dim);font-size:var(--text-base);color:var(--text-secondary);line-height:1.5}
+    .rationale-content .why-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-disabled);margin-bottom:3px}
     .rationale-content .why-text{color:var(--text-secondary)}
 
     /* STOCK RATIONALE TOOLTIP (sector cards) */
-    .stock-tooltip{position:fixed;z-index:200;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:6px;padding:10px 14px;max-width:280px;font-size:12px;color:var(--text-secondary);line-height:1.5;box-shadow:var(--shadow-md);pointer-events:none;display:none}
-    .stock-tooltip .tt-sym{font-weight:700;font-size:13px;color:var(--text-primary);margin-bottom:4px}
+    .stock-tooltip{position:fixed;z-index:200;background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:10px 14px;max-width:280px;font-size:var(--text-base);color:var(--text-secondary);line-height:1.5;box-shadow:var(--shadow-md);pointer-events:none;display:none}
+    .stock-tooltip .tt-sym{font-weight:700;font-size:var(--text-md);color:var(--text-primary);margin-bottom:4px}
     .stock-tooltip .tt-why{color:var(--text-secondary)}
 
     /* CONTROLS */
     .controls{display:flex;gap:10px;align-items:center;margin-bottom:var(--sp-6);flex-wrap:wrap}
-    .btn{padding:7px 14px;border-radius:5px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+    .btn{padding:7px 14px;border-radius:var(--radius-md);font-size:var(--text-md);font-weight:500;cursor:pointer;border:none;transition:all .15s}
     .btn-refresh{background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border-subtle)}
     .btn-refresh:hover{background:var(--bg-active);color:var(--text-primary)}
     .btn-refresh.loading{opacity:.6;pointer-events:none}
@@ -166,9 +166,9 @@
     
 
     /* LIVE AI SECTION */
-    .live-summary{font-size:13px;color:var(--text-secondary);line-height:1.6;padding:10px 14px;background:var(--bg-base);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;margin-bottom:var(--sp-5)}
-    .live-risk{font-size:12px;color:var(--warning-text);background:var(--warning-dim);border:1px solid var(--warning-text);border-radius:4px;padding:8px 12px;margin-bottom:var(--sp-5)}
-    .live-risk .risk-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warning-text);margin-bottom:3px}
+    .live-summary{font-size:var(--text-md);color:var(--text-secondary);line-height:1.6;padding:10px 14px;background:var(--bg-base);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;margin-bottom:var(--sp-5)}
+    .live-risk{font-size:var(--text-base);color:var(--warning-text);background:var(--warning-dim);border:1px solid var(--warning-text);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:var(--sp-5)}
+    .live-risk .risk-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--warning-text);margin-bottom:3px}
     .live-sector-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4)}
     @media(max-width:900px){.live-sector-grid{grid-template-columns:repeat(2,1fr)}}
     @media(max-width:540px){.live-sector-grid{grid-template-columns:1fr}}
@@ -176,30 +176,30 @@
     .live-sector-card.bullish{border-color:oklch(65% 0.18 165 / 0.3)}
     .live-sector-card.bearish{border-color:oklch(62% 0.20 20 / 0.3)}
     .live-sector-card.neutral{border-color:var(--border-subtle)}
-    .live-sector-name{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
-    .live-sector-thesis{font-size:11px;color:var(--text-tertiary);line-height:1.4;margin-bottom:10px}
-    .live-stock{padding:7px 8px;border-radius:4px;background:var(--bg-elevated);margin-bottom:4px;cursor:pointer}
+    .live-sector-name{font-size:var(--text-md);font-weight:700;color:var(--text-primary);margin-bottom:4px}
+    .live-sector-thesis{font-size:var(--text-sm);color:var(--text-tertiary);line-height:1.4;margin-bottom:10px}
+    .live-stock{padding:7px 8px;border-radius:var(--radius-sm);background:var(--bg-elevated);margin-bottom:4px;cursor:pointer;transition:background .12s}
     .live-stock:hover{background:var(--bg-hover)}
     .live-stock-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
-    .live-stock-sym{font-weight:700;font-size:13px;color:var(--text-primary)}
-    .live-stock-move.pos{color:var(--positive);font-weight:700;font-size:12px}
-    .live-stock-move.neg{color:var(--negative);font-weight:700;font-size:12px}
-    .live-stock-move.neutral{color:var(--text-secondary);font-weight:700;font-size:12px}
-    .live-stock-name{font-size:10px;color:var(--text-disabled);margin-bottom:4px}
-    .live-stock-rationale{font-size:11px;color:var(--text-tertiary);line-height:1.4;display:none}
+    .live-stock-sym{font-weight:700;font-size:var(--text-md);color:var(--text-primary)}
+    .live-stock-move.pos{color:var(--positive);font-weight:700;font-size:var(--text-base)}
+    .live-stock-move.neg{color:var(--negative);font-weight:700;font-size:var(--text-base)}
+    .live-stock-move.neutral{color:var(--text-secondary);font-weight:700;font-size:var(--text-base)}
+    .live-stock-name{font-size:var(--text-xs);color:var(--text-disabled);margin-bottom:4px}
+    .live-stock-rationale{font-size:var(--text-sm);color:var(--text-tertiary);line-height:1.4;display:none}
     .live-stock.expanded .live-stock-rationale{display:block}
     .live-stock.expanded{background:var(--bg-hover)}
-    .live-conv{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase}
+    .live-conv{font-size:var(--text-xs);font-weight:700;padding:1px 5px;border-radius:var(--radius-sm);text-transform:uppercase}
     .live-conv.high{background:var(--positive-dim);color:var(--positive)}
     .live-conv.medium{background:var(--bg-hover);color:var(--text-secondary)}
     .live-conv.low{background:var(--bg-hover);color:var(--text-tertiary)}
     /* QUANT CONTEXT PANEL */
-    .quant-panel{background:var(--bg-base);border:1px solid var(--border-dim);border-radius:6px;padding:14px;margin-bottom:var(--sp-5);display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4)}
+    .quant-panel{background:var(--bg-base);border:1px solid var(--border-dim);border-radius:var(--radius-md);padding:14px;margin-bottom:var(--sp-5);display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-4)}
     @media(max-width:640px){.quant-panel{grid-template-columns:1fr}}
-    .quant-block .qb-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-disabled);margin-bottom:6px}
-    .prob-row{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:4px;font-size:11px}
-    .prob-bar-wrap{flex:1;height:5px;background:var(--bg-hover);border-radius:3px;overflow:hidden}
-    .prob-bar{height:100%;border-radius:3px;transition:width .3s}
+    .quant-block .qb-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-disabled);margin-bottom:6px}
+    .prob-row{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:4px;font-size:var(--text-sm)}
+    .prob-bar-wrap{flex:1;height:5px;background:var(--bg-hover);border-radius:var(--radius-sm);overflow:hidden}
+    .prob-bar{height:100%;border-radius:var(--radius-sm);transition:width .3s}
     .prob-bar.bullish{background:var(--positive)}
     .prob-bar.mixed{background:var(--warning-text)}
     .prob-bar.bearish{background:var(--negative)}
@@ -208,29 +208,29 @@
     .regime-mult.compress{color:var(--negative)}
     .regime-mult.neutral{color:var(--text-secondary)}
     .regime-tags{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
-    .ev-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid var(--bg-surface)}
+    .ev-row{display:flex;justify-content:space-between;align-items:center;font-size:var(--text-sm);padding:3px 0;border-bottom:1px solid var(--bg-surface)}
     .ev-row:last-child{border-bottom:none}
-    .ev-val{font-weight:700;font-size:12px}
+    .ev-val{font-weight:700;font-size:var(--text-base)}
     .ev-val.pos{color:var(--positive)}
     .ev-val.neg{color:var(--negative)}
     .ev-val.flat{color:var(--text-secondary)}
     .ev-bar-wrap{width:50px;height:4px;background:var(--bg-hover);border-radius:2px;display:inline-block;vertical-align:middle;margin-left:4px}
     .ev-bar{height:100%;border-radius:2px}
-    .live-generating{text-align:center;padding:32px;color:var(--text-disabled);font-size:13px}
+    .live-generating{text-align:center;padding:32px;color:var(--text-disabled);font-size:var(--text-md)}
     .live-generating .spin{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
     
-    .live-ai-badge{font-size:10px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);padding:2px 7px;opacity:.8;border-radius:3px;margin-left:6px;vertical-align:middle}
-    .live-cached-note{font-size:11px;color:var(--text-disabled);margin-top:8px;text-align:right}
+    .live-ai-badge{font-size:var(--text-xs);background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);padding:2px 7px;opacity:.8;border-radius:var(--radius-sm);margin-left:6px;vertical-align:middle}
+    .live-cached-note{font-size:var(--text-sm);color:var(--text-disabled);margin-top:8px;text-align:right}
 
     /* DISCLAIMER */
-    .disclaimer{margin-top:24px;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:6px;font-size:11px;color:var(--text-disabled);line-height:1.5}
+    .disclaimer{margin-top:24px;padding:10px 14px;background:var(--bg-surface);border:1px solid var(--border-dim);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--text-disabled);line-height:1.5}
 
     /* SECTION LABEL */
-    .section-label{font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+    .section-label{font-size:var(--text-sm);font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
 
     /* LOADING STATE */
-    .loading-row{text-align:center;padding:40px;color:var(--text-disabled);font-size:13px}
-    .error-row{text-align:center;padding:24px;color:var(--negative);font-size:13px}
+    .loading-row{text-align:center;padding:40px;color:var(--text-disabled);font-size:var(--text-md)}
+    .error-row{text-align:center;padding:24px;color:var(--negative);font-size:var(--text-md)}
   </style>
 
 <script>
@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <a href="/fundamental">Fundamental</a>
     <a href="/technical">Technical</a>
   </div>
-    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">
+    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
       <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <svg id="theme-icon-sun" width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span id="theme-label">Light</span>
@@ -302,8 +302,8 @@ document.addEventListener('DOMContentLoaded',function(){
 
   <!-- Controls + Scenario Tabs -->
   <div class="controls">
-    <button class="btn btn-refresh" id="btnRefresh" onclick="loadEventPlays()">↻ Refresh</button>
-    <span id="statusLabel" style="font-size:12px;color:var(--text-secondary)">Loading…</span>
+    <button class="btn btn-refresh" id="btnRefresh" onclick="loadEventPlays()" aria-label="Refresh event plays">↻ Refresh</button>
+    <span id="statusLabel" style="font-size:var(--text-base);color:var(--text-secondary)">Loading…</span>
   </div>
 
   <div class="scenario-tabs" id="scenarioTabs">
@@ -333,7 +333,9 @@ document.addEventListener('DOMContentLoaded',function(){
             </tr>
           </thead>
           <tbody id="histGeneralBody">
-            <tr><td colspan="4" style="color:var(--text-tertiary);font-size:11px;padding:8px">Loading…</td></tr>
+            <tr><td colspan="4"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
+            <tr><td colspan="4"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
+            <tr><td colspan="4"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -350,7 +352,9 @@ document.addEventListener('DOMContentLoaded',function(){
             </tr>
           </thead>
           <tbody id="histStateBody">
-            <tr><td colspan="3" style="color:var(--text-tertiary);font-size:11px;padding:8px">Loading…</td></tr>
+            <tr><td colspan="3"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
+            <tr><td colspan="3"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
+            <tr><td colspan="3"><div class="skeleton" style="height:11px;margin:4px 0"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -368,7 +372,7 @@ document.addEventListener('DOMContentLoaded',function(){
   <!-- Top 10 Picks -->
   <div class="card">
     <div class="card-title">Top 10 Stock Picks — <span id="picksScenarioLabel"></span>
-      <span style="color:var(--text-tertiary);font-weight:400;font-size:10px;margin-left:6px">Click row for selection rationale</span>
+      <span style="color:var(--text-tertiary);font-weight:400;font-size:var(--text-xs);margin-left:6px">Click row for selection rationale</span>
     </div>
     <div style="overflow-x:auto">
       <table class="picks-table">
@@ -379,7 +383,7 @@ document.addEventListener('DOMContentLoaded',function(){
             <th>Sector</th>
             <th>Dir</th>
             <th>Hist%</th>
-            <th>Score <span style="color:var(--text-tertiary);font-weight:400;font-size:9px">H40·AI35·B25</span></th>
+            <th>Score <span style="color:var(--text-tertiary);font-weight:400;font-size:var(--text-xs)">H40·AI35·B25</span></th>
             <th>Conviction</th>
             <th>AI Analysis <span id="llmStatus" style="color:var(--text-tertiary);font-weight:400">pending…</span></th>
           </tr>
@@ -396,9 +400,9 @@ document.addEventListener('DOMContentLoaded',function(){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px">
       <div>
         <div class="card-title" style="margin-bottom:2px">⚡ Live AI Intelligence
-          <span style="font-size:10px;color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">AI generates fresh sector + stock picks at runtime using financial reasoning</span>
+          <span style="font-size:var(--text-xs);color:var(--text-tertiary);font-weight:400;text-transform:none;letter-spacing:0;margin-left:8px">AI generates fresh sector + stock picks at runtime using financial reasoning</span>
         </div>
-        <div style="font-size:11px;color:var(--text-tertiary)" id="liveIntelMeta">Not yet generated for this scenario.</div>
+        <div style="font-size:var(--text-sm);color:var(--text-tertiary)" id="liveIntelMeta">Not yet generated for this scenario.</div>
       </div>
       <button class="btn" id="btnLiveIntel" onclick="generateLiveIntel()"
         style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--border-subtle);white-space:nowrap">
@@ -530,7 +534,7 @@ document.addEventListener('DOMContentLoaded',function(){
       if (!sub) {
         sub = document.createElement('div');
         sub.id = 'eventSubtitle';
-        sub.style.cssText = 'font-size:12px;color:var(--accent);margin-bottom:8px;font-weight:500;';
+        sub.style.cssText = 'font-size:var(--text-base);color:var(--accent);margin-bottom:8px;font-weight:500;';
         document.getElementById('eventName').after(sub);
       }
       sub.textContent = ev.subtitle;
@@ -593,8 +597,8 @@ document.addEventListener('DOMContentLoaded',function(){
           <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
           <td class="outcome-cell">
             ${topSectors ? `<div class="top-sector">${topSectors}</div>` : ''}
-            <div style="color:var(--text-secondary);font-size:10px;margin-top:1px">${e.notes.length > 55 ? e.notes.slice(0,55)+'…' : e.notes}</div>
-            ${e.recovery_3d ? `<div style="color:var(--positive);font-size:9px">+${e.recovery_3d}% 3d recovery</div>` : ''}
+            <div style="color:var(--text-secondary);font-size:var(--text-xs);margin-top:1px">${e.notes.length > 55 ? e.notes.slice(0,55)+'…' : e.notes}</div>
+            ${e.recovery_3d ? `<div style="color:var(--positive);font-size:var(--text-xs)">+${e.recovery_3d}% 3d recovery</div>` : ''}
           </td>
         </tr>`;
       }).join('');
@@ -614,7 +618,7 @@ document.addEventListener('DOMContentLoaded',function(){
           <td><strong style="color:var(--text-primary)">${e.year}</strong></td>
           <td><span class="pct ${pctClass}">${sign}${e.nifty_change}%</span></td>
           <td class="outcome-cell">
-            <div style="color:var(--text-secondary);font-size:11px">${e.outcome.length > 50 ? e.outcome.slice(0,50)+'…' : e.outcome}</div>
+            <div style="color:var(--text-secondary);font-size:var(--text-sm)">${e.outcome.length > 50 ? e.outcome.slice(0,50)+'…' : e.outcome}</div>
             ${topSectors ? `<div class="top-sector" style="margin-top:2px">${topSectors}</div>` : ''}
           </td>
         </tr>`;
@@ -675,7 +679,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="sector-stocks">${visibleRows}</div>
         ${hiddenRows ? `
           <div class="sector-stocks" id="extra-${sectorId}" style="display:none;margin-top:3px">${hiddenRows}</div>
-          <div style="font-size:10px;color:var(--accent);margin-top:6px;cursor:pointer;user-select:none"
+          <div style="font-size:var(--text-xs);color:var(--accent);margin-top:6px;cursor:pointer;user-select:none"
             onclick="const el=document.getElementById('extra-${sectorId}');const hidden=el.style.display==='none';el.style.display=hidden?'flex':'none';this.textContent=hidden?'▲ show less':'▼ +${s.stocks.length-7} more stocks'">
             ▼ +${s.stocks.length-7} more stocks
           </div>` : ''}
@@ -716,9 +720,9 @@ document.addEventListener('DOMContentLoaded',function(){
       return `<tr class="pick-row" id="row-${p.symbol}" onclick="toggleRationale('${p.symbol}', ${JSON.stringify(rationaleMap[p.symbol]?.rationale || p.rationale || '')})">
         <td class="rank-num">${i+1}</td>
         <td class="sym-cell">${p.symbol}${brainHtml ? ' '+brainHtml : ''}
-          <small>${p.name || ''}${hasRationale ? ' <span style="color:var(--text-tertiary);font-size:9px">▾ why</span>' : ''}</small>
+          <small>${p.name || ''}${hasRationale ? ' <span style="color:var(--text-tertiary);font-size:var(--text-xs)">▾ why</span>' : ''}</small>
         </td>
-        <td style="font-size:11px;color:var(--text-secondary)">${p.sector}</td>
+        <td style="font-size:var(--text-sm);color:var(--text-secondary)">${p.sector}</td>
         <td><span class="dir-badge ${dirClass}">${dirLabel}</span></td>
         <td class="hist-pct ${pctClass}">${sign}${p.avg_move}%</td>
         <td class="score-cell ${scoreCls}" id="score-${p.symbol}">${score.toFixed(1)}</td>
@@ -792,7 +796,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
     btn.disabled = true;
     btn.textContent = '⏳ Generating…';
-    body.innerHTML = `<div class="live-generating"><span class="spin">⚡</span>AI is analysing ${data.scenario_label} — generating sectors, stocks, and financial rationale…<br><span style="font-size:11px;margin-top:6px;display:block">Usually takes 8-15 seconds.</span></div>`;
+    body.innerHTML = `<div class="live-generating"><span class="spin">⚡</span>AI is analysing ${data.scenario_label} — generating sectors, stocks, and financial rationale…<br><span style="font-size:var(--text-sm);margin-top:6px;display:block">Usually takes 8-15 seconds.</span></div>`;
     meta.textContent = 'Generating…';
 
     try {
@@ -812,7 +816,7 @@ document.addEventListener('DOMContentLoaded',function(){
       liveIntelCache[scenario] = result;
       renderLiveIntel(result, scenario);
     } catch (e) {
-      body.innerHTML = `<div style="color:var(--negative);font-size:13px;padding:16px">⚠ Generation failed: ${e.message}</div>`;
+      body.innerHTML = `<div style="color:var(--negative);font-size:var(--text-md);padding:16px">⚠ Generation failed: ${e.message}</div>`;
       meta.textContent = 'Failed.';
     } finally {
       btn.disabled = false;
@@ -841,7 +845,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const rmDir = rm > 1.05 ? '▲ expanding' : rm < 0.90 ? '▼ compressed' : '→ neutral';
     const rc = qc.regime_context || {};
     const regimeTags = [rc.vix_state, rc.sentiment, rc.regime, rc.gift_nifty ? `GIFT:${rc.gift_nifty}` : null]
-      .filter(Boolean).map(t => `<span class="brain-tag default" style="font-size:10px;padding:1px 6px">${t}</span>`).join('');
+      .filter(Boolean).map(t => `<span class="brain-tag default" style="font-size:var(--text-xs);padding:1px 6px">${t}</span>`).join('');
 
     const maxAbsEV = Math.max(...(qc.top_sectors||[]).map(s => Math.abs(s.adj_ev)), 1);
     const evRows = (qc.top_sectors || []).slice(0, 6).map(s => {
@@ -851,11 +855,11 @@ document.addEventListener('DOMContentLoaded',function(){
       const barColor = cls === 'pos' ? 'var(--positive)' : cls === 'neg' ? 'var(--negative)' : 'var(--text-secondary)';
       const cons = Math.round((s.consistency || 0.5) * 100);
       return `<div class="ev-row">
-        <span style="color:var(--text-secondary);font-size:10px;flex:1">${s.name.replace(' & PSU Aerospace','').replace(' — WB Projects Unlocked','').replace(' — WB Corridor','').replace(' — WB Energy','')}</span>
+        <span style="color:var(--text-secondary);font-size:var(--text-xs);flex:1">${s.name.replace(' & PSU Aerospace','').replace(' — WB Projects Unlocked','').replace(' — WB Corridor','').replace(' — WB Energy','')}</span>
         <span class="ev-val ${cls}">${sign}${s.adj_ev}%
           <span class="ev-bar-wrap"><span class="ev-bar" style="width:${barW}%;background:${barColor}"></span></span>
         </span>
-        <span style="color:var(--text-tertiary);font-size:10px;margin-left:6px">${cons}%✓</span>
+        <span style="color:var(--text-tertiary);font-size:var(--text-xs);margin-left:6px">${cons}%✓</span>
       </div>`;
     }).join('');
 
@@ -866,14 +870,14 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
       <div class="quant-block">
         <div class="qb-label">Market Regime</div>
-        <div class="regime-mult ${rmClass}">${rm}x <span style="font-size:12px;font-weight:400">${rmDir}</span></div>
-        <div class="regime-tags">${regimeTags || '<span style="color:var(--text-tertiary);font-size:11px">Brain cache unavailable</span>'}</div>
-        ${qc.regime_context ? '' : '<div style="font-size:10px;color:var(--text-tertiary);margin-top:4px">Using neutral multiplier (1.0x)</div>'}
+        <div class="regime-mult ${rmClass}">${rm}x <span style="font-size:var(--text-base);font-weight:400">${rmDir}</span></div>
+        <div class="regime-tags">${regimeTags || '<span style="color:var(--text-tertiary);font-size:var(--text-sm)">Brain cache unavailable</span>'}</div>
+        ${qc.regime_context ? '' : '<div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:4px">Using neutral multiplier (1.0x)</div>'}
       </div>
       <div class="quant-block">
         <div class="qb-label">Sector EV T+7 (regime-adj)</div>
         ${evRows}
-        <div style="font-size:9px;color:var(--text-tertiary);margin-top:6px">%✓ = historical consistency</div>
+        <div style="font-size:var(--text-xs);color:var(--text-tertiary);margin-top:6px">%✓ = historical consistency</div>
       </div>
     </div>`;
   }
@@ -896,13 +900,13 @@ document.addEventListener('DOMContentLoaded',function(){
     if (result.key_risk || result.regime_note) {
       html += `<div class="live-risk">`;
       if (result.key_risk) html += `<div class="risk-label">⚠ Key Risk</div>${result.key_risk}`;
-      if (result.regime_note) html += `<div style="margin-top:6px;color:var(--text-secondary)"><span style="color:var(--accent);font-weight:700;font-size:10px">REGIME · </span>${result.regime_note}</div>`;
+      if (result.regime_note) html += `<div style="margin-top:6px;color:var(--text-secondary)"><span style="color:var(--accent);font-weight:700;font-size:var(--text-xs)">REGIME · </span>${result.regime_note}</div>`;
       html += `</div>`;
     }
 
     const sectors = result.sectors || [];
     if (!sectors.length) {
-      html += `<div style="color:var(--text-tertiary);font-size:13px">No sectors returned by AI.</div>`;
+      html += `<div style="color:var(--text-tertiary);font-size:var(--text-md)">No sectors returned by AI.</div>`;
     } else {
       html += `<div class="live-sector-grid">`;
       sectors.forEach(s => {
@@ -910,7 +914,7 @@ document.addEventListener('DOMContentLoaded',function(){
         const evAdj = s.ev_adj ?? s.expected_move_pct ?? 0;
         const sign = evAdj >= 0 ? '+' : '';
         const moveColor = dirClass === 'bullish' ? 'var(--positive)' : dirClass === 'bearish' ? 'var(--negative)' : 'var(--text-secondary)';
-        const consistency = s.consistency_pct ? `<span style="font-size:10px;color:var(--text-tertiary);margin-left:6px">${s.consistency_pct}% consistent</span>` : '';
+        const consistency = s.consistency_pct ? `<span style="font-size:var(--text-xs);color:var(--text-tertiary);margin-left:6px">${s.consistency_pct}% consistent</span>` : '';
 
         const stocksHtml = (s.stocks || []).map(st => {
           const stDir = st.direction || 'bullish';
@@ -922,7 +926,7 @@ document.addEventListener('DOMContentLoaded',function(){
               <span class="live-stock-sym">${st.symbol} <span class="live-conv ${stConv}">${stConv}</span></span>
               <span class="live-stock-move ${stMoveClass}">${stSign}${st.expected_move_pct || 0}%</span>
             </div>
-            <div class="live-stock-name">${st.name || ''} <span style="font-size:9px;color:var(--text-tertiary)">▾ tap for rationale</span></div>
+            <div class="live-stock-name">${st.name || ''} <span style="font-size:var(--text-xs);color:var(--text-tertiary)">▾ tap for rationale</span></div>
             <div class="live-stock-rationale">${st.rationale || ''}</div>
           </div>`;
         }).join('');
@@ -930,7 +934,7 @@ document.addEventListener('DOMContentLoaded',function(){
         html += `<div class="live-sector-card ${dirClass}">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
             <div class="live-sector-name">${s.name}</div>
-            <span style="font-weight:700;font-size:18px;color:${moveColor}">${sign}${evAdj}%${consistency}</span>
+            <span style="font-weight:700;font-size:var(--text-xl);color:${moveColor}">${sign}${evAdj}%${consistency}</span>
           </div>
           <div class="live-sector-thesis">${s.thesis || ''}</div>
           ${stocksHtml}
@@ -947,7 +951,7 @@ document.addEventListener('DOMContentLoaded',function(){
   loadEventPlays('bjp_wave');
   setTimeout(() => { loadEventPlays('split_verdict', true); loadEventPlays('opposition_sweep', true); }, 3000);
 </script>
-<div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:10px;opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>
+<div id="build-badge" style="position:fixed;bottom:8px;right:12px;font-size:var(--text-xs);opacity:0.4;font-family:monospace;z-index:9999;cursor:default" title="Deployed build time"></div>
 <script>
 fetch("/api/version").then(r=>r.json()).then(d=>{
   const t=d.buildTime||d.version;
