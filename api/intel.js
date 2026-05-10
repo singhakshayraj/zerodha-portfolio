@@ -6,19 +6,8 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { getBrainResult }  from '../dashboard/lib/brain.js';
-// plan.js uses Node 'https' module — lazy-imported inside the handler to avoid
-// Vercel ncc bundling conflict that silently drops the function at deploy time.
-import { analyzeStock, analyzeEventStocks, analyzeEventScenario } from '../dashboard/lib/llm.js';
-import { getBrainCache, setBrainCache, insertTrade as dbInsertTrade } from '../dashboard/lib/supabase.js';
-import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
-import { runIntersection }    from '../dashboard/lib/intersect.js';
-// tradeplan.js → plan.js → https (Node built-in) — lazy-imported to avoid Vercel ncc bundling crash
-import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
-import { getEventPlays, getActiveEvent, buildQuantContext } from '../dashboard/lib/eventplays.js';
-import { redisGet, redisSet } from '../dashboard/lib/redis.js';
-import { config as appConfig } from '../dashboard/config.js';
-import { UNIVERSE, runTriggerCycle } from '../dashboard/lib/trigger.js';
+// All dashboard/lib imports are lazy (inside handler) — static imports through
+// lib files transitively hit Node built-ins (https, net) that crash Vercel ncc.
 
 // ── Research: module-level helpers (merged from api/research.js) ──────────────
 
@@ -184,6 +173,32 @@ async function fetchKiteHistory(symbol, interval, count, enctoken) {
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 export default async function handler(req, res) {
+  // Lazy-import all lib modules — avoids Vercel ncc bundling failures caused by
+  // transitive Node built-in imports (https/net) deep in the lib tree.
+  const [
+    { getBrainResult },
+    { analyzeStock, analyzeEventStocks, analyzeEventScenario },
+    { getBrainCache, setBrainCache, insertTrade: dbInsertTrade },
+    { recordOutcomes, refreshSourceStats, fetchCalibration },
+    { runIntersection },
+    { allocate, closeTradeAlloc, getSession, resetSession },
+    { getEventPlays, getActiveEvent, buildQuantContext },
+    { redisGet, redisSet },
+    { config: appConfig },
+    { UNIVERSE, runTriggerCycle },
+  ] = await Promise.all([
+    import('../dashboard/lib/brain.js'),
+    import('../dashboard/lib/llm.js'),
+    import('../dashboard/lib/supabase.js'),
+    import('../dashboard/lib/outcomes.js'),
+    import('../dashboard/lib/intersect.js'),
+    import('../dashboard/lib/allocate.js'),
+    import('../dashboard/lib/eventplays.js'),
+    import('../dashboard/lib/redis.js'),
+    import('../dashboard/config.js'),
+    import('../dashboard/lib/trigger.js'),
+  ]);
+
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Kite-Enctoken');
