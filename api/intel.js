@@ -13,7 +13,7 @@ import { analyzeStock, analyzeEventStocks, analyzeEventScenario } from '../dashb
 import { getBrainCache, setBrainCache, insertTrade as dbInsertTrade } from '../dashboard/lib/supabase.js';
 import { recordOutcomes, refreshSourceStats, fetchCalibration } from '../dashboard/lib/outcomes.js';
 import { runIntersection }    from '../dashboard/lib/intersect.js';
-import { generateTradePlans } from '../dashboard/lib/tradeplan.js';
+// tradeplan.js → plan.js → https (Node built-in) — lazy-imported to avoid Vercel ncc bundling crash
 import { allocate, closeTradeAlloc, getSession, resetSession } from '../dashboard/lib/allocate.js';
 import { getEventPlays, getActiveEvent, buildQuantContext } from '../dashboard/lib/eventplays.js';
 import { redisGet, redisSet } from '../dashboard/lib/redis.js';
@@ -330,6 +330,7 @@ export default async function handler(req, res) {
       if (!Array.isArray(opportunities) || opportunities.length === 0) {
         return res.status(400).json({ error: 'opportunities[] required — pass Step 3 intersect output in body' });
       }
+      const { generateTradePlans } = await import('../dashboard/lib/tradeplan.js');
       const result = await generateTradePlans(opportunities);
       return res.status(200).json(result);
     }
@@ -1026,6 +1027,7 @@ Return ONLY raw JSON (no markdown):
       }
 
       // Step 4: Trade plans (generateTradePlans logs to Supabase automatically for audit)
+      const { generateTradePlans } = await import('../dashboard/lib/tradeplan.js');
       const planResult = await generateTradePlans(opportunities);
       const plans      = planResult.plans || [];
 
