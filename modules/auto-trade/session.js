@@ -12,10 +12,11 @@
  *   MAX_PROFIT_PCT   — profit target as % of capital (e.g. 15)
  *   MAX_LOSS_PCT     — loss limit as % of capital (e.g. 10)
  *   KITE_ENCTOKEN    — Kite enctoken (from browser or Zerodha account)
+ *   RUNTIME_MODE     — must be 'server' (set BEFORE running; workflow does this automatically)
  *
- * Optional:
- *   MAX_TRADES       — max open positions (default: 5)
- *   RUNTIME_MODE     — set to 'server' (default for this script)
+ * Quick local run:
+ *   RUNTIME_MODE=server CAPITAL=10000 MAX_PROFIT_PCT=15 MAX_LOSS_PCT=10 \
+ *   KITE_ENCTOKEN=xxx node modules/auto-trade/session.js
  *   LLM_PROVIDER / GROQ_API_KEY / ANTHROPIC_API_KEY — for brain refresh
  *   SUPABASE_URL / SUPABASE_ANON_KEY                — for trade journal
  *   UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN         — optional fast session cache
@@ -45,7 +46,12 @@ const MAX_LOSS_PCT   = parseFloat(process.env.MAX_LOSS_PCT || '0');
 const MAX_TRADES     = parseInt(process.env.MAX_TRADES || '5', 10);
 const ENCTOKEN       = process.env.KITE_ENCTOKEN || '';
 
-process.env.RUNTIME_MODE = 'server';
+// RUNTIME_MODE must be set externally before Node starts (workflows set it via env block).
+// ES module imports are evaluated before this body runs, so setting it here would be too late.
+if (process.env.RUNTIME_MODE !== 'server') {
+  console.error('❌ RUNTIME_MODE must be "server". Run with: RUNTIME_MODE=server node modules/auto-trade/session.js');
+  process.exit(1);
+}
 
 if (!CAPITAL || !MAX_PROFIT_PCT || !MAX_LOSS_PCT) {
   console.error('❌ Set CAPITAL, MAX_PROFIT_PCT, MAX_LOSS_PCT env vars before running.');

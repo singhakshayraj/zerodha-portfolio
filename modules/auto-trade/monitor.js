@@ -31,7 +31,11 @@ import { redisSet }                from '../../dashboard/lib/redis.js';
 const __dirname    = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_FILE = path.join(__dirname, '..', '..', 'data', 'auto-session.json');
 
-process.env.RUNTIME_MODE = 'server';
+// RUNTIME_MODE must be set externally before Node starts (ES module imports evaluate before body).
+if (process.env.RUNTIME_MODE !== 'server') {
+  console.error('❌ RUNTIME_MODE must be "server". Run with: RUNTIME_MODE=server node modules/auto-trade/monitor.js');
+  process.exit(1);
+}
 
 const ENCTOKEN   = process.env.KITE_ENCTOKEN || '';
 const FORCE_STOP = process.env.FORCE_STOP === 'true';
