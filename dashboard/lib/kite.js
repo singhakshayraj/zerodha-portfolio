@@ -277,6 +277,49 @@ export async function placeOrder({ symbol, transactionType, quantity, enctoken, 
 }
 
 /**
+ * Cancel a GTT trigger by ID.
+ */
+export async function cancelGTT(triggerId, clientEnctoken) {
+  const token = clientEnctoken || config.kite.enctoken;
+  if (!token) throw new Error('enctoken required');
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: KITE_HOST,
+      path:     KITE_PATH_PREFIX + `/gtt/triggers/${triggerId}`,
+      method:   'DELETE',
+      headers: {
+        'Authorization':  `enctoken ${token}`,
+        'X-Kite-Version': '3',
+      },
+    };
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(data);
+          if (result.status === 'success') resolve({ deleted: result.data?.trigger_id ?? triggerId });
+          else reject(new Error(`[${result.error_type || 'Error'}] ${result.message}`));
+        } catch {
+          reject(new Error(`Kite GTT delete non-JSON (HTTP ${res.statusCode}): ${data.slice(0, 200)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+/**
+ * List all GTT triggers (active and triggered).
+ */
+export async function listGTTs(clientEnctoken) {
+  const enctoken = clientEnctoken || config.kite.enctoken;
+  if (!enctoken) throw new Error('KITE_ENCTOKEN is not set.');
+  return kiteRequest('/gtt/triggers', enctoken);
+}
+
+/**
  * Place a GTT OCO order (buy at market + target + stop-loss in one shot).
  * Uses Kite's two-leg GTT which survives browser close.
  */

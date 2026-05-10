@@ -7,6 +7,7 @@
  * GET  /api/kite?action=margins    — available cash & margin
  */
 import { getHoldings, getQuotes, getHistorical, getHistory, getPositions, getMargins } from '../dashboard/lib/kite.js';
+import { redisGet, redisSet, redisDel } from '../dashboard/lib/redis.js';
 
 function enc(req) {
   const raw = req.headers['x-kite-enctoken'] || process.env.KITE_ENCTOKEN || '';
@@ -23,6 +24,16 @@ export default async function handler(req, res) {
   const url    = new URL(req.url, 'https://x.vercel.app');
   const action = url.searchParams.get('action');
 
+  // ── Token status — no auth required, reads Redis flag set by 403 responses ──
+  if (action === 'token_status') {
+    try {
+      const stale = await redisGet('kite:token_stale');
+      return res.status(200).json({ stale: !!stale, checked_at: new Date().toISOString() });
+    } catch {
+      return res.status(200).json({ stale: false, checked_at: new Date().toISOString() });
+    }
+  }
+
   const token = enc(req);
   if (!token || token === 'test') {
     // positions is optional — return empty gracefully
@@ -34,6 +45,7 @@ export default async function handler(req, res) {
   try {
     if (action === 'holdings') {
       const data = await getHoldings(token);
+      redisDel('kite:token_stale').catch(() => {}); // clear stale flag on valid token
       return res.status(200).json({ data });
     }
 
@@ -78,6 +90,7 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'action must be holdings | quotes | historical | positions | margins | ta_history' });
   } catch (e) {
     const status = e.message?.includes('[403]') ? 403 : e.message?.includes('[400]') ? 400 : 500;
+    if (status === 403) redisSet('kite:token_stale', 1, 86400).catch(() => {});
     res.status(status).json({ error: e.message });
   }
 }

@@ -1,0 +1,15 @@
+{
+  "date": null,
+  "status": "idle",
+  "capital": null,
+  "max_profit_pct": null,
+  "max_loss_pct": null,
+  "profit_target": null,
+  "loss_limit": null,
+  "trades": [],
+  "realized_pnl": 0,
+  "stopped_at": null,
+  "stop_reason": null,
+  "started_at": null,
+  "updated_at": null
+}

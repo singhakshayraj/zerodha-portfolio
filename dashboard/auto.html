@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>(function(){var t=localStorage.getItem("zpi-theme");if(t==="light")document.body.classList.add("light");})()</script>
+  <meta charset="UTF-8"/>
+  <script>if(!localStorage.getItem('pf_auth')){location.replace('/login?next='+encodeURIComponent(location.pathname));}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="/dashboard/zpi.css"/>
+  <title>Auto Trade — Portfolio Intelligence</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-ui); background: var(--bg-base); color: var(--text-primary); min-height: 100vh; }
+    .page { max-width: 1020px; margin: 0 auto; padding: 32px 24px; }
+    h1 { font-size: var(--text-2xl); font-weight: 800; margin-bottom: 6px; }
+    .sub { font-size: var(--text-base); color: var(--text-tertiary); margin-bottom: 28px; }
+
+    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+    .panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-disabled); margin-bottom: 14px; }
+
+    /* Trigger options */
+    .trigger-option { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 10px; }
+    .trigger-option:last-child { margin-bottom: 0; }
+    .trigger-option.primary { border-color: var(--accent); background: var(--accent-dim); }
+    .trigger-option h3 { font-size: var(--text-base); font-weight: 700; margin-bottom: 5px; }
+    .trigger-option.primary h3 { color: var(--accent); }
+    .trigger-option p  { font-size: var(--text-sm); color: var(--text-tertiary); line-height: 1.5; margin-bottom: 10px; }
+    code { font-family: monospace; background: var(--bg-base); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s; }
+    .btn-primary { background: var(--accent); color: var(--bg-base); }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-stop  { background: var(--negative); color: #fff; }
+    .btn-stop:hover:not(:disabled) { opacity: 0.85; }
+    .btn-secondary { background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Preview */
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .field input { width: 100%; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 10px; font-size: var(--text-base); color: var(--text-primary); outline: none; }
+    .field input:focus { border-color: var(--accent); }
+
+    .derived { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px 14px; margin-top: 10px; }
+    .derived-row { display: flex; justify-content: space-between; font-size: var(--text-sm); padding: 3px 0; }
+    .derived-label { color: var(--text-tertiary); }
+    .pos { color: var(--positive); font-weight: 700; }
+    .neg { color: var(--negative); font-weight: 700; }
+
+    /* Status */
+    .status-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 20px; }
+    .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .status-header h2 { font-size: var(--text-md); font-weight: 700; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge-active    { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); }
+    .badge-stopped   { background: var(--negative-dim); color: var(--negative); border: 1px solid var(--negative-border); }
+    .badge-completed { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+    .badge-idle      { background: rgba(113,128,150,0.12); color: var(--text-tertiary); border: 1px solid rgba(113,128,150,0.25); }
+
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .metric { background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 12px; }
+    .metric-label { font-size: 10px; color: var(--text-disabled); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .metric-val { font-size: var(--text-xl); font-weight: 700; }
+
+    .prog-section { margin-bottom: 16px; }
+    .prog-row { margin-bottom: 8px; }
+    .prog-label { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: 4px; }
+    .prog-track { height: 7px; background: var(--bg-base); border-radius: 4px; overflow: hidden; }
+    .prog-fill { height: 7px; border-radius: 4px; transition: width 0.4s; max-width: 100%; }
+    .prog-profit { background: var(--positive); }
+    .prog-loss   { background: var(--negative); }
+
+    .circuit-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 10px 14px; color: #f59e0b; font-size: var(--text-sm); margin-bottom: 14px; display: none; line-height: 1.5; }
+
+    .trades-section h3 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-disabled); margin-bottom: 10px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    thead th { text-align: left; padding: 7px 10px; color: var(--text-disabled); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid var(--bg-card); }
+    tbody tr:hover { background: var(--bg-card); }
+    tbody td { padding: 8px 10px; vertical-align: middle; }
+    .sym  { font-weight: 700; }
+    .side-buy  { color: var(--positive); font-weight: 700; }
+    .side-sell { color: var(--negative); font-weight: 700; }
+    .lvl-entry  { color: var(--accent); }
+    .lvl-target { color: var(--positive); }
+    .lvl-sl     { color: var(--negative); }
+    .pnl-pos { color: var(--positive); font-weight: 700; }
+    .pnl-neg { color: var(--negative); font-weight: 700; }
+    .pnl-open { color: var(--text-disabled); }
+    .st-open { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .st-closed { background: var(--positive-dim); color: var(--positive); border: 1px solid var(--positive); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .st-cancelled { background: rgba(113,128,150,0.12); color: var(--text-tertiary); border: 1px solid rgba(113,128,150,0.25); padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+
+    .empty { text-align: center; padding: 36px; color: var(--text-disabled); font-size: var(--text-base); }
+    .updated-at { font-size: 11px; color: var(--text-disabled); margin-top: 14px; text-align: right; }
+  </style>
+</head>
+<body>
+<nav class="topnav">
+  <a href="/" class="topnav-brand">📈 Portfolio</a>
+  <div class="topnav-links">
+    <a href="/">Dashboard</a>
+    <a href="/trader">Trader Desk</a>
+    <a href="/auto" class="active">Auto Trade</a>
+    <a href="/trades">Trade Journal</a>
+    <a href="/research.html">Research Desk</a>
+    <a href="/connect">Connect Kite</a>
+  </div>
+  <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+    <svg id="theme-icon-moon" width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg id="theme-icon-sun" width="13" height="13" viewBox="0 0 16 16" fill="none" style="display:none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span id="theme-label">Light</span>
+  </button>
+</nav>
+
+<div class="page">
+  <h1>Auto Trade</h1>
+  <p class="sub">Pipeline: Brain → Triggers → Intersection → Plans → Allocate → Execute. Runs as a standalone Node.js script via GitHub Actions — no server or Vercel required. State is stored in <code>data/auto-session.json</code>.</p>
+
+  <div class="layout">
+
+    <!-- LEFT -->
+    <div>
+
+      <!-- How to start -->
+      <div class="panel">
+        <div class="panel-title">Start a Session</div>
+
+        <div class="trigger-option primary">
+          <h3>▶ Trigger via GitHub Actions</h3>
+          <p>Runs <code>session.js</code> directly. Override capital and limits per-run using the workflow dispatch inputs.</p>
+          <a class="btn btn-primary"
+             href="https://github.com/singhakshayraj/zerodha-portfolio/actions/workflows/auto-trade.yml"
+             target="_blank" rel="noopener">Open Workflow →</a>
+        </div>
+
+        <div class="trigger-option">
+          <h3>⏰ Scheduled (weekdays 9:45 AM IST)</h3>
+          <p>Uses <code>AUTO_CAPITAL</code>, <code>AUTO_MAX_PROFIT_PCT</code>, <code>AUTO_MAX_LOSS_PCT</code> from repo variables. Set these once in <em>Settings → Secrets and variables → Actions → Variables</em>.</p>
+        </div>
+
+        <div class="trigger-option" style="margin-bottom:0">
+          <h3>💻 Run locally</h3>
+          <p>Works on any machine with Node 20+:</p>
+          <code style="display:block;padding:8px;line-height:1.8;font-size:11px">
+            CAPITAL=10000 MAX_PROFIT_PCT=15 MAX_LOSS_PCT=10 \<br>
+            KITE_ENCTOKEN=xxx RUNTIME_MODE=server \<br>
+            node modules/auto-trade/session.js
+          </code>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="panel">
+        <div class="panel-title">Preview Session Targets</div>
+        <div class="field">
+          <label>Capital (₹)</label>
+          <input type="number" id="inp-capital" placeholder="e.g. 10000" step="1000"/>
+        </div>
+        <div class="field">
+          <label>Max Profit (%)</label>
+          <input type="number" id="inp-profit" placeholder="e.g. 15" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Max Loss (%)</label>
+          <input type="number" id="inp-loss" placeholder="e.g. 10" step="0.5"/>
+        </div>
+        <div id="targets-preview" style="display:none;">
+          <div class="derived">
+            <div class="derived-row"><span class="derived-label">Profit target (₹)</span><span id="prev-profit" class="pos">—</span></div>
+            <div class="derived-row"><span class="derived-label">Loss limit (₹)</span><span id="prev-loss" class="neg">—</span></div>
+            <div class="derived-row"><span class="derived-label">Allocator R-multiple</span><span id="prev-rmult" style="font-weight:700;color:var(--text-secondary)">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency stop -->
+      <div class="panel" style="margin-bottom:0">
+        <div class="panel-title">Emergency Stop</div>
+        <p style="font-size:var(--text-sm);color:var(--text-tertiary);margin-bottom:12px;line-height:1.5">
+          Triggers the monitor workflow with <code>force_stop=true</code> — cancels all GTTs and marks open trades cancelled.
+          Open positions must still be exited manually in Kite.
+        </p>
+        <a class="btn btn-stop"
+           href="https://github.com/singhakshayraj/zerodha-portfolio/actions/workflows/session-monitor.yml"
+           target="_blank" rel="noopener">Open Monitor Workflow →</a>
+        <p style="font-size:11px;color:var(--text-disabled);margin-top:8px">Set <code>force_stop</code> input to <code>true</code> before running.</p>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: STATUS -->
+    <div>
+      <div class="status-card">
+        <div class="status-header">
+          <h2>Today's Session</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="status-badge" class="badge badge-idle">—</span>
+            <button class="btn btn-secondary" onclick="loadSession()">↻ Refresh</button>
+          </div>
+        </div>
+
+        <div id="circuit-warn" class="circuit-warn"></div>
+
+        <div id="session-empty" class="empty">
+          No session found for today.<br>
+          <span style="font-size:var(--text-sm)">State is read from <code>data/auto-session.json</code> in this repo.</span>
+        </div>
+
+        <div id="session-body" style="display:none;">
+          <div class="metrics" id="metrics-grid"></div>
+          <div class="prog-section" id="progress-section"></div>
+
+          <div class="trades-section">
+            <h3>Positions placed by this session</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Symbol</th><th>Side</th><th>Entry</th><th>Target</th><th>SL</th><th>Qty</th><th>P&amp;L</th><th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="trades-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="updated-at" id="updated-at"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /layout -->
+</div>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('zpi-theme', isLight ? 'light' : 'dark');
+  document.getElementById('theme-icon-moon').style.display = isLight ? 'none' : '';
+  document.getElementById('theme-icon-sun').style.display  = isLight ? '' : 'none';
+  document.getElementById('theme-label').textContent = isLight ? 'Dark' : 'Light';
+}
+(function(){
+  const isLight = localStorage.getItem('zpi-theme') === 'light';
+  document.getElementById('theme-icon-moon').style.display = isLight ? 'none' : '';
+  document.getElementById('theme-icon-sun').style.display  = isLight ? '' : 'none';
+  document.getElementById('theme-label').textContent = isLight ? 'Dark' : 'Light';
+})();
+
+const fmtRs = n => '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+// ── Targets preview ───────────────────────────────────────────────────────────
+['inp-capital', 'inp-profit', 'inp-loss'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updatePreview)
+);
+function updatePreview() {
+  const cap = +document.getElementById('inp-capital').value;
+  const pct = +document.getElementById('inp-profit').value;
+  const lct = +document.getElementById('inp-loss').value;
+  const prev = document.getElementById('targets-preview');
+  if (cap > 0 && pct > 0 && lct > 0) {
+    prev.style.display = 'block';
+    document.getElementById('prev-profit').textContent = '+' + fmtRs(cap * pct / 100);
+    document.getElementById('prev-loss').textContent   = '−' + fmtRs(cap * lct / 100);
+    document.getElementById('prev-rmult').textContent  = (pct / lct).toFixed(2) + 'x';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
+// ── Load session — reads data/auto-session.json as a plain static file ────────
+// Works on any platform: Vercel, GitHub Pages, VPS, local server.
+// No API server required.
+async function loadSession() {
+  try {
+    const res  = await fetch('/data/auto-session.json?_=' + Date.now());
+    if (!res.ok) { renderSession(null); return; }
+    const data = await res.json();
+    // Show only today's session
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    renderSession(data?.date === today ? data : null);
+  } catch { renderSession(null); }
+}
+
+function renderSession(s) {
+  const empty = document.getElementById('session-empty');
+  const body  = document.getElementById('session-body');
+  const badge = document.getElementById('status-badge');
+  const warn  = document.getElementById('circuit-warn');
+
+  if (!s) {
+    empty.style.display = ''; body.style.display = 'none';
+    badge.className = 'badge badge-idle'; badge.textContent = '—';
+    warn.style.display = 'none'; return;
+  }
+
+  empty.style.display = 'none'; body.style.display = '';
+
+  const MAP = {
+    active:           ['badge-active',    'Active'],
+    stopped:          ['badge-stopped',   'Stopped'],
+    completed:        ['badge-completed', 'Completed'],
+    no_signals:       ['badge-idle', 'No Signals'],
+    no_brain_picks:   ['badge-idle', 'No Brain Picks'],
+    no_opportunities: ['badge-idle', 'No Matches'],
+    no_plans:         ['badge-idle', 'No Plans'],
+    no_trades:        ['badge-idle', 'No Trades'],
+    market_closed:    ['badge-idle', 'Market Closed'],
+  };
+  const [cls, label] = MAP[s.status] || ['badge-idle', s.status || '—'];
+  badge.className = 'badge ' + cls; badge.textContent = label;
+
+  if (s.stop_reason) {
+    warn.style.display = '';
+    warn.innerHTML = `⚠ <strong>${s.stop_reason}</strong><br>GTTs cancelled — exit open positions manually in Kite.`;
+  } else { warn.style.display = 'none'; }
+
+  const pnl  = s.realized_pnl ?? 0;
+  const pCls = pnl >= 0 ? 'pos' : 'neg';
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric"><div class="metric-label">Capital</div><div class="metric-val">${fmtRs(s.capital)}</div></div>
+    <div class="metric"><div class="metric-label">Realized P&L</div><div class="metric-val ${pCls}">${pnl >= 0 ? '+' : '−'}${fmtRs(pnl)}</div></div>
+    <div class="metric"><div class="metric-label">Profit Target</div><div class="metric-val pos">+${fmtRs(s.profit_target)}</div></div>
+    <div class="metric"><div class="metric-label">Loss Limit</div><div class="metric-val neg">−${fmtRs(s.loss_limit)}</div></div>
+    <div class="metric"><div class="metric-label">Positions</div><div class="metric-val">${(s.trades || []).length}</div></div>
+    <div class="metric"><div class="metric-label">Quote Source</div><div class="metric-val" style="font-size:var(--text-sm)">${s.quote_source || '—'}</div></div>
+  `;
+
+  const pPct = s.profit_target ? Math.min(100, Math.max(0, pnl  / s.profit_target * 100)) : 0;
+  const lPct = s.loss_limit    ? Math.min(100, Math.max(0, -pnl / s.loss_limit    * 100)) : 0;
+  document.getElementById('progress-section').innerHTML = `
+    <div class="prog-row">
+      <div class="prog-label"><span>Profit progress</span><span class="pos">${pPct.toFixed(0)}%</span></div>
+      <div class="prog-track"><div class="prog-fill prog-profit" style="width:${pPct}%"></div></div>
+    </div>
+    <div class="prog-row">
+      <div class="prog-label"><span>Loss exposure</span><span class="neg">${lPct.toFixed(0)}%</span></div>
+      <div class="prog-track"><div class="prog-fill prog-loss" style="width:${lPct}%"></div></div>
+    </div>
+  `;
+
+  renderTradesTable(s.trades || []);
+
+  if (s.updated_at) {
+    document.getElementById('updated-at').textContent =
+      'Last updated: ' + new Date(s.updated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  }
+}
+
+function renderTradesTable(trades) {
+  const tbody = document.getElementById('trades-body');
+  if (!trades.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-disabled);padding:18px">No positions in this session</td></tr>';
+    return;
+  }
+  tbody.innerHTML = trades.map(t => {
+    const pnl    = t.pnl ?? null;
+    const pnlStr = pnl != null
+      ? `<span class="${pnl >= 0 ? 'pnl-pos' : 'pnl-neg'}">${pnl >= 0 ? '+' : '−'}${fmtRs(pnl)}</span>`
+      : '<span class="pnl-open">Open</span>';
+    const side  = t.side === 'BUY' ? '<span class="side-buy">BUY</span>' : '<span class="side-sell">SELL</span>';
+    const stCls = t.status === 'open' ? 'st-open' : t.status === 'closed' ? 'st-closed' : 'st-cancelled';
+    return `<tr>
+      <td><span class="sym">${t.symbol}</span></td>
+      <td>${side}</td>
+      <td class="lvl-entry">₹${(t.entry||0).toLocaleString('en-IN')}</td>
+      <td class="lvl-target">₹${(t.target||0).toLocaleString('en-IN')}</td>
+      <td class="lvl-sl">₹${(t.sl||0).toLocaleString('en-IN')}</td>
+      <td>${t.qty}</td>
+      <td>${pnlStr}</td>
+      <td><span class="${stCls}">${t.status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+loadSession();
+</script>
+</body>
+</html>

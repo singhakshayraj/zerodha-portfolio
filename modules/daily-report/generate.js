@@ -16,6 +16,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getHoldings } from '../../dashboard/lib/kite.js';
+import { upsertSnapshot } from '../../dashboard/lib/supabase.js';
 import { generateDailyReportHTML } from './template.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,7 +57,7 @@ async function run() {
   const sectors = JSON.parse(fs.readFileSync(SECTORS_PATH, 'utf8'));
 
   // 3. Compute snapshot
-  let totalInvested = 0, currentValue = 0, totalPnl = 0;
+  let totalInvested = 0, currentValue = 0, totalPnl = 0, dayPnl = 0;
   let winners = 0, losers = 0;
 
   const holdings = rawHoldings.map(h => {
@@ -68,6 +69,7 @@ async function run() {
     totalInvested += invested;
     currentValue  += current;
     totalPnl      += pnl;
+    dayPnl        += (h.day_change || 0) * h.quantity;
     if (pnl >= 0) winners++; else losers++;
 
     return {
@@ -113,6 +115,24 @@ async function run() {
     console.log('  Appended new snapshot for ' + snapshot.date);
   }
   fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2));
+
+  // 5b. Upsert snapshot to Supabase portfolio_snapshots (non-fatal)
+  try {
+    await upsertSnapshot({
+      snapshot_date:  snapshot.date,
+      total_invested: snapshot.totalInvested,
+      current_value:  snapshot.currentValue,
+      total_pnl:      snapshot.totalPnl,
+      total_pnl_pct:  snapshot.totalPnlPct,
+      day_pnl:        Math.round(dayPnl),
+      winners:        snapshot.winners,
+      losers:         snapshot.losers,
+      holdings:       snapshot.holdings,
+    });
+    console.log('  Snapshot upserted to Supabase.');
+  } catch (e) {
+    console.warn('  ⚠ Supabase upsert failed (non-fatal):', e.message);
+  }
 
   // 6. Generate daily report HTML
   if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
