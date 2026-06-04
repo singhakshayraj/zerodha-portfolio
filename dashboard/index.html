@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <p>Day-on-day tracking · Zerodha Kite via Claude MCP</p>
   </div>
   <div style="display:flex;gap:var(--sp-4);align-items:center;">
-    <span style="font-size:var(--text-sm);color:var(--text-secondary);">Updated: <strong id="lastUpdatedLabel" style="color:var(--text-primary)">3 Jun 2026</strong></span>
+    <span style="font-size:var(--text-sm);color:var(--text-secondary);">Updated: <strong id="lastUpdatedLabel" style="color:var(--text-primary)">4 Jun 2026</strong></span>
     <span id="liveIndicator" style="display:none;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-xl);background:var(--positive-dim);color:var(--positive-text);border:1px solid var(--positive)">● LIVE</span>
     <button id="refreshBtn" onclick="refreshDashboard(true)" class="btn btn-ghost btn-sm" style="display:none;">↻ Refresh</button>
     <button class="theme-toggle btn btn-ghost btn-sm" onclick="window.__zpiToggleTheme?.()" title="Toggle theme"><span class="icon">☀︎</span> <span>Light</span></button>
@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="card" id="c-invested">
       <div class="label">Total Invested</div>
       <div class="value white" id="cardInvested">₹6,24,347</div>
-      <div class="delta muted" id="cardHoldings">Across 18 holdings · stale · 3 Jun</div>
+      <div class="delta muted" id="cardHoldings">Across 18 holdings · stale · 4 Jun</div>
     </div>
     <div class="card" id="c-value">
       <div class="label">Current Value</div>
@@ -260,7 +260,16 @@ document.addEventListener('DOMContentLoaded',function(){
       </thead>
       <tbody id="historyTable">
         <tr>
-          <td><strong>3 Jun 2026</strong> <span style="font-size:var(--text-xs);color:var(--positive-text);margin-left:4px;">● Latest</span> <span style="font-size:var(--text-xs);color:var(--warning-text);margin-left:4px;">⚠ stale</span></td>
+          <td><strong>4 Jun 2026</strong> <span style="font-size:var(--text-xs);color:var(--positive-text);margin-left:4px;">● Latest</span> <span style="font-size:var(--text-xs);color:var(--warning-text);margin-left:4px;">⚠ stale</span></td>
+          <td>₹6,24,347</td>
+          <td>₹5,87,180</td>
+          <td class="red">-₹37,167</td>
+          <td class="red">-5.95%</td>
+          <td class="green">▲ +₹3,034</td>
+          <td><a class="report-link" href="/reports/daily/2026-06-04.html">View →</a></td>
+        </tr>
+        <tr>
+          <td><strong>3 Jun 2026</strong> <span style="font-size:var(--text-xs);color:var(--warning-text);margin-left:4px;">⚠ stale</span></td>
           <td>₹6,24,347</td>
           <td>₹5,87,180</td>
           <td class="red">-₹37,167</td>
@@ -337,7 +346,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   <!-- Stock-level Day-on-Day -->
   <div class="section">
-    <h2 id="stockGridTitle">Stock Performance — 3 Jun 2026 (prices as of 21 Apr)</h2>
+    <h2 id="stockGridTitle">Stock Performance — 4 Jun 2026 (prices as of 21 Apr)</h2>
     <div class="stock-grid" id="stockGrid">
       <div class="stock-card">
         <div class="sym">AARTIIND</div>
@@ -454,11 +463,11 @@ document.addEventListener('DOMContentLoaded',function(){
   new Chart(valueCtx, {
     type: 'line',
     data: {
-      labels: ['7 Apr', '15 Apr', '21 Apr', '21 May', '27 May', '28 May', '29 May', '3 Jun'],
+      labels: ['7 Apr', '15 Apr', '21 Apr', '21 May', '27 May', '28 May', '29 May', '3 Jun', '4 Jun'],
       datasets: [
         {
           label: 'Invested',
-          data: [564038, 564037, 624347, 624347, 624347, 624347, 624347, 624347],
+          data: [564038, 564037, 624347, 624347, 624347, 624347, 624347, 624347, 624347],
           borderColor: '#5b9bd5',
           backgroundColor: 'rgba(91,155,213,0.08)',
           borderWidth: 2,
@@ -467,7 +476,7 @@ document.addEventListener('DOMContentLoaded',function(){
         },
         {
           label: 'Current Value',
-          data: [481497, 502106, 587180, 587180, 587180, 587180, 587180, 587180],
+          data: [481497, 502106, 587180, 587180, 587180, 587180, 587180, 587180, 587180],
           borderColor: '#52a875',
           backgroundColor: 'rgba(82,168,117,0.08)',
           borderWidth: 2,
